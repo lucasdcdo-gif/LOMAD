@@ -1,0 +1,20 @@
+TERMOS DE PRIVACIDADE E USO DE DADOS - OPL (OPEN PRIVACY LICENSE)
+
+1. COLETA DE DADOS
+Ao utilizar o serviço LOMAD, você concorda que:
+- Seus dados de áudio serão processados temporariamente para fins de transcrição.
+- O conteúdo das reuniões é privado e pertence exclusivamente a você.
+- Não utilizamos suas reuniões para treinar modelos de IA sem seu consentimento explícito.
+
+2. ARMAZENAMENTO
+- As transcrições são armazenadas de forma segura em nossos servidores.
+- Você tem o direito de solicitar a exclusão total de seus dados a qualquer momento.
+
+3. USO DE IA
+- Utilizamos serviços de terceiros (Google Gemini) para processamento de linguagem natural.
+- Os dados enviados para a API são efêmeros e utilizados apenas para gerar a resposta solicitada.
+
+4. RESPONSABILIDADE
+- Você é responsável pelo conteúdo transcrito e pelo cumprimento das leis de gravação de terceiros em sua jurisdição.
+
+Ao criar sua conta, você confirma que leu e concorda com estes termos.

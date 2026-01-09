@@ -1,0 +1,9 @@
+
+{
+  "name": "Meeting Transcriber Pro",
+  "description": "Transcrição em tempo real de reuniões (Sistema + Microfone) com resumos e ações inteligentes via Gemini Live API.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}

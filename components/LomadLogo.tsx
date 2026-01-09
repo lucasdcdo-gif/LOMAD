@@ -1,0 +1,37 @@
+export const LomadLogo = ({ size = 200, withText = true, className = "" }) => (
+    <svg
+        viewBox="0 0 200 200"
+        width={size}
+        height={size}
+        className={className}
+        xmlns="http://www.w3.org/2000/svg"
+    >
+        <defs>
+            <linearGradient id="lomad-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
+                <stop offset="0%" style={{ stopColor: '#10b981', stopOpacity: 1 }} />
+                <stop offset="100%" style={{ stopColor: '#06b6d4', stopOpacity: 1 }} />
+            </linearGradient>
+        </defs>
+        <rect x="45" y="70" width="12" height="60" fill="url(#lomad-gradient)" rx="6" />
+        <rect x="65" y="50" width="12" height="100" fill="url(#lomad-gradient)" rx="6" />
+        <rect x="85" y="60" width="12" height="80" fill="url(#lomad-gradient)" rx="6" />
+        <rect x="105" y="40" width="12" height="120" fill="url(#lomad-gradient)" rx="6" />
+        <rect x="125" y="65" width="12" height="70" fill="url(#lomad-gradient)" rx="6" />
+        <rect x="145" y="55" width="12" height="90" fill="url(#lomad-gradient)" rx="6" />
+        {withText && (
+            <text
+                x="100"
+                y="185"
+                fontFamily="Arial, sans-serif"
+                fontSize="28"
+                fontWeight="bold"
+                fill="#1e293b"
+                textAnchor="middle"
+            >
+                LOMAD
+            </text>
+        )}
+    </svg>
+);
+
+export default LomadLogo;

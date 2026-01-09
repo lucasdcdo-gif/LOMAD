@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="lomadGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#00D4D4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00C896;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Audio bars -->
+  <rect x="130" y="80" width="20" height="160" rx="10" fill="url(#lomadGradient)"/>
+  <rect x="175" y="35" width="20" height="250" rx="10" fill="url(#lomadGradient)"/>
+  <rect x="220" y="65" width="20" height="190" rx="10" fill="url(#lomadGradient)"/>
+  <rect x="265" y="10" width="20" height="300" rx="10" fill="url(#lomadGradient)"/>
+  <rect x="310" y="55" width="20" height="210" rx="10" fill="url(#lomadGradient)"/>
+  <rect x="355" y="40" width="20" height="240" rx="10" fill="url(#lomadGradient)"/>
+  
+  <!-- LOMAD text -->
+  <text x="200" y="360" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#1e293b" text-anchor="middle">LOMAD</text>
+</svg>
