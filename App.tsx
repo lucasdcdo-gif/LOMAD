@@ -545,7 +545,18 @@ const App: React.FC = () => {
 
   const connectToLiveAPI = () => {
     try {
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        console.error("CRITICAL: VITE_GEMINI_API_KEY is missing in environment variables!");
+        setStatus(SessionStatus.ERROR);
+        setError("Erro de Configuração: API Key não encontrada (VITE_GEMINI_API_KEY). Verifique as variáveis de ambiente no Render.");
+        return;
+      }
+
+      console.log(`[DEBUG] Inicializando IA com API Key: ${apiKey.substring(0, 8)}...`);
+      console.log(`[DEBUG] Ambiente: ${import.meta.env.MODE}`);
+
+      const ai = new GoogleGenAI({ apiKey });
 
       // Criar sessão para MICROFONE
       const micSessionPromise = ai.live.connect({
