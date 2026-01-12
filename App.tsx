@@ -1141,7 +1141,10 @@ const App: React.FC = () => {
               </>
             )}
             {!user && (
-              <button onClick={() => setView('LOGIN')} className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all">Entrar</button>
+              <>
+                <button onClick={() => setView('HOW_IT_WORKS')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Como Funciona</button>
+                <button onClick={() => setView('LOGIN')} className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all">Entrar</button>
+              </>
             )}
           </div>
         </div>
