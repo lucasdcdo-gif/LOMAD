@@ -553,9 +553,6 @@ const App: React.FC = () => {
         return;
       }
 
-      console.log(`[DEBUG] Inicializando IA com API Key: ${apiKey.substring(0, 8)}...`);
-      console.log(`[DEBUG] Ambiente: ${import.meta.env.MODE}`);
-
       const ai = new GoogleGenAI({ apiKey });
 
       // Criar sessão para MICROFONE
