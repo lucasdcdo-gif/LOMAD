@@ -1,20 +1,38 @@
-TERMOS DE PRIVACIDADE E USO DE DADOS - OPL (OPEN PRIVACY LICENSE)
+POLÍTICA DE PRIVACIDADE - MEETINGMIND
+
+Em conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei 13.709/18).
 
 1. COLETA DE DADOS
-Ao utilizar o serviço LOMAD, você concorda que:
-- Seus dados de áudio serão processados temporariamente para fins de transcrição.
-- O conteúdo das reuniões é privado e pertence exclusivamente a você.
-- Não utilizamos suas reuniões para treinar modelos de IA sem seu consentimento explícito.
+Coletamos os seguintes dados pessoais:
+- Identificação: Nome, Email, CPF (para emissão de nota fiscal).
+- Contato: Telefone, Endereço.
+- Uso: Logs de acesso (IP, Data/Hora) exigidos pelo Marco Civil da Internet.
+- Áudio/Texto: Gravações e transcrições das suas reuniões.
 
-2. ARMAZENAMENTO
-- As transcrições são armazenadas de forma segura em nossos servidores.
-- Você tem o direito de solicitar a exclusão total de seus dados a qualquer momento.
+2. FINALIDADE DO USO
+- Fornecer o serviço de transcrição.
+- Processar pagamentos e assinaturas.
+- Cumprir obrigações legais (fiscais e judiciais).
+- Melhorar a segurança e performance da plataforma.
 
-3. USO DE IA
-- Utilizamos serviços de terceiros (Google Gemini) para processamento de linguagem natural.
-- Os dados enviados para a API são efêmeros e utilizados apenas para gerar a resposta solicitada.
+3. ARMAZENAMENTO E SEGURANÇA
+Seus dados são armazenados em ambiente seguro (Supabase/Google Cloud) com criptografia. Os logs de acesso são mantidos por 6 meses, conforme Art. 15 do Marco Civil da Internet.
 
-4. RESPONSABILIDADE
-- Você é responsável pelo conteúdo transcrito e pelo cumprimento das leis de gravação de terceiros em sua jurisdição.
+4. COMPARTILHAMENTO
+Não vendemos seus dados. Compartilhamos apenas com processadores essenciais para o serviço:
+- Processador de Pagamentos (Asaas)
+- Provedor de Nuvem e IA (Google Cloud/Supabase)
 
-Ao criar sua conta, você confirma que leu e concorda com estes termos.
+5. SEUS DIREITOS (LGPD)
+Você tem direito a:
+- Confirmar a existência de tratamento de dados.
+- Acessar seus dados.
+- Corrigir dados incompletos ou desatualizados.
+- Solicitar a exclusão de dados desnecessários.
+- Revogar o consentimento a qualquer momento.
+
+6. EXCLUSÃO DE DADOS
+Para solicitar a exclusão completa de sua conta e dados, utilize a opção "Excluir Conta" no seu perfil ou envie um email para privacidade@meetingmind.com.br.
+
+7. COOKIES
+Utilizamos cookies essenciais para autenticação e cookies analíticos para melhorar o serviço. Você pode gerenciar suas preferências no banner de cookies.

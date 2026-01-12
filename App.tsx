@@ -8,6 +8,9 @@ import { supabase, SUPABASE_CONFIGURED } from './lib/supabase.ts';
 import { MeetingsService } from './lib/meetings.service.ts';
 import LomadLogo from './components/LomadLogo.tsx';
 import { PaymentModal } from './components/PaymentModal.tsx';
+import { FooterCompliance } from './components/FooterCompliance.tsx';
+import { CookieBanner } from './components/CookieBanner.tsx';
+import { VLibrasWidget } from './components/VLibrasWidget.tsx';
 
 const MODEL_NAME = 'gemini-2.0-flash-exp';
 
@@ -88,7 +91,7 @@ const App: React.FC = () => {
 
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView] = useState<'MAIN' | 'HISTORY' | 'MEETING_DETAILS' | 'LOGIN' | 'REGISTER' | 'PROFILE' | 'ADMIN_DASHBOARD' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD' | 'HOW_IT_WORKS'>('MAIN');
+  const [view, setView] = useState<'MAIN' | 'HISTORY' | 'MEETING_DETAILS' | 'LOGIN' | 'REGISTER' | 'PROFILE' | 'ADMIN_DASHBOARD' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD' | 'HOW_IT_WORKS' | 'TERMS' | 'PRIVACY'>('MAIN');
   // States for Meeting Management
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
@@ -115,6 +118,7 @@ const App: React.FC = () => {
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerPlan, setRegisterPlan] = useState<'FREE' | 'PRO'>('FREE');
   const [privacyPolicy, setPrivacyPolicy] = useState<string>('');
+  const [termsContent, setTermsContent] = useState<string>('');
   const [privacyAccepted, setPrivacyAccepted] = useState<boolean>(false);
   const [resetEmail, setResetEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -250,11 +254,17 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (view === 'REGISTER') {
+    if (view === 'REGISTER' || view === 'PRIVACY') {
       fetch('/api/privacy-policy')
         .then(res => res.json())
         .then(data => setPrivacyPolicy(data.content))
         .catch(err => console.error("Falha ao carregar política de privacidade", err));
+    }
+    if (view === 'TERMS') {
+      fetch('/api/terms')
+        .then(res => res.json())
+        .then(data => setTermsContent(data.content))
+        .catch(err => console.error("Falha ao carregar termos de uso", err));
     }
   }, [view]);
 
@@ -2506,6 +2516,38 @@ const App: React.FC = () => {
 
       )}
 
+      {/* View: Termos de Uso */}
+      {view === 'TERMS' && (
+        <div className="pt-32 pb-20 px-6 max-w-4xl mx-auto">
+          <button onClick={() => setView('MAIN')} className="mb-8 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Voltar
+          </button>
+          <div className="glass p-8 rounded-2xl border border-white/10">
+            <h1 className="text-3xl font-black text-white mb-8">Termos de Uso</h1>
+            <div className="prose prose-invert max-w-none whitespace-pre-wrap text-slate-300">
+              {termsContent || "Carregando..."}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View: Política de Privacidade */}
+      {view === 'PRIVACY' && (
+        <div className="pt-32 pb-20 px-6 max-w-4xl mx-auto">
+          <button onClick={() => setView('MAIN')} className="mb-8 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Voltar
+          </button>
+          <div className="glass p-8 rounded-2xl border border-white/10">
+            <h1 className="text-3xl font-black text-white mb-8">Política de Privacidade</h1>
+            <div className="prose prose-invert max-w-none whitespace-pre-wrap text-slate-300">
+              {privacyPolicy || "Carregando..."}
+            </div>
+          </div>
+        </div>
+      )}
+
       <PaymentModal
         isOpen={paymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
@@ -2518,6 +2560,16 @@ const App: React.FC = () => {
         paymentLoading={paymentLoading}
         error={error}
       />
+
+      <CookieBanner onPrivacyClick={() => setView('PRIVACY')} />
+      <VLibrasWidget />
+
+      {view !== 'MEETING_DETAILS' && (
+        <FooterCompliance
+          onTermsClick={() => setView('TERMS')}
+          onPrivacyClick={() => setView('PRIVACY')}
+        />
+      )}
 
     </div >
   );

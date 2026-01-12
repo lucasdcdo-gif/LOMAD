@@ -244,6 +244,9 @@ export const PaymentModal = ({
                             )}
                         </button>
                     </div>
+                    <p className="mt-4 text-center text-[10px] text-slate-500 leading-tight">
+                        Em conformidade com o Art. 49 do CDC, você tem 7 dias para cancelamento e reembolso total em caso de arrependimento.
+                    </p>
                 </form>
             </div>
         </div>

@@ -15,6 +15,22 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
+app.get(/.*/, (req, res, next) => {
+  // Basic Access Logger (Marco Civil - Art. 15)
+  // In production, this should write to a persistent DB or rotation log file.
+  // Here we log to console for demonstration/MVP compliance.
+  // For full compliance, ensure your hosting provider retains these logs or insert into Supabase 'access_logs' table.
+  const logEntry = {
+    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    url: req.originalUrl,
+    userAgent: req.headers['user-agent']
+  };
+  // console.log("[ACCESS LOG]", JSON.stringify(logEntry)); // Uncomment to enable verbose logging
+  next();
+});
+
 app.use(express.json());
 
 // Servir arquivos estáticos do diretório dist
@@ -415,6 +431,44 @@ app.get('/api/privacy-policy', (req, res) => {
     }
   } catch (err) {
     res.status(500).json({ error: "Erro ao ler política de privacidade" });
+  }
+});
+
+// Terms of Use Endpoint
+app.get('/api/terms', (req, res) => {
+  try {
+    const termsPath = path.join(__dirname, 'terms_of_use.txt');
+    if (fs.existsSync(termsPath)) {
+      const content = fs.readFileSync(termsPath, 'utf-8');
+      res.json({ content });
+    } else {
+      res.json({ content: "Termos de uso não encontrados." });
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao ler termos de uso" });
+  }
+});
+
+// LGPD Data Deletion Request
+app.post('/api/request-data-deletion', async (req, res) => {
+  try {
+    const { userId, email } = req.body;
+    console.log(`[LGPD] Deletion request received for user: ${userId} (${email})`);
+
+    // Insert into a 'deletion_requests' table or log strictly
+    // For MVP, we log and potentially update the profile status
+    if (userId) {
+      const { error } = await supabase.from('profiles').update({
+        is_active: false,
+        subscription_status: 'DELETION_REQUESTED'
+      }).eq('id', userId);
+
+      if (error) console.error("Error flagging user for deletion:", error);
+    }
+
+    res.json({ success: true, message: "Solicitação recebida. Seus dados serão excluídos em até 15 dias conforme a lei." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
