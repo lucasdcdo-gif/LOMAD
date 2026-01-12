@@ -248,19 +248,55 @@ app.post('/api/subscription/cancel', async (req, res) => {
     // Integração Asaas
     const { AsaasService } = await import('./lib/asaas.js');
 
-    // Cancelar no Asaas
+    // 1. Verificar elegibilidade para estorno (7 dias)
+    // Buscamos os pagamentos dessa assinatura para ver a data do último confirmado
+    const payments = await AsaasService.getSubscriptionPayments(user.subscription_id);
+    const lastPayment = payments
+      .filter(p => p.status === 'RECEIVED' || p.status === 'CONFIRMED')
+      .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())[0];
+
+    const now = Date.now();
+    let refunded = false;
+    let message = "Assinatura cancelada com sucesso. Seu acesso continua até o fim do período.";
+
+    if (lastPayment) {
+      const paymentDate = new Date(lastPayment.paymentDate || lastPayment.dateCreated).getTime(); // Prefer paymentDate
+      const diffDays = (now - paymentDate) / (1000 * 60 * 60 * 24);
+
+      if (diffDays <= 7) {
+        console.log(`[Refund] User ${userId} eligible for refund (Days: ${diffDays.toFixed(1)})`);
+        // 2. Realizar estorno automático
+        await AsaasService.refundPayment(lastPayment.id);
+        refunded = true;
+        message = "Assinatura cancelada. O reembolso do seu último pagamento foi solicitado (Prazo de 7 dias - CDC).";
+      }
+    }
+
+    // 3. Cancelar assinatura no Asaas
     await AsaasService.cancelSubscription(user.subscription_id);
 
-    // Atualizar status local
-    // Mantemos o role PRO até a data de expiração (subscription_end)
-    const { error: updateError } = await supabase.from('profiles').update({
-      subscription_status: 'CANCELED'
-      // Não mudamos subscription_end, pois o acesso continua até lá
-    }).eq('id', userId);
+    // 4. Atualizar status local
+    const updatePayload = {
+      subscription_status: refunded ? 'REFUNDED' : 'CANCELED'
+    };
+
+    // Se foi estornado, removemos o acesso PRO imediatamente
+    if (refunded) {
+      updatePayload.role = 'FREE';
+      updatePayload.subscription_end = Date.now(); // Expira agora
+    }
+    // Se não foi estornado, mantemos o role e o subscription_end original (acesso até o fim)
+
+    const { error: updateError } = await supabase.from('profiles').update(updatePayload).eq('id', userId);
 
     if (updateError) throw updateError;
 
-    res.json({ success: true, endDate: user.subscription_end });
+    res.json({
+      success: true,
+      refunded,
+      message,
+      endDate: refunded ? Date.now() : user.subscription_end
+    });
 
   } catch (err) {
     console.error("Cancel Error:", err);
