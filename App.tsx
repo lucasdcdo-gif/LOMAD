@@ -127,6 +127,9 @@ const App: React.FC = () => {
   // Meeting Details State
   const [transcriptionExpanded, setTranscriptionExpanded] = useState(false);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const MAX_RETRIES = 3;
+  const reconnectAttemptsRef = useRef(0);
+
   const [meetingToDelete, setMeetingToDelete] = useState<string | null>(null);
 
   // Payment State
@@ -517,6 +520,9 @@ const App: React.FC = () => {
       setError(null);
       setError(null);
 
+      // Reset Reconnect Counter
+      reconnectAttemptsRef.current = 0;
+
       // Reset State for new meeting
       setTranscriptions([]);
       transcriptionsRef.current = [];
@@ -555,7 +561,7 @@ const App: React.FC = () => {
       micStreamRef.current = micStream;
 
       setStatus(SessionStatus.CONNECTING);
-      connectToLiveAPI();
+      connectToLiveAPI(false);
     } catch (err: any) {
       console.error("Initiate Error:", err);
       setStatus(SessionStatus.IDLE);
@@ -563,7 +569,7 @@ const App: React.FC = () => {
     }
   };
 
-  const connectToLiveAPI = () => {
+  const connectToLiveAPI = (isReconnect = false) => {
     try {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
@@ -581,6 +587,12 @@ const App: React.FC = () => {
         callbacks: {
           onopen: () => {
             console.log("🎤 Sessão do Microfone conectada!");
+            reconnectAttemptsRef.current = 0; // Success reset
+            if (isReconnect) {
+              console.log("🔄 Reconexão bem-sucedida!");
+              // No need to setup processors again, just ensure status is correct
+              setStatus(SessionStatus.RECORDING);
+            }
           },
           onmessage: async (msg: LiveServerMessage) => {
             if (msg.serverContent?.inputTranscription) {
@@ -629,7 +641,9 @@ const App: React.FC = () => {
             // Ambas as sessões conectadas, iniciar gravação
             isRecordingRef.current = true;
             setStatus(SessionStatus.RECORDING);
-            setupAudioProcessors();
+            if (!isReconnect) {
+              setupAudioProcessors();
+            }
           },
           onmessage: async (msg: LiveServerMessage) => {
             if (msg.serverContent?.inputTranscription) {
@@ -666,13 +680,25 @@ const App: React.FC = () => {
             // Sanitize log: Don't log full event object which contains target URL with Key
             console.warn(`🖥️ Sessão da Tela fechada. Code: ${event.code}, Reason: ${event.reason || 'N/A'}`);
 
+
             if (isRecordingRef.current) {
               // Auto-recovery attempt or graceful stop
               if (event.code === 1006 || event.code === 1011) {
-                // Abnormal closure - Try to save what we have
-                console.log("Abnormal closure detected, saving current state...");
-                handleStop();
-                setError(`A conexão foi interrompida (Erro ${event.code}). As notas foram salvas.`);
+                if (reconnectAttemptsRef.current < MAX_RETRIES) {
+                  reconnectAttemptsRef.current++;
+                  const delay = 2000;
+                  console.log(`⚠️ Conexão perdida (Tentativa ${reconnectAttemptsRef.current}/${MAX_RETRIES}). Reconectando em ${delay}ms...`);
+                  setError(`Conexão instável... Reconectando (${reconnectAttemptsRef.current}/${MAX_RETRIES})`);
+
+                  setTimeout(() => {
+                    if (isRecordingRef.current) connectToLiveAPI(true);
+                  }, delay);
+                  return; // Don't stop yet
+                } else {
+                  console.log("❌ Máximo de tentativas excedido. Salvando reunião.");
+                  setError(`A conexão caiu definitivamente após ${MAX_RETRIES} tentativas. Reunião salva.`);
+                  handleStop();
+                }
               } else {
                 handleStop();
               }
