@@ -1340,6 +1340,22 @@ const App: React.FC = () => {
                   <button onClick={handleStop} className="px-10 md:px-14 py-4 md:py-5 font-black rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-500/30 hover:scale-105 text-sm uppercase tracking-wider">Encerrar</button>
                 </div>
 
+                {/* Persistent Warning Alert */}
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 flex items-start gap-4 animate-fade-in">
+                  <div className="p-2 bg-amber-500/20 rounded-lg shrink-0">
+                    <svg className="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-amber-200 font-bold text-lg">Atenção Obrigatória</h4>
+                    <p className="text-amber-200/80 text-sm leading-relaxed">
+                      Para que a gravação funcione, você <strong>DEVE</strong> ter marcado a opção <span className="text-amber-100 font-bold">"Compartilhar áudio do sistema"</span> ao selecionar a tela.
+                    </p>
+                    <p className="text-amber-200/60 text-xs mt-2 italic">
+                      * A transcrição é realizada por IA de terceiros e pode apresentar instabilidades momentâneas.
+                    </p>
+                  </div>
+                </div>
+
                 <div className="glass rounded-[2.5rem] p-10 md:p-12 overflow-y-auto h-[450px] border border-white/10 text-left flex flex-col-reverse gap-5 shadow-2xl bg-gradient-to-b from-slate-950/50 to-slate-900/50">
                   {transcriptions.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full gap-4">
