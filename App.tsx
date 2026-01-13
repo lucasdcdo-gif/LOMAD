@@ -138,6 +138,7 @@ const App: React.FC = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editForm, setEditForm] = useState({ phone: '', postalCode: '', addressNumber: '' });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [consentGiven, setConsentGiven] = useState(false); // Compliance LGPD
   const [cardForm, setCardForm] = useState({
     number: '',
     name: '',
@@ -245,6 +246,7 @@ const App: React.FC = () => {
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setView('MAIN');
+        setConsentGiven(false);
       }
     });
 
@@ -522,6 +524,14 @@ const App: React.FC = () => {
       setChatMessages([]);
       setSelectedMeeting(null);
       currentInputTranscription.current = '';
+
+      setTranscriptions([]);
+      transcriptionsRef.current = [];
+      setPartialTranscript('');
+      setChatMessages([]);
+      setSelectedMeeting(null);
+      currentInputTranscription.current = '';
+      setConsentGiven(false); // Reset consent for next time
 
       setStatus(SessionStatus.PERMISSIONS);
 
