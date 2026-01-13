@@ -1138,6 +1138,7 @@ const App: React.FC = () => {
                   Iniciar Transcrição
                 </button>
                 <button onClick={() => setView('HOW_IT_WORKS')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Como Funciona</button>
+                <button onClick={() => setView('ABOUT')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Quem Somos</button>
                 <button onClick={() => setView('HISTORY')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Histórico</button>
                 <div className="flex items-center gap-2">
                   {user.role === 'MASTER' && (
@@ -1163,6 +1164,7 @@ const App: React.FC = () => {
             {!user && (
               <>
                 <button onClick={() => setView('HOW_IT_WORKS')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Como Funciona</button>
+                <button onClick={() => setView('ABOUT')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Quem Somos</button>
                 <button onClick={() => setView('LOGIN')} className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all">Entrar</button>
               </>
             )}
@@ -2604,6 +2606,89 @@ const App: React.FC = () => {
           </div>
         </div>
 
+      )}
+
+      {/* ABOUT PAGE (Quem Somos) */}
+      {view === 'ABOUT' && (
+        <div className="w-full max-w-4xl mx-auto py-16 px-6 animate-fade-in">
+          <div className="text-center mb-16">
+            <h1 className="text-5xl md:text-6xl font-black text-white mb-6">
+              Nossa <span className="bg-gradient-to-r from-cyan-500 to-emerald-500 bg-clip-text text-transparent">Missão</span>
+            </h1>
+            <p className="text-slate-400 text-xl max-w-2xl mx-auto">Transformando a maneira como o mundo captura e processa informações.</p>
+          </div>
+
+          <div className="space-y-12">
+            <div className="glass p-10 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+                <LomadLogo size={300} withText={false} />
+              </div>
+              <h2 className="text-3xl font-black text-white mb-6 relative z-10">A Origem</h2>
+              <p className="text-slate-300 text-lg leading-relaxed relative z-10">
+                A LOMAD nasceu da necessidade de tornar reuniões mais produtivas, acessíveis e inteligentes.
+                Em um mundo onde a informação flui rapidamente, perder detalhes importantes de uma conversa pode custar caro.
+                Nossa fundação se baseia na crença de que a tecnologia deve servir como uma extensão da capacidade humana,
+                permitindo que profissionais foquem no que realmente importa: **criar, decidir e agir**, enquanto nós cuidamos de registrar e organizar.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="glass p-8 rounded-[2rem] border border-cyan-500/20 bg-cyan-900/5">
+                <h3 className="text-xl font-black text-white mb-4 uppercase tracking-widest text-cyan-400">Visão</h3>
+                <p className="text-slate-300">
+                  Ser a plataforma referência global em inteligência de reuniões, eliminando barreiras de comunicação e garantindo que nenhuma ideia brilhante seja esquecida.
+                </p>
+              </div>
+              <div className="glass p-8 rounded-[2rem] border border-emerald-500/20 bg-emerald-900/5">
+                <h3 className="text-xl font-black text-white mb-4 uppercase tracking-widest text-emerald-400">Valores</h3>
+                <ul className="space-y-3 text-slate-300">
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>Privacidade e Segurança em primeiro lugar</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>Inovação contínua</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>Transparência radical</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONTACT PAGE (Contatos) */}
+      {view === 'CONTACT' && (
+        <div className="w-full max-w-4xl mx-auto py-16 px-6 animate-fade-in">
+          <div className="text-center mb-16">
+            <h1 className="text-4xl md:text-5xl font-black text-white mb-4">Fale Conosco</h1>
+            <p className="text-slate-400 text-lg">Estamos aqui para ajudar você e sua empresa.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="glass p-8 rounded-3xl border border-white/10 flex flex-col items-center text-center hover:scale-105 transition-transform duration-300">
+              <div className="w-14 h-14 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-6">
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Email</h3>
+              <p className="text-slate-400 text-sm mb-4">Para dúvidas gerais e suporte</p>
+              <a href="mailto:contato@lomad.com.br" className="text-blue-400 font-bold hover:text-blue-300 transition-colors">contato@lomad.com.br</a>
+            </div>
+
+            <div className="glass p-8 rounded-3xl border border-white/10 flex flex-col items-center text-center hover:scale-105 transition-transform duration-300">
+              <div className="w-14 h-14 rounded-2xl bg-green-500/20 text-green-400 flex items-center justify-center mb-6">
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Telefone</h3>
+              <p className="text-slate-400 text-sm mb-4">Segunda a Sexta, 9h às 18h</p>
+              <span className="text-white font-bold">(11) 99999-9999</span>
+            </div>
+
+            <div className="glass p-8 rounded-3xl border border-white/10 flex flex-col items-center text-center hover:scale-105 transition-transform duration-300">
+              <div className="w-14 h-14 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-6">
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Endereço</h3>
+              <p className="text-slate-400 text-sm mb-4">Venha nos visitar</p>
+              <span className="text-white font-bold text-sm">Av. Paulista, 1000<br />São Paulo, SP</span>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* View: Termos de Uso */}
