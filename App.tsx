@@ -655,22 +655,33 @@ const App: React.FC = () => {
               setPartialTranscript(`🎤 ${currentMicTranscription.current}`);
             }
           },
-          onerror: (e) => {
-            console.error("🖥️ Erro na sessão da Tela:", e);
+          onerror: (e: any) => {
+            // Sanitize log: Remove any potential API key or sensitive URL params
+            const safeError = e?.message || "Unknown error";
+            console.error("🖥️ Erro na sessão da Tela:", safeError);
             setStatus(SessionStatus.ERROR);
-            setError("Conexão com IA interrompida.");
+            setError("Conexão com IA interrompida (Instabilidade na Rede).");
           },
           onclose: (event: any) => {
-            console.warn("🖥️ Sessão da Tela fechada.", event);
+            // Sanitize log: Don't log full event object which contains target URL with Key
+            console.warn(`🖥️ Sessão da Tela fechada. Code: ${event.code}, Reason: ${event.reason || 'N/A'}`);
 
             if (isRecordingRef.current) {
-              handleStop();
+              // Auto-recovery attempt or graceful stop
+              if (event.code === 1006 || event.code === 1011) {
+                // Abnormal closure - Try to save what we have
+                console.log("Abnormal closure detected, saving current state...");
+                handleStop();
+                setError(`A conexão foi interrompida (Erro ${event.code}). As notas foram salvas.`);
+              } else {
+                handleStop();
+              }
             } else {
               setStatus(SessionStatus.IDLE);
             }
 
-            if (event.code === 4003 || event.code === 1006 || (event.reason && event.reason.includes('API key'))) {
-              setError("Sistema fora, tente novamente mais tarde");
+            if (event.code === 4003 || (event.reason && event.reason.includes('API key'))) {
+              setError("Erro de Autenticação (Chave inválida ou expirada).");
             }
           }
         },
