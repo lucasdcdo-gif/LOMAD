@@ -547,6 +547,17 @@ const App: React.FC = () => {
         audio: true
       });
       console.log("Display Media obtained:", displayStream.id);
+
+      // Check for System Audio
+      if (displayStream.getAudioTracks().length === 0) {
+        console.warn("⚠️ No system audio track detected!");
+        setError("⚠️ Áudio do sistema NÃO detectado! Pare e compartilhe novamente marcando 'Compartilhar áudio'.");
+        // We don't stop here to allow mic-only recording if user really wants, 
+        // but the error message will be persistent and red.
+      } else {
+        console.log("✓ System Audio detected.");
+      }
+
       displayStreamRef.current = displayStream;
 
       // Monitor track ending
