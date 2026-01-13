@@ -629,11 +629,12 @@ const App: React.FC = () => {
               setPartialTranscript(`🖥️ ${currentScreenTranscription.current}`);
             }
           },
-          onerror: (e) => {
-            console.error("🎤 Erro na sessão do Microfone:", e);
+          onerror: (e: any) => {
+            const safeError = e?.message || "Unknown error";
+            console.error("🎤 Erro na sessão do Microfone:", safeError);
           },
           onclose: (event: any) => {
-            console.warn("🎤 Sessão do Microfone fechada.", event);
+            console.warn(`🎤 Sessão do Microfone fechada. Code: ${event.code}`);
           }
         },
         config: {
