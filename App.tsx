@@ -1428,13 +1428,49 @@ const App: React.FC = () => {
                     <p className="font-semibold text-sm">{new Date(selectedMeeting.timestamp).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })} às {new Date(selectedMeeting.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDeleteMeeting(selectedMeeting.id)}
-                  className="px-4 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  Excluir
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (!selectedMeeting) return;
+                      const hasTranscriptions = Array.isArray(selectedMeeting.transcriptions) && selectedMeeting.transcriptions.length > 0;
+
+                      let content = `TÍTULO: ${selectedMeeting.title}\n`;
+                      content += `DATA: ${new Date(selectedMeeting.timestamp).toLocaleDateString('pt-BR')} ${new Date(selectedMeeting.timestamp).toLocaleTimeString('pt-BR')}\n`;
+                      content += `\n--- RESUMO ---\n${selectedMeeting.summary || "Sem resumo disponível."}\n`;
+                      content += `\n--- TRANSCRIÇÃO ---\n`;
+
+                      if (hasTranscriptions) {
+                        (selectedMeeting.transcriptions as TranscriptionEntry[]).forEach(t => {
+                          content += `[${new Date(t.timestamp).toLocaleTimeString()}] ${t.role === 'model' ? 'AI' : 'Você'}: ${t.text}\n`;
+                        });
+                      } else {
+                        content += "Nenhuma transcrição disponível.";
+                      }
+
+                      content += `\n--- NOTAS ---\n${meetingNotes || ""}\n`;
+
+                      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `meeting_${selectedMeeting.id}.txt`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Baixar TXT
+                  </button>
+                  <button
+                    onClick={() => handleDeleteMeeting(selectedMeeting.id)}
+                    className="px-4 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    Excluir
+                  </button>
+                </div>
               </div>
             </div>
 
