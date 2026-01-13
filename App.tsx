@@ -2503,6 +2503,32 @@ const App: React.FC = () => {
             </div>
           </div>
 
+          {/* Seção 3: Conformidade e Segurança (LGPD) */}
+          <div className="mb-16">
+            <div className="glass p-8 rounded-2xl border border-emerald-500/20 bg-emerald-900/10">
+              <div className="flex items-start gap-6">
+                <div className="flex-shrink-0 hidden md:block">
+                  <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center">
+                    <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-white mb-2">Segurança e Retenção de Dados</h3>
+                  <p className="text-slate-300 text-lg mb-4">
+                    Para garantir sua privacidade e conformidade com a LGPD, implementamos uma política de retenção automática.
+                  </p>
+                  <div className="bg-slate-950/50 rounded-xl p-4 border border-white/5">
+                    <p className="text-slate-400 text-sm">
+                      <span className="font-bold text-emerald-400">Importante:</span> Todas as transcrições são armazenadas de forma segura e <span className="text-white font-bold">excluídas automaticamente após 30 dias</span> da data de gravação. Recomendamos exportar os dados importantes antes deste prazo.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* CTA */}
           <div className="text-center">
             <button
