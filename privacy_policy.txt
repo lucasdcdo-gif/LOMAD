@@ -1,38 +1,61 @@
-POLÍTICA DE PRIVACIDADE - MEETINGMIND
+POLÍTICA DE PRIVACIDADE - LOMAD
 
-Em conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei 13.709/18).
+A LOMAD está comprometida com a privacidade e a proteção de dados de seus usuários. Esta Política de Privacidade descreve como os dados são tratados em nossa plataforma, em conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei 13.709/18) e o Marco Civil da Internet (Lei 12.965/14).
 
-1. COLETA DE DADOS
-Coletamos os seguintes dados pessoais:
-- Identificação: Nome, Email, CPF (para emissão de nota fiscal).
-- Contato: Telefone, Endereço.
-- Uso: Logs de acesso (IP, Data/Hora) exigidos pelo Marco Civil da Internet.
-- Áudio/Texto: Gravações e transcrições das suas reuniões.
+1. OS PAPÉIS NA PROTEÇÃO DE DADOS
+Para fins da LGPD, estabelece-se que:
 
-2. FINALIDADE DO USO
-- Fornecer o serviço de transcrição.
-- Processar pagamentos e assinaturas.
-- Cumprir obrigações legais (fiscais e judiciais).
-- Melhorar a segurança e performance da plataforma.
+O USUÁRIO é o Controlador de Dados, sendo o único responsável por obter o consentimento prévio, livre e expresso de todos os participantes das reuniões antes de iniciar qualquer transcrição.
 
-3. ARMAZENAMENTO E SEGURANÇA
-Seus dados são armazenados em ambiente seguro (Supabase/Google Cloud) com criptografia. Os logs de acesso são mantidos por 6 meses, conforme Art. 15 do Marco Civil da Internet.
+A LOMAD atua como Operadora de Dados, fornecendo a infraestrutura tecnológica e o processamento de Inteligência Artificial sob comando e responsabilidade do Usuário.
 
-4. COMPARTILHAMENTO
-Não vendemos seus dados. Compartilhamos apenas com processadores essenciais para o serviço:
-- Processador de Pagamentos (Asaas)
-- Provedor de Nuvem e IA (Google Cloud/Supabase)
+2. COLETA E TRATAMENTO DE DADOS
+A LOMAD coleta e processa os seguintes dados:
 
-5. SEUS DIREITOS (LGPD)
-Você tem direito a:
-- Confirmar a existência de tratamento de dados.
-- Acessar seus dados.
-- Corrigir dados incompletos ou desatualizados.
-- Solicitar a exclusão de dados desnecessários.
-- Revogar o consentimento a qualquer momento.
+Identificação e Faturamento: Nome, E-mail, CPF/CNPJ e Endereço (necessários para gestão de conta e emissão de notas fiscais).
 
-6. EXCLUSÃO DE DADOS
-Para solicitar a exclusão completa de sua conta e dados, utilize a opção "Excluir Conta" no seu perfil ou envie um email para privacidade@meetingmind.com.br.
+Logs de Acesso: Endereço IP, data, hora e metadados de conexão, armazenados por 6 meses conforme exigência do Art. 15 do Marco Civil da Internet.
 
-7. COOKIES
-Utilizamos cookies essenciais para autenticação e cookies analíticos para melhorar o serviço. Você pode gerenciar suas preferências no banner de cookies.
+Áudio e Texto:
+
+Áudio: O processamento ocorre via navegador de forma efêmera. A LOMAD não armazena os arquivos de áudio originais após a conclusão da conversão em texto.
+
+Transcrição (Texto): O conteúdo resultante é armazenado em ambiente criptografado para acesso exclusivo do Usuário através de sua conta.
+
+3. FINALIDADE E INTELIGÊNCIA ARTIFICIAL
+Os dados são processados estritamente para:
+
+Prestar o serviço de transcrição automática através da API de Inteligência Artificial (Google Gemini).
+
+Privacidade de IA: O processamento é realizado via camada Enterprise, o que garante que o conteúdo das transcrições não é utilizado para treinamento de modelos públicos de IA pelos provedores de infraestrutura.
+
+Gestão de pagamentos e assinaturas através da plataforma Asaas.
+
+4. RESPONSABILIDADE E ISENÇÃO
+O Usuário declara e garante que:
+
+Informou de maneira clara a todos os participantes sobre a realização da transcrição da reunião.
+
+Assume total responsabilidade civil e criminal por transcrições realizadas sem o consentimento dos interlocutores, isentando a LOMAD de qualquer litígio decorrente do uso indevido da ferramenta por parte do Controlador.
+
+5. ARMAZENAMENTO E RETENÇÃO
+Segurança: Os dados são hospedados em infraestrutura de alta disponibilidade (Google Cloud / Supabase) com criptografia de ponta a ponta.
+
+Exclusão Automática de Transcrições: Visando a segurança dos dados e o princípio da minimização da LGPD, todas as transcrições de texto com idade superior a 30 (trinta) dias serão excluídas automaticamente e de forma definitiva dos nossos servidores.
+
+Responsabilidade de Backup: É de inteira responsabilidade do Usuário realizar o download ou cópia das transcrições dentro deste prazo. Uma vez decorrido o período de 30 dias, os dados não poderão ser recuperados.
+
+6. SEUS DIREITOS (LGPD)
+O Usuário e os titulares dos dados podem, a qualquer momento, via e-mail privacidade@lomad.com.br:
+
+Acessar, corrigir ou solicitar a exclusão de seus dados pessoais.
+
+Revogar o consentimento de tratamento de dados de faturamento e conta.
+
+Solicitar a portabilidade dos dados de transcrição (dentro do prazo de retenção de 30 dias).
+
+7. COMPARTILHAMENTO DE DADOS
+A LOMAD não comercializa dados de usuários. O compartilhamento ocorre apenas com operadores logísticos e tecnológicos necessários para a operação do serviço (Google Cloud, Supabase e Asaas), todos em conformidade com as diretrizes de segurança da LGPD.
+
+8. COOKIES
+Utilizamos cookies essenciais para manter a sessão do usuário ativa e garantir a segurança da autenticação na plataforma.
