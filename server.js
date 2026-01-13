@@ -7,6 +7,7 @@ import { GoogleGenAI } from '@google/genai';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import logger, { logRequest } from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,19 +16,14 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.get(/.*/, (req, res, next) => {
-  // Basic Access Logger (Marco Civil - Art. 15)
-  // In production, this should write to a persistent DB or rotation log file.
-  // Here we log to console for demonstration/MVP compliance.
-  // For full compliance, ensure your hosting provider retains these logs or insert into Supabase 'access_logs' table.
-  const logEntry = {
-    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-    timestamp: new Date().toISOString(),
-    method: req.method,
-    url: req.originalUrl,
-    userAgent: req.headers['user-agent']
-  };
-  // console.log("[ACCESS LOG]", JSON.stringify(logEntry)); // Uncomment to enable verbose logging
+app.get(/.*/, logRequest);
+
+// Middleware de tratamento de erro para JSON malformado
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    logger.error(`JSON Parse Error: ${err.message}`);
+    return res.status(400).send({ status: 404, message: err.message }); // Bad request
+  }
   next();
 });
 
@@ -41,11 +37,11 @@ const supabase = createClient(
   process.env.SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_KEY || ''
 );
-console.log("--- DEBUG STARTUP ---");
-console.log(`[Server] URL: ${process.env.SUPABASE_URL}`);
-console.log(`[Server] Key Length: ${(process.env.SUPABASE_SERVICE_KEY || '').length}`);
-console.log(`[Server] Key Prefix: ${(process.env.SUPABASE_SERVICE_KEY || '').substring(0, 15)}...`);
-console.log("--- DEBUG END ---");
+
+logger.info("--- SERVER STARTUP ---");
+logger.info(`[Config] Supabase URL: ${process.env.SUPABASE_URL}`);
+// Security: Don't log full keys
+logger.info(`[Config] Key Check: ${(process.env.SUPABASE_SERVICE_KEY || '').length > 10 ? 'OK' : 'MISSING'}`);
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || process.env.GEMINI_API_KEY });
 
@@ -62,7 +58,7 @@ app.post('/api/meetings', async (req, res) => {
       .single();
 
     if (profileError) {
-      console.error("Erro ao buscar perfil para verificação de limite:", profileError);
+      logger.error("Erro ao buscar perfil para verificação de limite: " + JSON.stringify(profileError));
       // Opcional: permitir salvar se falhar a verificação ou bloquear. Vamos bloquear por segurança.
       throw new Error("Erro ao verificar limite de conta.");
     }
@@ -82,7 +78,7 @@ app.post('/api/meetings', async (req, res) => {
     }).eq('id', meetingData.user_id);
 
     if (updateError) {
-      console.error("CRITICAL: Falha ao incrementar meetings_recorded para usuario " + meetingData.user_id, updateError);
+      logger.error("CRITICAL: Falha ao incrementar meetings_recorded para usuario " + meetingData.user_id + " - " + JSON.stringify(updateError));
     }
 
     res.json(data);
@@ -151,7 +147,7 @@ app.post('/api/checkout', async (req, res) => {
     const cleanNumber = cardData.number.replace(/\s/g, '');
     // Buscar preços configurados (tabela pricing, único registro)
     const { data: pricingData, error: pricingError } = await supabase.from('pricing').select('*').single();
-    if (pricingError) console.warn("Pricing lookup error:", pricingError);
+    if (pricingError) logger.warn("Pricing lookup error: " + JSON.stringify(pricingError));
 
     // Fallback para valores padrão se falhar
     const defaultMonthly = 27.90;
@@ -229,7 +225,7 @@ app.post('/api/checkout', async (req, res) => {
     }
 
   } catch (err) {
-    console.error("Checkout Error:", err);
+    logger.error("Checkout Error: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -264,7 +260,7 @@ app.post('/api/subscription/cancel', async (req, res) => {
       const diffDays = (now - paymentDate) / (1000 * 60 * 60 * 24);
 
       if (diffDays <= 7) {
-        console.log(`[Refund] User ${userId} eligible for refund (Days: ${diffDays.toFixed(1)})`);
+        logger.info(`[Refund] User ${userId} eligible for refund (Days: ${diffDays.toFixed(1)})`);
         // 2. Realizar estorno automático
         await AsaasService.refundPayment(lastPayment.id);
         refunded = true;
@@ -299,7 +295,7 @@ app.post('/api/subscription/cancel', async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Cancel Error:", err);
+    logger.error("Cancel Error: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -321,13 +317,13 @@ app.post('/api/profiles/create', async (req, res) => {
       .single();
 
     if (error) {
-      console.error("Profile creation error:", error);
+      logger.error("Profile creation error: " + JSON.stringify(error));
       return res.status(500).json({ error: error.message });
     }
 
     res.json(data);
   } catch (err) {
-    console.error("Create profile exception:", err);
+    logger.error("Create profile exception: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -369,14 +365,14 @@ app.put('/api/profile', async (req, res) => {
           });
         }
       } catch (asaasErr) {
-        console.error("Erro ao sincronizar com Asaas (ignorado para não bloquear UI):", asaasErr.message);
+        logger.error("Erro ao sincronizar com Asaas (ignorado para não bloquear UI): " + asaasErr.message);
       }
     }
 
     res.json({ success: true });
 
   } catch (err) {
-    console.error("Profile Update Error:", err);
+    logger.error("Profile Update Error: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -489,7 +485,7 @@ app.get('/api/terms', (req, res) => {
 app.post('/api/request-data-deletion', async (req, res) => {
   try {
     const { userId, email } = req.body;
-    console.log(`[LGPD] Deletion request received for user: ${userId} (${email})`);
+    logger.info(`[LGPD] Deletion request received for user: ${userId} (${email})`);
 
     // Insert into a 'deletion_requests' table or log strictly
     // For MVP, we log and potentially update the profile status
@@ -499,7 +495,7 @@ app.post('/api/request-data-deletion', async (req, res) => {
         subscription_status: 'DELETION_REQUESTED'
       }).eq('id', userId);
 
-      if (error) console.error("Error flagging user for deletion:", error);
+      if (error) logger.error("Error flagging user for deletion: " + JSON.stringify(error));
     }
 
     res.json({ success: true, message: "Solicitação recebida. Seus dados serão excluídos em até 15 dias conforme a lei." });
@@ -532,11 +528,11 @@ app.post('/api/ai/chat', async (req, res) => {
     const { meetingContext, userPrompt, history } = req.body;
 
     // Construct the prompt with context
-    console.log(`[Chat] Receiving context length: ${meetingContext?.length || 0}`);
+    logger.info(`[Chat] Receiving context length: ${meetingContext?.length || 0}`);
 
     // Validar se há contexto
     if (!meetingContext || meetingContext.trim().length === 0) {
-      console.warn("[Chat] Empty meeting context rejected");
+      logger.warn("[Chat] Empty meeting context rejected");
       return res.json({ response: "Por favor, selecione uma reunião com transcrição válida antes de iniciar o chat." });
     }
 
@@ -576,7 +572,7 @@ app.post('/api/ai/chat', async (req, res) => {
 
     res.json({ response: result.text });
   } catch (err) {
-    console.error("Chat Error:", err);
+    logger.error("Chat Error: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -590,7 +586,19 @@ app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`\\n🚀 MeetingMind Ativo em http://localhost:${PORT}\\n`);
+
+// Tratamento de erros globais (Crash Reporting)
+process.on('uncaughtException', (err) => {
+  logger.error(`UNCAUGHT EXCEPTION: ${err.message}`, { stack: err.stack });
+  // Opcional: process.exit(1)? Em produção no Render, ele reinicia auto.
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error(`UNHANDLED REJECTION: ${JSON.stringify(reason)}`);
+});
+
+const port = process.env.PORT || 3001;
+app.listen(port, () => {
+  logger.info(`🚀 MeetingMind Ativo em http://localhost:${port}`);
+  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
