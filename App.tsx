@@ -1219,9 +1219,27 @@ const App: React.FC = () => {
                         </div>
                       </div>
                     )}
+                    {/* Checkbox de Consentimento LGPD */}
+                    <div className="flex items-start gap-3 bg-slate-800/50 p-4 rounded-xl border border-white/5 max-w-md mx-auto mb-6">
+                      <div className="relative flex items-center">
+                        <input
+                          id="consent-checkbox"
+                          type="checkbox"
+                          checked={consentGiven}
+                          onChange={(e) => setConsentGiven(e.target.checked)}
+                          className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-slate-500 bg-slate-900 transition-all checked:border-cyan-500 checked:bg-cyan-500 hover:border-cyan-400"
+                        />
+                        <svg className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-0 peer-checked:opacity-100 text-white transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      </div>
+                      <label htmlFor="consent-checkbox" className="text-sm text-slate-300 cursor-pointer select-none text-left">
+                        Declaro que informei todos os participantes sobre a gravação desta reunião e obtive o consentimento necessário, conforme os <button onClick={() => setView('TERMS')} className="text-cyan-400 hover:underline">Termos de Uso</button>.
+                      </label>
+                    </div>
+
                     <button
                       onClick={handleInitiate}
-                      className="group relative w-full py-10 md:py-12 rounded-[2rem] font-black text-3xl md:text-4xl text-white shadow-2xl hover:shadow-cyan-500/30 hover:scale-[1.02] transition-all bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 overflow-hidden"
+                      disabled={!consentGiven}
+                      className={`group relative w-full py-10 md:py-12 rounded-[2rem] font-black text-3xl md:text-4xl text-white shadow-2xl transition-all overflow-hidden ${consentGiven ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:shadow-cyan-500/30 hover:scale-[1.02] cursor-pointer' : 'bg-slate-700 opacity-50 cursor-not-allowed'}`}
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                       <span className="relative flex items-center justify-center gap-3">
