@@ -632,9 +632,31 @@ const App: React.FC = () => {
           onerror: (e: any) => {
             const safeError = e?.message || "Unknown error";
             console.error("🎤 Erro na sessão do Microfone:", safeError);
+            // Don't reset status if we are already recording, just warn
+            if (!isRecordingRef.current) {
+              setStatus(SessionStatus.ERROR);
+            }
           },
           onclose: (event: any) => {
-            console.warn(`🎤 Sessão do Microfone fechada. Code: ${event.code}`);
+            console.warn(`🎤 Sessão do Microfone fechada. Code: ${event.code}, Reason: ${event.reason || 'N/A'}`);
+
+            if (isRecordingRef.current) {
+              const isAbnormal = event.code === 1006 || event.code === 1011 || !event.code;
+
+              if (isAbnormal) {
+                if (reconnectAttemptsRef.current < MAX_RETRIES) {
+                  reconnectAttemptsRef.current++;
+                  const delay = 2000;
+                  console.log(`⚠️ Conexão perdida do Microfone (Tentativa ${reconnectAttemptsRef.current}/${MAX_RETRIES}). Reconectando em ${delay}ms...`);
+                  setError(`Conexão instável do Microfone... Reconectando (${reconnectAttemptsRef.current}/${MAX_RETRIES})`);
+                  // No need to call connectToLiveAPI again, screen session will handle the full reconnect
+                } else {
+                  console.log("❌ Máximo de tentativas excedido para o Microfone. A gravação pode continuar com áudio da tela.");
+                  setError(`A conexão do Microfone caiu definitivamente após ${MAX_RETRIES} tentativas.`);
+                  // We don't call handleStop here, as screen session might still be active
+                }
+              }
+            }
           }
         },
         config: {
@@ -685,17 +707,24 @@ const App: React.FC = () => {
             // Sanitize log: Remove any potential API key or sensitive URL params
             const safeError = e?.message || "Unknown error";
             console.error("🖥️ Erro na sessão da Tela:", safeError);
-            setStatus(SessionStatus.ERROR);
-            setError("Conexão com IA interrompida (Instabilidade na Rede).");
+
+            // Critical Fix: Don't change status to ERROR if we are active.
+            // This prevents the UI from flipping to IDLE/Start Screen during glitches.
+            if (!isRecordingRef.current) {
+              setStatus(SessionStatus.ERROR);
+            }
+            setError("Instabilidade na conexão. O sistema tentará reconectar...");
           },
           onclose: (event: any) => {
             // Sanitize log: Don't log full event object which contains target URL with Key
             console.warn(`🖥️ Sessão da Tela fechada. Code: ${event.code}, Reason: ${event.reason || 'N/A'}`);
 
-
             if (isRecordingRef.current) {
               // Auto-recovery attempt or graceful stop
-              if (event.code === 1006 || event.code === 1011) {
+              // Include undefined code as abnormal just in case
+              const isAbnormal = event.code === 1006 || event.code === 1011 || !event.code;
+
+              if (isAbnormal) {
                 if (reconnectAttemptsRef.current < MAX_RETRIES) {
                   reconnectAttemptsRef.current++;
                   const delay = 2000;
