@@ -247,6 +247,11 @@ const App: React.FC = () => {
       } else if (session?.user) {
         await fetchProfile(session.user.id, session.user.email, true);
       } else if (event === 'SIGNED_OUT') {
+        // Prevent clearing state if recording is active to avoid UI reset
+        if (isRecordingRef.current) {
+          console.warn("⚠️ Signed out event received during active recording. Ignoring UI reset.");
+          return;
+        }
         setUser(null);
         setView('MAIN');
         setConsentGiven(false);
@@ -257,6 +262,18 @@ const App: React.FC = () => {
     fetchPublicPricing();
     return () => { authListener.subscription.unsubscribe(); };
   }, []);
+
+  // DEBUG: Trace why status becomes IDLE during recording
+  useEffect(() => {
+    if (status === SessionStatus.IDLE && isRecordingRef.current) {
+      console.error("🚨 CRITICAL STATE MISMATCH DETECTED!");
+      console.error("Status check: isRecordingRef=true but status=IDLE");
+
+      // Auto-Recovery attempt
+      console.warn("🔧 Attempting auto-recovery of UI state...");
+      setStatus(SessionStatus.RECORDING);
+    }
+  }, [status]);
 
   useEffect(() => {
     if (view === 'REGISTER' || view === 'PRIVACY') {
