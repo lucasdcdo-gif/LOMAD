@@ -2717,6 +2717,144 @@ const App: React.FC = () => {
             </div>
           </div>
 
+          {/* Seção 2.5: Diferenciais do LOMAD */}
+          <div className="mb-20">
+            <h2 className="text-4xl font-black text-white mb-4 text-center">
+              Por que escolher o <span className="bg-gradient-to-r from-cyan-500 to-emerald-500 bg-clip-text text-transparent">LOMAD</span>?
+            </h2>
+            <p className="text-slate-400 text-center mb-12 max-w-3xl mx-auto">
+              Recursos poderosos de IA que transformam suas reuniões em insights acionáveis
+            </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              {/* Feature 1: Resumos Automáticos com IA */}
+              <div className="glass p-8 rounded-3xl border border-white/10 hover:border-cyan-500/30 transition-all group">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-black text-white mb-2">Resumos Automáticos com IA</h3>
+                    <p className="text-slate-300 text-base mb-4">
+                      Receba resumos inteligentes de suas reuniões à medida que acontecem, com perguntas personalizadas e itens de ação.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Perguntas personalizadas de IA sobre o conteúdo</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Geração automática de itens de ação</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Acesso a resumos de reuniões anteriores</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature 2: Chat IA Acionável */}
+              <div className="glass p-8 rounded-3xl border border-white/10 hover:border-emerald-500/30 transition-all group">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-black text-white mb-2">Insights de IA com Um Clique</h3>
+                    <p className="text-slate-300 text-base mb-4">
+                      Transforme suas transcrições em insights acionáveis instantaneamente. Gere e-mails, itens de ação e solicitações reutilizáveis.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Resumos de reuniões com um clique</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Criação de e-mails de acompanhamento automáticos</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Perguntas personalizadas reutilizáveis</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Feature 3: Transcrição Ao Vivo Sem Bots */}
+              <div className="glass p-8 rounded-3xl border border-white/10 hover:border-cyan-500/30 transition-all group">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-black text-white mb-2">Transcrição Ao Vivo Sem Bots</h3>
+                    <p className="text-slate-300 text-base mb-4">
+                      Capture reuniões sem que nenhum bot entre na chamada. Privacidade total e transcrição em tempo real.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Nenhum bot entra na chamada</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Compatível com Google Meet, Zoom, MS Teams</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Transcrição em tempo real enquanto você fala</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature 4: Identificação de Falantes + Idiomas */}
+              <div className="glass p-8 rounded-3xl border border-white/10 hover:border-pink-500/30 transition-all group">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-black text-white mb-2">Identificação Inteligente</h3>
+                    <p className="text-slate-300 text-base mb-4">
+                      Identifique automaticamente quem está falando e suporte para mais de 60 idiomas diferentes.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-pink-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Identificação automática de alto-falante</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-pink-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Suporte a mais de 60 idiomas</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-pink-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Transcrições precisas e contextualizadas</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Seção 3: Conformidade e Segurança (LGPD) */}
           <div className="mb-16">
             <div className="glass p-8 rounded-2xl border border-emerald-500/20 bg-emerald-900/10">
