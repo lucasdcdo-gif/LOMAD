@@ -28,13 +28,22 @@ export const MFAEnrollment: React.FC<Props> = ({ onEnrolled, onCancel }) => {
             if (listError) throw listError;
 
             // 2. Handle Existing Factors
+            // 2. Handle Existing Factors
             if (factors.totp && factors.totp.length > 0) {
                 // If we are forcing reset, unenroll ALL factors to be clean
                 if (forceReset) {
+                    // We iterate and await one by one
                     for (const f of factors.totp) {
-                        // console.log("Unenrolling factor:", f.id);
-                        await supabase.auth.mfa.unenroll({ factorId: f.id });
+                        try {
+                            // console.log("Unenrolling factor:", f.id);
+                            await supabase.auth.mfa.unenroll({ factorId: f.id });
+                        } catch (unenrollErr) {
+                            console.warn("Retrying unenrollment or ignoring error for:", f.id, unenrollErr);
+                        }
                     }
+
+                    // Small safety delay to ensure propagation
+                    await new Promise(r => setTimeout(r, 500));
                 } else {
                     // Check for VERIFIED factor
                     const verifiedFactor = factors.totp.find((f: any) => f.status === 'verified');
@@ -53,8 +62,10 @@ export const MFAEnrollment: React.FC<Props> = ({ onEnrolled, onCancel }) => {
             }
 
             // 3. Enroll new factor
+            // Use a Friendly Name to avoid collision with default "" name if stubborn
             const { data, error } = await supabase.auth.mfa.enroll({
                 factorType: 'totp',
+                friendlyName: 'LOMAD',
             });
 
             if (error) throw error;
