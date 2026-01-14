@@ -2883,13 +2883,13 @@ const App: React.FC = () => {
 
       {/* View: Pricing */}
       {view === 'PRICING' && (
-        <div className="pt-32 pb-20 px-6 max-w-7xl mx-auto w-full">
-          <button onClick={() => setView('MAIN')} className="mb-8 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+        <div className="pt-24 pb-20 px-6 max-w-7xl mx-auto w-full">
+          <button onClick={() => setView('MAIN')} className="mb-4 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             Voltar
           </button>
 
-          <div className="text-center mb-16 animate-fade-in">
+          <div className="text-center mb-10 animate-fade-in">
             <h1 className="text-4xl md:text-5xl font-black text-white mb-6">Planos que cabem no seu bolso</h1>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">Comece gratuitamente e evolua conforme sua necessidade. Sem contratos de fidelidade.</p>
           </div>
