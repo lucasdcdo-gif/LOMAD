@@ -12,50 +12,66 @@ export const MFAEnrollment: React.FC<Props> = ({ onEnrolled, onCancel }) => {
     const [verifyCode, setVerifyCode] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [existingVerifiedId, setExistingVerifiedId] = useState<string | null>(null);
 
-    useEffect(() => {
-        const enroll = async () => {
-            try {
-                setLoading(true);
+    const checkAndEnroll = async (forceReset = false) => {
+        try {
+            setLoading(true);
+            setError(null);
+            setQrCode(null); // Clear QR code when starting a new enrollment process
+            setFactorId(null); // Clear factor ID
+            setVerifyCode(''); // Clear verify code
+            setExistingVerifiedId(null); // Clear existing verified ID
 
-                // 1. Check for existing unverified factors and delete them
-                const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
-                if (listError) throw listError;
+            // 1. List Factors
+            const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
+            if (listError) throw listError;
 
-                if (factors.totp && factors.totp.length > 0) {
+            // 2. Handle Existing Factors
+            if (factors.totp && factors.totp.length > 0) {
+                // If we are forcing reset, unenroll ALL factors to be clean
+                if (forceReset) {
+                    for (const f of factors.totp) {
+                        // console.log("Unenrolling factor:", f.id);
+                        await supabase.auth.mfa.unenroll({ factorId: f.id });
+                    }
+                } else {
+                    // Check for VERIFIED factor
+                    const verifiedFactor = factors.totp.find((f: any) => f.status === 'verified');
+                    if (verifiedFactor) {
+                        setExistingVerifiedId(verifiedFactor.id);
+                        setLoading(false);
+                        return; // Stop here, show UI to ask user what to do
+                    }
+
+                    // Check for UNVERIFIED and remove (stale)
                     const unverifiedFactor = factors.totp.find((f: any) => f.status === 'unverified');
                     if (unverifiedFactor) {
-                        // console.log("Removing unverified factor:", unverifiedFactor.id);
                         await supabase.auth.mfa.unenroll({ factorId: unverifiedFactor.id });
                     }
-                    // If there is a verified factor, we might want to stop or continue. 
-                    // Assuming user wants to add a new one or replace it? 
-                    // For now, let's just proceed to add new one, but unenroll might fail if verified? 
-                    // Actually, if verified exists, supabase typically allows adding another if strict limit isn't hit.
-                    // But the error suggests we hit a limit or conflict.
-                    // If verified exists, maybe we shouldn't allow enrolling again without explicit action?
-                    // Let's assume if they are here, they want to setup.
                 }
-
-                // 2. Enroll new factor
-                const { data, error } = await supabase.auth.mfa.enroll({
-                    factorType: 'totp',
-                });
-
-                if (error) throw error;
-
-                setFactorId(data.id);
-                // Supabase returns an SVG string in data.totp.qr_code
-                setQrCode(data.totp.qr_code);
-            } catch (err: any) {
-                console.error("MFA Enroll Error:", err);
-                setError(err.message);
-            } finally {
-                setLoading(false);
             }
-        };
 
-        enroll();
+            // 3. Enroll new factor
+            const { data, error } = await supabase.auth.mfa.enroll({
+                factorType: 'totp',
+            });
+
+            if (error) throw error;
+
+            setFactorId(data.id);
+            setExistingVerifiedId(null); // Clear this state if we proceeded
+            setQrCode(data.totp.qr_code);
+        } catch (err: any) {
+            console.error("MFA Enroll Error:", err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        checkAndEnroll();
     }, []);
 
     const handleVerify = async () => {
@@ -84,13 +100,44 @@ export const MFAEnrollment: React.FC<Props> = ({ onEnrolled, onCancel }) => {
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto">
-            <h3 className="text-xl font-bold mb-4 text-gray-800">Coonfigurar Autenticação de Dois Fatores (2FA)</h3>
+            <h3 className="text-xl font-bold mb-4 text-gray-800">
+                {existingVerifiedId ? 'Gerenciar Autenticação (2FA)' : 'Configurar Autenticação de Dois Fatores (2FA)'}
+            </h3>
 
-            {loading && !qrCode && <p className="text-gray-600">Gerando QR Code...</p>}
+            {loading && !qrCode && <p className="text-gray-600">Carregando...</p>}
 
             {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
 
-            {qrCode && (
+            {/* State: Already Verified */}
+            {existingVerifiedId && !loading && (
+                <div className="space-y-6 text-center">
+                    <div className="bg-green-50 p-4 rounded-xl border border-green-200">
+                        <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                        <h4 className="font-bold text-gray-800 mb-1">MFA Ativo</h4>
+                        <p className="text-sm text-gray-600">Você já tem um método de autenticação configurado.</p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <button
+                            onClick={() => checkAndEnroll(true)}
+                            className="w-full py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors font-medium"
+                        >
+                            Redefinir / Configurar Novo
+                        </button>
+                        <button
+                            onClick={onCancel}
+                            className="w-full py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                            Voltar
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* State: Enrolling (Showing QR) */}
+            {qrCode && !existingVerifiedId && (
                 <div className="space-y-6">
                     <div className="flex flex-col items-center">
                         <p className="text-sm text-gray-600 mb-2 text-center">
