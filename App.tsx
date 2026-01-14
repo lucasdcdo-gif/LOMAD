@@ -630,6 +630,7 @@ const App: React.FC = () => {
             reconnectAttemptsRef.current = 0; // Success reset
             if (isReconnect) {
               console.log("🔄 Reconexão bem-sucedida!");
+              setError(null); // Remove error modal automatically
               // No need to setup processors again, just ensure status is correct
               setStatus(SessionStatus.RECORDING);
             }
@@ -706,6 +707,8 @@ const App: React.FC = () => {
             setStatus(SessionStatus.RECORDING);
             if (!isReconnect) {
               setupAudioProcessors();
+            } else {
+              setError(null); // Remove error modal automatically
             }
           },
           onmessage: async (msg: LiveServerMessage) => {
