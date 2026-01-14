@@ -1969,6 +1969,37 @@ const App: React.FC = () => {
               </div>
             )}
 
+            {/* MFA Section */}
+            <div className="glass rounded-[2rem] border border-white/10 p-8 mb-12">
+              <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider flex items-center gap-3">
+                <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                Segurança da Conta (MFA)
+              </h3>
+
+              {showMfaEnrollment ? (
+                <MFAEnrollment
+                  onEnrolled={() => {
+                    setShowMfaEnrollment(false);
+                    setSuccessMessage("Autenticação de dois fatores ativada com sucesso!");
+                  }}
+                  onCancel={() => setShowMfaEnrollment(false)}
+                />
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-white mb-1">Autenticação de dois fatores</p>
+                    <p className="text-sm text-slate-400">Proteja sua conta adicionando uma camada extra de segurança.</p>
+                  </div>
+                  <button
+                    onClick={() => setShowMfaEnrollment(true)}
+                    className="px-5 py-2 glass rounded-xl text-white font-bold text-xs hover:bg-white/10 flex items-center gap-2"
+                  >
+                    Configurar 2FA
+                  </button>
+                </div>
+              )}
+            </div>
+
 
             {
               user.role === 'FREE' && (
