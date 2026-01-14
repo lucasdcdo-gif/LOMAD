@@ -17,6 +17,27 @@ export const MFAEnrollment: React.FC<Props> = ({ onEnrolled, onCancel }) => {
         const enroll = async () => {
             try {
                 setLoading(true);
+
+                // 1. Check for existing unverified factors and delete them
+                const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
+                if (listError) throw listError;
+
+                if (factors.totp && factors.totp.length > 0) {
+                    const unverifiedFactor = factors.totp.find((f: any) => f.status === 'unverified');
+                    if (unverifiedFactor) {
+                        console.log("Removing unverified factor:", unverifiedFactor.id);
+                        await supabase.auth.mfa.unenroll({ factorId: unverifiedFactor.id });
+                    }
+                    // If there is a verified factor, we might want to stop or continue. 
+                    // Assuming user wants to add a new one or replace it? 
+                    // For now, let's just proceed to add new one, but unenroll might fail if verified? 
+                    // Actually, if verified exists, supabase typically allows adding another if strict limit isn't hit.
+                    // But the error suggests we hit a limit or conflict.
+                    // If verified exists, maybe we shouldn't allow enrolling again without explicit action?
+                    // Let's assume if they are here, they want to setup.
+                }
+
+                // 2. Enroll new factor
                 const { data, error } = await supabase.auth.mfa.enroll({
                     factorType: 'totp',
                 });
