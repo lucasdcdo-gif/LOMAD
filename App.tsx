@@ -91,7 +91,7 @@ const App: React.FC = () => {
 
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView] = useState<'MAIN' | 'HISTORY' | 'MEETING_DETAILS' | 'LOGIN' | 'REGISTER' | 'PROFILE' | 'ADMIN_DASHBOARD' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD' | 'HOW_IT_WORKS' | 'TERMS' | 'PRIVACY'>('MAIN');
+  const [view, setView] = useState<'MAIN' | 'HISTORY' | 'MEETING_DETAILS' | 'LOGIN' | 'REGISTER' | 'PROFILE' | 'ADMIN_DASHBOARD' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD' | 'HOW_IT_WORKS' | 'TERMS' | 'PRIVACY' | 'PRICING'>('MAIN');
   // States for Meeting Management
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
@@ -1244,6 +1244,7 @@ const App: React.FC = () => {
                   </svg>
                   Iniciar Transcrição
                 </button>
+                <button onClick={() => setView('PRICING')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Preços</button>
                 <button onClick={() => setView('HOW_IT_WORKS')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Como Funciona</button>
                 <button onClick={() => setView('ABOUT')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Quem Somos</button>
                 <button onClick={() => setView('HISTORY')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Histórico</button>
@@ -1270,6 +1271,7 @@ const App: React.FC = () => {
             )}
             {!user && (
               <>
+                <button onClick={() => setView('PRICING')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Preços</button>
                 <button onClick={() => setView('HOW_IT_WORKS')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Como Funciona</button>
                 <button onClick={() => setView('ABOUT')} className="px-5 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Quem Somos</button>
                 <button onClick={() => setView('LOGIN')} className="px-8 py-3 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all">Entrar</button>
@@ -2878,6 +2880,113 @@ const App: React.FC = () => {
         paymentLoading={paymentLoading}
         error={error}
       />
+
+      {/* View: Pricing */}
+      {view === 'PRICING' && (
+        <div className="pt-32 pb-20 px-6 max-w-7xl mx-auto w-full">
+          <button onClick={() => setView('MAIN')} className="mb-8 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Voltar
+          </button>
+
+          <div className="text-center mb-16 animate-fade-in">
+            <h1 className="text-4xl md:text-5xl font-black text-white mb-6">Planos que cabem no seu bolso</h1>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Comece gratuitamente e evolua conforme sua necessidade. Sem contratos de fidelidade.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* FREE PLAN */}
+            <div className="glass p-8 rounded-[2rem] border border-white/5 hover:border-white/10 transition-all flex flex-col">
+              <div className="mb-8">
+                <span className="px-3 py-1 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold uppercase tracking-wider">Gratuito</span>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-4xl font-black text-white">R$ 0</span>
+                  <span className="text-slate-500 font-bold">/mês</span>
+                </div>
+                <p className="text-slate-400 mt-2 text-sm">Para testes e uso ocasional.</p>
+              </div>
+
+              <ul className="space-y-4 mb-8 flex-1">
+                <li className="flex items-center gap-3 text-slate-300">
+                  <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <span>Até 5 reuniões transcritas</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-300">
+                  <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <span>Transcrição básica</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-500">
+                  <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  <span>Sem Chat IA</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-500">
+                  <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  <span>Suporte padrão</span>
+                </li>
+              </ul>
+
+              <button
+                onClick={() => user ? setView('MAIN') : setView('REGISTER')}
+                className="w-full py-4 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold border border-white/10 transition-all uppercase tracking-wide"
+              >
+                {user ? 'Continuar Grátis' : 'Criar Conta Grátis'}
+              </button>
+            </div>
+
+            {/* PRO PLAN */}
+            <div className="relative glass p-8 rounded-[2rem] border border-cyan-500/30 flex flex-col overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-emerald-500 to-cyan-500"></div>
+              <div className="absolute -right-12 -top-12 w-40 h-40 bg-cyan-500/20 rounded-full blur-3xl group-hover:bg-cyan-500/30 transition-colors"></div>
+
+              <div className="mb-8 relative">
+                <div className="flex justify-between items-start">
+                  <span className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-lg shadow-cyan-500/20">Recomendado</span>
+                </div>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-5xl font-black text-white">R$ {publicPricing.monthly.toFixed(2)}</span>
+                  <span className="text-slate-400 font-bold">/mês</span>
+                </div>
+                <p className="text-cyan-400 mt-2 text-sm font-bold">ou R$ {publicPricing.yearly.toFixed(2)}/ano (economize ~15%)</p>
+              </div>
+
+              <ul className="space-y-4 mb-8 flex-1 relative">
+                <li className="flex items-center gap-3 text-white font-bold">
+                  <div className="p-1 bg-cyan-500/20 rounded-full text-cyan-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></div>
+                  <span>Reuniões Ilimitadas</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-300">
+                  <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <span>Chat IA com suas reuniões</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-300">
+                  <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <span>Resumos automáticos</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-300">
+                  <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <span>Acesso prioritário a atualizações</span>
+                </li>
+              </ul>
+
+              <button
+                onClick={() => {
+                  if (!user) {
+                    setView('REGISTER');
+                  } else if (user.role === 'PRO' || user.role === 'MASTER') {
+                    // Do nothing or user feedback
+                  } else {
+                    setPaymentModalOpen(true);
+                  }
+                }}
+                disabled={user?.role === 'PRO' || user?.role === 'MASTER'}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-bold uppercase tracking-wide shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {user?.role === 'PRO' || user?.role === 'MASTER' ? 'Você já é PRO' : 'Assinar Agora'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <CookieBanner onPrivacyClick={() => setView('PRIVACY')} />
       <VLibrasWidget />
