@@ -30,20 +30,29 @@ export const MFAEnrollment: React.FC<Props> = ({ onEnrolled, onCancel }) => {
             // 2. Handle Existing Factors
             // 2. Handle Existing Factors
             if (factors.totp && factors.totp.length > 0) {
-                // If we are forcing reset, unenroll ALL factors to be clean
+                // If we are forcing reset, use BACKEND ADMIN endpoint to nuke factors (bypasses AAL2 requirement)
                 if (forceReset) {
-                    // We iterate and await one by one
-                    for (const f of factors.totp) {
-                        try {
-                            // console.log("Unenrolling factor:", f.id);
-                            await supabase.auth.mfa.unenroll({ factorId: f.id });
-                        } catch (unenrollErr) {
-                            console.warn("Retrying unenrollment or ignoring error for:", f.id, unenrollErr);
+                    const session = await supabase.auth.getSession();
+                    const token = session.data.session?.access_token;
+
+                    if (token) {
+                        const response = await fetch(`${import.meta.env.VITE_APP_URL || ''}/api/auth/mfa/reset`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error("Falha ao redefinir MFA via servidor.");
                         }
+                    } else {
+                        throw new Error("Sessão inválida para redefinição.");
                     }
 
-                    // Small safety delay to ensure propagation
-                    await new Promise(r => setTimeout(r, 500));
+                    // Small safety delay
+                    await new Promise(r => setTimeout(r, 1000));
                 } else {
                     // Check for VERIFIED factor
                     const verifiedFactor = factors.totp.find((f: any) => f.status === 'verified');
@@ -54,9 +63,12 @@ export const MFAEnrollment: React.FC<Props> = ({ onEnrolled, onCancel }) => {
                     }
 
                     // Check for UNVERIFIED and remove (stale)
+                    // Unverified can usually be removed by AAL1 user (it's not active yet)
                     const unverifiedFactor = factors.totp.find((f: any) => f.status === 'unverified');
                     if (unverifiedFactor) {
-                        await supabase.auth.mfa.unenroll({ factorId: unverifiedFactor.id });
+                        try {
+                            await supabase.auth.mfa.unenroll({ factorId: unverifiedFactor.id });
+                        } catch (e) { console.warn("Could not remove unverified factor", e); }
                     }
                 }
             }

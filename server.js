@@ -93,6 +93,40 @@ app.get('/api/meetings/:uid', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Admin Endpoint: Reset MFA
+app.post('/api/auth/mfa/reset', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Missing token' });
+
+    // 1. Verify User (using the token passed)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) return res.status(401).json({ error: 'Invalid token' });
+
+    console.log(`[MFA Reset] Resetting MFA for user: ${user.id}`);
+
+    // 2. List Factors (Admin)
+    const { data: factors, error: listError } = await supabase.auth.admin.mfa.listFactors({ userId: user.id });
+    if (listError) throw listError;
+
+    // 3. Delete All Factors
+    if (factors.factors) {
+      for (const f of factors.factors) {
+        await supabase.auth.admin.mfa.deleteFactor({ id: f.id, userId: user.id });
+      }
+    } else if (factors.length && Array.isArray(factors)) { // Handle potential array return
+      for (const f of factors) {
+        await supabase.auth.admin.mfa.deleteFactor({ id: f.id, userId: user.id });
+      }
+    }
+
+    res.json({ success: true, message: 'MFA Reset Successful' });
+  } catch (err) {
+    logger.error(`MFA Reset Error: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/ai/summarize', async (req, res) => {
   try {
     const response = await ai.models.generateContent({
