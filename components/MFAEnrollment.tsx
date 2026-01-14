@@ -25,7 +25,7 @@ export const MFAEnrollment: React.FC<Props> = ({ onEnrolled, onCancel }) => {
                 if (factors.totp && factors.totp.length > 0) {
                     const unverifiedFactor = factors.totp.find((f: any) => f.status === 'unverified');
                     if (unverifiedFactor) {
-                        console.log("Removing unverified factor:", unverifiedFactor.id);
+                        // console.log("Removing unverified factor:", unverifiedFactor.id);
                         await supabase.auth.mfa.unenroll({ factorId: unverifiedFactor.id });
                     }
                     // If there is a verified factor, we might want to stop or continue. 
@@ -72,7 +72,7 @@ export const MFAEnrollment: React.FC<Props> = ({ onEnrolled, onCancel }) => {
 
             if (error) throw error;
 
-            console.log("MFA Verified successfully:", data);
+            // console.log("MFA Verified successfully");
             onEnrolled();
         } catch (err: any) {
             console.error("MFA Verify Error:", err);

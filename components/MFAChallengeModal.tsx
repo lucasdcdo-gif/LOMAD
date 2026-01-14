@@ -37,7 +37,7 @@ export const MFAChallengeModal: React.FC<Props> = ({ onSuccess, onCancel }) => {
 
             if (verifyError) throw verifyError;
 
-            console.log("MFA Login Verified:", data);
+            // console.log("MFA Login Verified");
             onSuccess();
         } catch (err: any) {
             console.error("MFA Challenge Error:", err);
