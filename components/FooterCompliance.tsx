@@ -10,10 +10,10 @@ interface FooterProps {
 }
 
 export const FooterCompliance: React.FC<FooterProps> = ({
-    companyName = "MEETING MIND TECNOLOGIA LTDA", // Placeholder
-    cnpj = "00.000.000/0001-00", // Placeholder
-    address = "Av. Paulista, 1000 - São Paulo, SP", // Placeholder
-    email = "contato@meetingmind.com.br",
+    companyName = "LOMAD TECNOLOGIA LTDA", // Placeholder
+    cnpj,
+    address,
+    email = "contato@LOMAD.com.br",
     onTermsClick,
     onPrivacyClick
 }) => {
@@ -25,8 +25,8 @@ export const FooterCompliance: React.FC<FooterProps> = ({
                     <h4 className="text-white font-bold uppercase tracking-wider text-sm">Identificação</h4>
                     <div className="text-slate-400 text-sm space-y-1">
                         <p className="font-bold text-slate-300">{companyName}</p>
-                        <p>CNPJ: {cnpj}</p>
-                        <p>{address}</p>
+                        {cnpj && <p>CNPJ: {cnpj}</p>}
+                        {address && <p>{address}</p>}
                         <p>Email: {email}</p>
                     </div>
                 </div>
