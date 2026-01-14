@@ -62,7 +62,7 @@ export const MFAChallengeModal: React.FC<Props> = ({ onSuccess, onCancel }) => {
                         type="text"
                         value={code}
                         onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        className="w-full p-3 border rounded text-2xl text-center tracking-[0.5em] font-mono mb-6 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-full p-3 border rounded text-2xl text-center tracking-[0.5em] font-mono mb-6 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-gray-900 bg-white"
                         placeholder="000000"
                         autoFocus
                     />

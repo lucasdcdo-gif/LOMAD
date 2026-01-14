@@ -88,7 +88,7 @@ export const MFAEnrollment: React.FC<Props> = ({ onEnrolled, onCancel }) => {
                             type="text"
                             value={verifyCode}
                             onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none text-center text-xl tracking-widest"
+                            className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none text-center text-xl tracking-widest text-gray-900 bg-white"
                             placeholder="000 000"
                             disabled={loading}
                         />
