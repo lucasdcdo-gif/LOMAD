@@ -145,7 +145,6 @@ const App: React.FC = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editForm, setEditForm] = useState({ phone: '', postalCode: '', addressNumber: '' });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [consentGiven, setConsentGiven] = useState(false); // Compliance LGPD
 
   // Terms Enforcement State
@@ -2382,8 +2381,7 @@ const App: React.FC = () => {
           )
         }
 
-        )
-        }
+
 
         {/* --- BLOCKING TERMS MODAL --- */}
         {showTermsBlockingModal && user && (
