@@ -145,7 +145,14 @@ const App: React.FC = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editForm, setEditForm] = useState({ phone: '', postalCode: '', addressNumber: '' });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [consentGiven, setConsentGiven] = useState(false); // Compliance LGPD
+
+  // Terms Enforcement State
+  const [termsAccepted, setTermsAccepted] = useState(true); // Default true until checked to avoid flash
+  const [showTermsBlockingModal, setShowTermsBlockingModal] = useState(false);
+  const [termsAcceptLoading, setTermsAcceptLoading] = useState(false);
+
   const [cardForm, setCardForm] = useState({
     number: '',
     name: '',
@@ -317,6 +324,28 @@ const App: React.FC = () => {
 
       if (data) {
 
+        // --- TERMS ENFORCEMENT CHECK ---
+        // Only run this if we are not already in a specific view that handles it (like Register)
+        // actually, we want to enforce it globally on login/profile load.
+        try {
+          const termsRes = await fetch(`/api/terms/status/${uid}`);
+          if (termsRes.ok) {
+            const termsData = await termsRes.json();
+            if (!termsData.accepted) {
+              console.log("🔒 Terms not accepted. Blocking UI.");
+              setTermsAccepted(false);
+              setShowTermsBlockingModal(true);
+            } else {
+              setTermsAccepted(true);
+              setShowTermsBlockingModal(false);
+            }
+          }
+        } catch (termsErr) {
+          console.error("Failed to check terms status:", termsErr);
+          // Don't block on network error, or maybe yes? 
+          // For now, let's assume it's OK to avoid bricking if server glitches
+        }
+        // -------------------------------
 
         // Security Check: Block suspended users
         if (!data.is_active) {
@@ -546,6 +575,23 @@ const App: React.FC = () => {
           console.error("Profile creation warning:", profileError);
           // Continue anyway, as auth worked
         }
+
+        // --- AUTO ACCEPT TERMS FOR REGISTRATION ---
+        // Since they clicked the checkbox, we record it now.
+        try {
+          await fetch('/api/terms/accept', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: authData.user.id,
+              userAgent: navigator.userAgent
+            })
+          });
+          setTermsAccepted(true); // Update local state so modal doesn't trigger
+        } catch (termsErr) {
+          console.error("Failed to auto-accept terms:", termsErr);
+        }
+        // ------------------------------------------
 
         // 3. Handle Plan Selection
         // We do NOT await fetchProfile here because onAuthStateChange will trigger it.
@@ -2336,8 +2382,92 @@ const App: React.FC = () => {
           )
         }
 
+        )
+        }
+
+        {/* --- BLOCKING TERMS MODAL --- */}
+        {showTermsBlockingModal && user && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6">
+            <div className="bg-slate-900 border border-white/10 text-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full animate-bounce-in relative overflow-hidden">
+              {/* Decorative background */}
+              <div className="absolute top-0 right-0 p-12 opacity-5 translate-x-1/3 -translate-y-1/3">
+                <svg className="w-96 h-96 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
+              </div>
+
+              <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                    <svg className="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-white">Atualização de Termos</h2>
+                    <p className="text-slate-400 text-sm">Ação Necessária para Continuar</p>
+                  </div>
+                </div>
+
+                <p className="text-slate-300 text-base leading-relaxed mb-6">
+                  Para garantir a segurança e conformidade legal de todos os usuários, precisamos que você leia e aceite nossos novos <strong>Termos de Uso</strong> e <strong>Política de Privacidade</strong> antes de continuar utilizando o sistema.
+                </p>
+
+                <div className="bg-slate-950/50 rounded-xl p-4 border border-white/5 h-40 overflow-y-auto mb-6 custom-scrollbar">
+                  <p className="text-xs text-slate-400 whitespace-pre-wrap">
+                    {privacyPolicy || "Carregando termos..."}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 mb-8 p-4 bg-white/5 rounded-xl border border-white/5 hover:border-cyan-500/50 transition-colors cursor-pointer" onClick={() => !termsAcceptLoading && setPrivacyAccepted(!privacyAccepted)}>
+                  <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${privacyAccepted ? 'bg-cyan-500 border-cyan-500' : 'border-slate-500 bg-transparent'}`}>
+                    {privacyAccepted && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  <label className="text-sm font-bold text-white cursor-pointer select-none flex-1">
+                    Li e aceito integralmente os Termos de Uso e Política de Privacidade.
+                  </label>
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleLogout}
+                    className="px-6 py-4 rounded-xl border border-white/10 text-white font-bold hover:bg-white/5 transition-all text-sm uppercase tracking-wide"
+                  >
+                    Sair
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!privacyAccepted) return;
+                      setTermsAcceptLoading(true);
+                      try {
+                        const res = await fetch('/api/terms/accept', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userId: user.id, userAgent: navigator.userAgent })
+                        });
+                        if (res.ok) {
+                          setTermsAccepted(true);
+                          setShowTermsBlockingModal(false);
+                          setSuccessMessage("Termos aceitos com sucesso! Bom trabalho.");
+                        } else {
+                          setError("Falha ao salvar. Tente novamente.");
+                        }
+                      } catch (e) {
+                        setError("Erro de conexão.");
+                      } finally {
+                        setTermsAcceptLoading(false);
+                      }
+                    }}
+                    disabled={!privacyAccepted || termsAcceptLoading}
+                    className="flex-1 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-black text-sm uppercase tracking-widest shadow-lg hover:shadow-cyan-500/20 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {termsAcceptLoading ? 'Salvando...' : 'Aceitar e Continuar'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {
           view === 'REGISTER' && (
+
             <div className="w-full max-w-2xl p-8 glass rounded-[2.5rem] border border-white/5 animate-bounce-in">
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-black text-white mb-2">Crie sua Conta</h2>

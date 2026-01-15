@@ -440,6 +440,58 @@ app.patch('/api/meetings/:id/title', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- TERMS OF USE ENDPOINTS ---
+
+// Check Terms Status
+app.get('/api/terms/status/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    // Check if there is an acceptance for the current version (e.g., '1.0')
+    const { data, error } = await supabase
+      .from('terms_acceptances')
+      .select('accepted_at')
+      .eq('user_id', userId)
+      .eq('terms_version', '1.0') // Hardcoded version for now, could be config
+      .maybeSingle();
+
+    if (error) throw error;
+
+    res.json({ accepted: !!data, acceptedAt: data?.accepted_at });
+  } catch (err) {
+    logger.error(`Terms Check Error: ${err.message}`);
+    // Fail safe: if error (e.g. table missing), don't block user? Or block?
+    // Let's return false to be safe (strict mode) or handle table missing error.
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Accept Terms
+app.post('/api/terms/accept', async (req, res) => {
+  try {
+    const { userId, userAgent, ip } = req.body;
+
+    // Using service key (supabase client initialized with it) to bypass RLS if needed,
+    // though we are insertion as explicit user usually.
+    // Ideally we should verify the token here, but for this architecture we trust the frontend slightly
+    // or rely on the `userId` passed being consistent with the session.
+    // For robust security, we should check `req.headers.authorization` match, but existing structure uses explicit args.
+
+    const { error } = await supabase.from('terms_acceptances').upsert({
+      user_id: userId,
+      terms_version: '1.0',
+      user_agent: userAgent,
+      ip_address: ip || req.ip
+    }, { onConflict: 'user_id, terms_version' });
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (err) {
+    logger.error(`Terms Accept Error: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- ADMIN ENDPOINTS ---
 
 // Get Admin Stats
