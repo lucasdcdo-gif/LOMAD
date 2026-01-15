@@ -1,57 +1,12 @@
-TERMOS E CONDIÇÕES DE USO - LOMAD
+TERMOS DE USO
 
-Bem-vindo à LOMAD. Ao utilizar nossos serviços, você concorda com os termos descritos abaixo. Leia-os atentamente.
+1. Aceitação
+Ao usar o MeetingMind, você concorda com estes termos.
 
-1. OBJETO DO SERVIÇO
-A LOMAD é uma plataforma baseada em nuvem que oferece ferramentas de transcrição de áudio em tempo real e processamento de texto através de Inteligência Artificial. O serviço é prestado na modalidade SaaS (Software as a Service).
+2. Responsabilidades
+O usuário é responsável pelo conteúdo das reuniões gravadas e deve garantir que possui o consentimento dos participantes.
 
-2. ELEGIBILIDADE E CADASTRO
-Para utilizar a LOMAD, o usuário deve ser maior de 18 anos ou pessoa jurídica devidamente constituída.
+3. Planos
+O plano FREE permite 5 gravações. O plano PRO é ilimitado.
 
-O usuário é responsável pela veracidade das informações prestadas no cadastro e pela segurança de sua senha de acesso.
-
-3. RESPONSABILIDADE PELO CONTEÚDO E CONSENTIMENTO
-Uso Ético: O usuário é o único responsável pelo conteúdo transcrevido e pelo uso que fará dele.
-
-Consentimento de Terceiros: A LOMAD fornece apenas a ferramenta. É dever absoluto e indelegável do Usuário informar e obter a autorização de todos os participantes antes de iniciar qualquer transcrição de reunião.
-
-Proibições: É proibido utilizar a LOMAD para:
-
-Registrar atividades ilícitas;
-
-Violar direitos de propriedade intelectual ou segredos industriais de terceiros;
-
-Obter informações de forma clandestina ou sem autorização legal.
-
-4. PAGAMENTOS E ASSINATURAS
-Planos: Os serviços são oferecidos conforme os planos descritos no site oficial.
-
-Processamento: Os pagamentos são processados via Asaas. O acesso aos recursos pagos será liberado somente após a confirmação do pagamento.
-
-Renovação: Assinaturas recorrentes serão renovadas automaticamente ao final de cada período, a menos que o usuário solicite o cancelamento através do painel de controle.
-
-5. CANCELAMENTO E REEMBOLSO
-Cancelamento: O usuário pode cancelar sua assinatura a qualquer momento. O acesso permanecerá ativo até o final do período já pago.
-
-Arrependimento: Conforme o Código de Defesa do Consumidor, o usuário tem até 7 dias após a primeira contratação para solicitar o estorno integral, desde que não tenha havido uso abusivo dos créditos de transcrição neste período.
-
-6. EXCLUSÃO AUTOMÁTICA E BACKUP
-Regra dos 30 dias: Conforme nossa Política de Privacidade, a LOMAD realiza a exclusão automática definitiva de todas as transcrições após 30 dias de sua criação.
-
-Isenção de Responsabilidade: A LOMAD não se responsabiliza por perdas de dados decorrentes da exclusão automática ou por falhas na conexão de internet do usuário durante o processo de transcrição via navegador.
-
-7. LIMITAÇÃO DE RESPONSABILIDADE
-Precisão da IA: A transcrição é realizada por Inteligência Artificial (Google Gemini) e pode conter erros de interpretação, gramática ou omissões dependendo da qualidade do áudio e sotaques. A LOMAD não garante 100% de precisão gramatical ou técnica.
-
-Disponibilidade: Esforçamo-nos para manter a plataforma ativa 24/7, porém, manutenções técnicas ou falhas em provedores de nuvem (Google Cloud/Supabase) podem causar interrupções temporárias.
-
-8. PROPRIEDADE INTELECTUAL
-O software, a marca "LOMAD", o design e o código-fonte são de propriedade exclusiva da LOMAD.
-
-O texto transcrevido gerado a partir do áudio do usuário é de propriedade do Usuário.
-
-9. MODIFICAÇÕES DOS TERMOS
-A LOMAD reserva-se o direito de alterar estes termos a qualquer momento. Alterações significativas serão notificadas aos usuários via e-mail ou aviso na plataforma. O uso continuado do serviço após as alterações implica na aceitação dos novos termos.
-
-10. FORO
-Para dirimir quaisquer controvérsias oriundas deste contrato, as partes elegem o Foro da Comarca de [Inserir sua cidade/UF], com renúncia expressa a qualquer outro.
+(Edite este arquivo para atualizar os termos reais)
