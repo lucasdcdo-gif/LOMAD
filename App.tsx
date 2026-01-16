@@ -287,11 +287,19 @@ const App: React.FC = () => {
   }, [status]);
 
   useEffect(() => {
-    if (view === 'REGISTER' || view === 'PRIVACY') {
+    // Load if entering specific views OR if the blocking modal is triggered
+    if (view === 'REGISTER' || view === 'PRIVACY' || showTermsBlockingModal) {
       fetch('/api/privacy-policy')
         .then(res => res.json())
         .then(data => setPrivacyPolicy(data.content))
         .catch(err => console.error("Falha ao carregar política de privacidade", err));
+
+      // Also load terms if we are in blocking modal, just in case we need both
+      // (The modal currently shows privacyPolicy, but might need terms too)
+      fetch('/api/terms')
+        .then(res => res.json())
+        .then(data => setTermsContent(data.content))
+        .catch(err => console.error("Falha ao carregar termos de uso", err));
     }
     if (view === 'TERMS') {
       fetch('/api/terms')
@@ -299,7 +307,7 @@ const App: React.FC = () => {
         .then(data => setTermsContent(data.content))
         .catch(err => console.error("Falha ao carregar termos de uso", err));
     }
-  }, [view]);
+  }, [view, showTermsBlockingModal]);
 
   const fetchPublicPricing = async () => {
     try {
