@@ -27,11 +27,11 @@ const logger = winston.createLogger({
         new winston.transports.Console({
             format: consoleFormat,
         }),
-
-        // 2. File Transport (Good for local debug or short-term Render storage)
-        // Note: Render filesystem is ephemeral. These files Reset on deploy/restart.
-        new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-        new winston.transports.File({ filename: 'logs/combined.log' }),
+        // File transports only in development
+        ...(process.env.NODE_ENV !== 'production' ? [
+            new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+            new winston.transports.File({ filename: 'logs/combined.log' })
+        ] : [])
     ],
 });
 
