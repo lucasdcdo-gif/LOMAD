@@ -1881,10 +1881,31 @@ const App: React.FC = () => {
 
                 <div className="bg-slate-950/50 rounded-2xl p-6 min-h-[300px] max-h-[500px] overflow-y-auto mb-6 flex flex-col gap-4 border border-white/5 relative">
                   {selectedMeeting.pinned_response && (
-                    <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 relative">
-                      <div className="flex items-center gap-2 mb-2 text-amber-500">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
-                        <span className="text-xs font-bold uppercase tracking-wider">Resposta Fixada</span>
+                    <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 relative group">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 text-amber-500">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
+                          <span className="text-xs font-bold uppercase tracking-wider">Resposta Fixada</span>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await fetch(`/api/meetings/${selectedMeeting.id}/pin`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ pinnedResponse: null })
+                              });
+                              // Update both selected and list state
+                              const updated = { ...selectedMeeting, pinned_response: undefined };
+                              setSelectedMeeting(updated);
+                              setMeetings(prev => prev.map(m => m.id === updated.id ? updated : m));
+                            } catch (e) { console.error("Erro ao desafixar:", e); }
+                          }}
+                          className="text-amber-500/50 hover:text-amber-500 transition-colors"
+                          title="Desafixar"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
                       </div>
                       <p className="text-sm text-slate-200 whitespace-pre-wrap">{selectedMeeting.pinned_response}</p>
                     </div>
@@ -1903,10 +1924,10 @@ const App: React.FC = () => {
                           <div className="absolute -bottom-8 left-0 hidden group-hover:flex gap-2">
                             <button
                               onClick={() => navigator.clipboard.writeText(msg.text)}
-                              className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-300 hover:text-white text-xs flex items-center gap-1 transition-colors"
+                              className="px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all border border-white/10 hover:border-white/30"
                               title="Copiar texto"
                             >
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 01-2-2V5" /></svg>
                               Copiar
                             </button>
                             <button
@@ -1917,16 +1938,20 @@ const App: React.FC = () => {
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ pinnedResponse: msg.text })
                                   });
-                                  // Update local state to reflect change immediately
-                                  setSelectedMeeting({ ...selectedMeeting, pinned_response: msg.text });
+                                  // Update both selected and list state
+                                  const updated = { ...selectedMeeting, pinned_response: msg.text };
+                                  setSelectedMeeting(updated);
+                                  setMeetings(prev => prev.map(m => m.id === updated.id ? updated : m));
                                 } catch (e) {
                                   console.error("Erro ao fixar:", e);
                                 }
                               }}
-                              className="p-2 bg-amber-900/40 hover:bg-amber-700/60 rounded-lg text-amber-500 hover:text-amber-200 text-xs flex items-center gap-1 transition-colors"
+                              className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all border border-amber-500/20 hover:border-amber-500/50"
                               title="Fixar esta resposta"
                             >
-                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
+                              <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
+                              </svg>
                               Fixar
                             </button>
                           </div>
