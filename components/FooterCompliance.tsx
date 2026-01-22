@@ -10,8 +10,8 @@ interface FooterProps {
 }
 
 export const FooterCompliance: React.FC<FooterProps> = ({
-    companyName = "LOMAD TECNOLOGIA LTDA", // Placeholder
-    cnpj,
+    companyName = "LOMAD TECNOLOGIA", // Placeholder
+    cnpj = "64.644.169/0001-67",
     address,
     email = "contato@LOMAD.com.br",
     onTermsClick,
