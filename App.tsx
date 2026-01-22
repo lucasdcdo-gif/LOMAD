@@ -1879,21 +1879,58 @@ const App: React.FC = () => {
                   <h3 className="text-xl font-black text-white uppercase tracking-widest">Chat Inteligente</h3>
                 </div>
 
-                <div className="bg-slate-950/50 rounded-2xl p-6 h-[300px] overflow-y-auto mb-6 flex flex-col gap-4 border border-white/5">
-                  {chatMessages.length === 0 && (
+                <div className="bg-slate-950/50 rounded-2xl p-6 min-h-[300px] max-h-[500px] overflow-y-auto mb-6 flex flex-col gap-4 border border-white/5 relative">
+                  {selectedMeeting.pinned_response && (
+                    <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 relative">
+                      <div className="flex items-center gap-2 mb-2 text-amber-500">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
+                        <span className="text-xs font-bold uppercase tracking-wider">Resposta Fixada</span>
+                      </div>
+                      <p className="text-sm text-slate-200 whitespace-pre-wrap">{selectedMeeting.pinned_response}</p>
+                    </div>
+                  )}
+
+                  {chatMessages.length === 0 && !selectedMeeting.pinned_response && (
                     <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-4">
                       <p className="font-medium">Pergunte algo sobre a reunião...</p>
-                      <div className="flex flex-wrap justify-center gap-2">
-                        <button onClick={() => handleChatSubmit("Gere um resumo detalhado")} className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold uppercase transition-colors">Resumo Detalhado</button>
-                        <button onClick={() => handleChatSubmit("Crie um email de follow-up para os participantes")} className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold uppercase transition-colors">Email de Follow-up</button>
-                        <button onClick={() => handleChatSubmit("Liste as tarefas e responsáveis")} className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold uppercase transition-colors">Tarefas</button>
-                      </div>
                     </div>
                   )}
                   {chatMessages.map((msg, idx) => (
                     <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`p-4 rounded-2xl max-w-[80%] ${msg.role === 'user' ? 'bg-cyan-500 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none'}`}>
+                      <div className={`p-4 rounded-2xl max-w-[80%] group relative ${msg.role === 'user' ? 'bg-cyan-500 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none'}`}>
                         <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                        {msg.role === 'model' && (
+                          <div className="absolute -bottom-8 left-0 hidden group-hover:flex gap-2">
+                            <button
+                              onClick={() => navigator.clipboard.writeText(msg.text)}
+                              className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-300 hover:text-white text-xs flex items-center gap-1 transition-colors"
+                              title="Copiar texto"
+                            >
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                              Copiar
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await fetch(`/api/meetings/${selectedMeeting.id}/pin`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ pinnedResponse: msg.text })
+                                  });
+                                  // Update local state to reflect change immediately
+                                  setSelectedMeeting({ ...selectedMeeting, pinned_response: msg.text });
+                                } catch (e) {
+                                  console.error("Erro ao fixar:", e);
+                                }
+                              }}
+                              className="p-2 bg-amber-900/40 hover:bg-amber-700/60 rounded-lg text-amber-500 hover:text-amber-200 text-xs flex items-center gap-1 transition-colors"
+                              title="Fixar esta resposta"
+                            >
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
+                              Fixar
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1908,28 +1945,41 @@ const App: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex gap-4">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={e => setChatInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
-                    placeholder="Digite sua pergunta..."
-                    className="flex-1 bg-slate-950/50 border border-white/10 rounded-xl px-5 py-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all"
-                  />
-                  <button
-                    onClick={() => handleChatSubmit()}
-                    disabled={chatLoading}
-                    className="px-6 bg-cyan-500 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                  </button>
+              </div>
+
+              {/* Persistent Suggestions Footer */}
+              <div className="mb-6 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                <div className="flex gap-2 min-w-max px-1">
+                  <button onClick={() => handleChatSubmit("Gere um resumo detalhado")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Resumo Detalhado</button>
+                  <button onClick={() => handleChatSubmit("Resumo em tópicos")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Resumo em Tópicos</button>
+                  <button onClick={() => handleChatSubmit("Principal assunto resumido")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Principal Assunto</button>
+                  <button onClick={() => handleChatSubmit("Resumo formal e gentil")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Formal & Gentil</button>
+                  <button onClick={() => handleChatSubmit("Resumo formal e direto")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Formal & Direto</button>
+                  <button onClick={() => handleChatSubmit("Crie um email de follow-up para os participantes")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Email Follow-up</button>
+                  <button onClick={() => handleChatSubmit("Liste as tarefas e responsáveis")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Tarefas</button>
                 </div>
+              </div>
+
+              <div className="flex gap-4">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
+                  placeholder="Digite sua pergunta..."
+                  className="flex-1 bg-slate-950/50 border border-white/10 rounded-xl px-5 py-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all"
+                />
+                <button
+                  onClick={() => handleChatSubmit()}
+                  disabled={chatLoading}
+                  className="px-6 bg-cyan-500 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                </button>
               </div>
             </div>
           </div>
         )}
-
         {view === 'PROFILE' && user && (
           <div className="w-full max-w-4xl py-16 animate-fade-in">
             <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-8">Meu Perfil</h1>
@@ -2154,7 +2204,8 @@ const App: React.FC = () => {
               )
             }
           </div >
-        )}
+        )
+        }
 
         {
           paymentModalOpen && (
@@ -2443,84 +2494,86 @@ const App: React.FC = () => {
 
 
         {/* --- BLOCKING TERMS MODAL --- */}
-        {showTermsBlockingModal && user && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6">
-            <div className="bg-slate-900 border border-white/10 text-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full animate-bounce-in relative overflow-hidden">
-              {/* Decorative background */}
-              <div className="absolute top-0 right-0 p-12 opacity-5 translate-x-1/3 -translate-y-1/3">
-                <svg className="w-96 h-96 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
-              </div>
-
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                    <svg className="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-black text-white">Atualização de Termos</h2>
-                    <p className="text-slate-400 text-sm">Ação Necessária para Continuar</p>
-                  </div>
+        {
+          showTermsBlockingModal && user && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6">
+              <div className="bg-slate-900 border border-white/10 text-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full animate-bounce-in relative overflow-hidden">
+                {/* Decorative background */}
+                <div className="absolute top-0 right-0 p-12 opacity-5 translate-x-1/3 -translate-y-1/3">
+                  <svg className="w-96 h-96 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
                 </div>
 
-                <p className="text-slate-300 text-base leading-relaxed mb-6">
-                  Para garantir a segurança e conformidade legal de todos os usuários, precisamos que você leia e aceite nossos novos <strong>Termos de Uso</strong> e <strong>Política de Privacidade</strong> antes de continuar utilizando o sistema.
-                </p>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                      <svg className="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-black text-white">Atualização de Termos</h2>
+                      <p className="text-slate-400 text-sm">Ação Necessária para Continuar</p>
+                    </div>
+                  </div>
 
-                <div className="bg-slate-950/50 rounded-xl p-4 border border-white/5 h-40 overflow-y-auto mb-6 custom-scrollbar">
-                  <p className="text-xs text-slate-400 whitespace-pre-wrap">
-                    {privacyPolicy || "Carregando termos..."}
+                  <p className="text-slate-300 text-base leading-relaxed mb-6">
+                    Para garantir a segurança e conformidade legal de todos os usuários, precisamos que você leia e aceite nossos novos <strong>Termos de Uso</strong> e <strong>Política de Privacidade</strong> antes de continuar utilizando o sistema.
                   </p>
-                </div>
 
-                <div className="flex items-center gap-3 mb-8 p-4 bg-white/5 rounded-xl border border-white/5 hover:border-cyan-500/50 transition-colors cursor-pointer" onClick={() => !termsAcceptLoading && setPrivacyAccepted(!privacyAccepted)}>
-                  <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${privacyAccepted ? 'bg-cyan-500 border-cyan-500' : 'border-slate-500 bg-transparent'}`}>
-                    {privacyAccepted && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                  <div className="bg-slate-950/50 rounded-xl p-4 border border-white/5 h-40 overflow-y-auto mb-6 custom-scrollbar">
+                    <p className="text-xs text-slate-400 whitespace-pre-wrap">
+                      {privacyPolicy || "Carregando termos..."}
+                    </p>
                   </div>
-                  <label className="text-sm font-bold text-white cursor-pointer select-none flex-1">
-                    Li e aceito integralmente os Termos de Uso e Política de Privacidade.
-                  </label>
-                </div>
 
-                <div className="flex gap-4">
-                  <button
-                    onClick={handleLogout}
-                    className="px-6 py-4 rounded-xl border border-white/10 text-white font-bold hover:bg-white/5 transition-all text-sm uppercase tracking-wide"
-                  >
-                    Sair
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!privacyAccepted) return;
-                      setTermsAcceptLoading(true);
-                      try {
-                        const res = await fetch('/api/terms/accept', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userId: user.id, userAgent: navigator.userAgent })
-                        });
-                        if (res.ok) {
-                          setTermsAccepted(true);
-                          setShowTermsBlockingModal(false);
-                          setSuccessMessage("Termos aceitos com sucesso! Bom trabalho.");
-                        } else {
-                          setError("Falha ao salvar. Tente novamente.");
+                  <div className="flex items-center gap-3 mb-8 p-4 bg-white/5 rounded-xl border border-white/5 hover:border-cyan-500/50 transition-colors cursor-pointer" onClick={() => !termsAcceptLoading && setPrivacyAccepted(!privacyAccepted)}>
+                    <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${privacyAccepted ? 'bg-cyan-500 border-cyan-500' : 'border-slate-500 bg-transparent'}`}>
+                      {privacyAccepted && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                    </div>
+                    <label className="text-sm font-bold text-white cursor-pointer select-none flex-1">
+                      Li e aceito integralmente os Termos de Uso e Política de Privacidade.
+                    </label>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button
+                      onClick={handleLogout}
+                      className="px-6 py-4 rounded-xl border border-white/10 text-white font-bold hover:bg-white/5 transition-all text-sm uppercase tracking-wide"
+                    >
+                      Sair
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!privacyAccepted) return;
+                        setTermsAcceptLoading(true);
+                        try {
+                          const res = await fetch('/api/terms/accept', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId: user.id, userAgent: navigator.userAgent })
+                          });
+                          if (res.ok) {
+                            setTermsAccepted(true);
+                            setShowTermsBlockingModal(false);
+                            setSuccessMessage("Termos aceitos com sucesso! Bom trabalho.");
+                          } else {
+                            setError("Falha ao salvar. Tente novamente.");
+                          }
+                        } catch (e) {
+                          setError("Erro de conexão.");
+                        } finally {
+                          setTermsAcceptLoading(false);
                         }
-                      } catch (e) {
-                        setError("Erro de conexão.");
-                      } finally {
-                        setTermsAcceptLoading(false);
-                      }
-                    }}
-                    disabled={!privacyAccepted || termsAcceptLoading}
-                    className="flex-1 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-black text-sm uppercase tracking-widest shadow-lg hover:shadow-cyan-500/20 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {termsAcceptLoading ? 'Salvando...' : 'Aceitar e Continuar'}
-                  </button>
+                      }}
+                      disabled={!privacyAccepted || termsAcceptLoading}
+                      className="flex-1 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-black text-sm uppercase tracking-widest shadow-lg hover:shadow-cyan-500/20 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {termsAcceptLoading ? 'Salvando...' : 'Aceitar e Continuar'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
         {
           view === 'REGISTER' && (
@@ -2873,472 +2926,484 @@ const App: React.FC = () => {
       }
 
       {/* MFA Verification Modal */}
-      {mfaChallengeOpen && (
-        <MFAChallengeModal
-          onSuccess={handleMfaSuccess}
-          onCancel={() => {
-            setMfaChallengeOpen(false);
-            setLoginStatus('IDLE');
-            supabase.auth.signOut();
-            setUser(null);
-            setView('LOGIN');
-          }}
-        />
-      )}
+      {
+        mfaChallengeOpen && (
+          <MFAChallengeModal
+            onSuccess={handleMfaSuccess}
+            onCancel={() => {
+              setMfaChallengeOpen(false);
+              setLoginStatus('IDLE');
+              supabase.auth.signOut();
+              setUser(null);
+              setView('LOGIN');
+            }}
+          />
+        )
+      }
 
       {/* HOW IT WORKS PAGE */}
-      {view === 'HOW_IT_WORKS' && (
-        <div className="w-full max-w-6xl mx-auto py-16 px-6 animate-fade-in">
-          {/* Header */}
-          <div className="text-center mb-16">
-            <h1 className="text-5xl md:text-6xl font-black text-white mb-4">
-              Como o <span className="bg-gradient-to-r from-cyan-500 to-emerald-500 bg-clip-text text-transparent">LOMAD</span> Funciona
-            </h1>
-            <p className="text-slate-400 text-lg">Entenda os requisitos e o processo de transcrição</p>
-          </div>
-
-          {/* Seção 1: Pré-requisitos */}
-          <div className="mb-20">
-            <h2 className="text-3xl font-black text-white mb-8 text-center">
-              <span className="text-cyan-400">✓</span> Pré-requisitos do Sistema
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Requisito 1 */}
-              <div className="glass p-6 rounded-2xl border border-white/10 hover:border-cyan-500/30 transition-all">
-                <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h3 className="text-white font-bold mb-2">Navegador Compatível</h3>
-                <p className="text-slate-400 text-sm">Chrome, Edge ou Opera (versão atualizada)</p>
-              </div>
-
-              {/* Requisito 2 */}
-              <div className="glass p-6 rounded-2xl border border-white/10 hover:border-cyan-500/30 transition-all">
-                <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                  </svg>
-                </div>
-                <h3 className="text-white font-bold mb-2">Captura de Áudio</h3>
-                <p className="text-slate-400 text-sm">Permissão para captura de áudio do navegador</p>
-              </div>
-
-              {/* Requisito 3 */}
-              <div className="glass p-6 rounded-2xl border border-white/10 hover:border-cyan-500/30 transition-all">
-                <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                  </svg>
-                </div>
-                <h3 className="text-white font-bold mb-2">Acesso ao Microfone</h3>
-                <p className="text-slate-400 text-sm">Permissão para uso do microfone</p>
-              </div>
-
-              {/* Requisito 4 */}
-              <div className="glass p-6 rounded-2xl border border-white/10 hover:border-cyan-500/30 transition-all">
-                <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                  </svg>
-                </div>
-                <h3 className="text-white font-bold mb-2">Conexão Estável</h3>
-                <p className="text-slate-400 text-sm">Internet estável para processamento em tempo real</p>
-              </div>
-
-              {/* Requisito 5 */}
-              <div className="glass p-6 rounded-2xl border border-white/10 hover:border-cyan-500/30 transition-all">
-                <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h3 className="text-white font-bold mb-2">Sistema Operacional</h3>
-                <p className="text-slate-400 text-sm">Windows, macOS ou Linux</p>
-              </div>
+      {
+        view === 'HOW_IT_WORKS' && (
+          <div className="w-full max-w-6xl mx-auto py-16 px-6 animate-fade-in">
+            {/* Header */}
+            <div className="text-center mb-16">
+              <h1 className="text-5xl md:text-6xl font-black text-white mb-4">
+                Como o <span className="bg-gradient-to-r from-cyan-500 to-emerald-500 bg-clip-text text-transparent">LOMAD</span> Funciona
+              </h1>
+              <p className="text-slate-400 text-lg">Entenda os requisitos e o processo de transcrição</p>
             </div>
-          </div>
 
-          {/* Seção 2: Como Funciona */}
-          <div className="mb-16">
-            <h2 className="text-3xl font-black text-white mb-12 text-center">
-              Processo de <span className="text-emerald-500">Transcrição</span>
-            </h2>
+            {/* Seção 1: Pré-requisitos */}
+            <div className="mb-20">
+              <h2 className="text-3xl font-black text-white mb-8 text-center">
+                <span className="text-cyan-400">✓</span> Pré-requisitos do Sistema
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Requisito 1 */}
+                <div className="glass p-6 rounded-2xl border border-white/10 hover:border-cyan-500/30 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-white font-bold mb-2">Navegador Compatível</h3>
+                  <p className="text-slate-400 text-sm">Chrome, Edge ou Opera (versão atualizada)</p>
+                </div>
 
-            <div className="space-y-12">
-              {/* Passo 1 */}
-              <div className="flex flex-col md:flex-row items-center gap-8">
-                <div className="flex-shrink-0">
-                  <div className="w-24 h-24 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-3xl flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                    <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {/* Requisito 2 */}
+                <div className="glass p-6 rounded-2xl border border-white/10 hover:border-cyan-500/30 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-white font-bold mb-2">Captura de Áudio</h3>
+                  <p className="text-slate-400 text-sm">Permissão para captura de áudio do navegador</p>
+                </div>
+
+                {/* Requisito 3 */}
+                <div className="glass p-6 rounded-2xl border border-white/10 hover:border-cyan-500/30 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     </svg>
                   </div>
+                  <h3 className="text-white font-bold mb-2">Acesso ao Microfone</h3>
+                  <p className="text-slate-400 text-sm">Permissão para uso do microfone</p>
                 </div>
-                <div className="flex-1 glass p-8 rounded-2xl border border-white/10">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-cyan-400 font-black text-2xl">01</span>
-                    <h3 className="text-2xl font-black text-white">Captura de Áudio</h3>
+
+                {/* Requisito 4 */}
+                <div className="glass p-6 rounded-2xl border border-white/10 hover:border-cyan-500/30 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
                   </div>
-                  <p className="text-slate-300 text-lg mb-4">O LOMAD captura simultaneamente o áudio do navegador (reuniões, vídeos, músicas) e do seu microfone</p>
-                  <div className="flex items-center gap-4 text-sm text-slate-400">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-cyan-500 rounded-full animate-pulse"></div>
-                      <span>Navegador</span>
+                  <h3 className="text-white font-bold mb-2">Conexão Estável</h3>
+                  <p className="text-slate-400 text-sm">Internet estável para processamento em tempo real</p>
+                </div>
+
+                {/* Requisito 5 */}
+                <div className="glass p-6 rounded-2xl border border-white/10 hover:border-cyan-500/30 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-white font-bold mb-2">Sistema Operacional</h3>
+                  <p className="text-slate-400 text-sm">Windows, macOS ou Linux</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Seção 2: Como Funciona */}
+            <div className="mb-16">
+              <h2 className="text-3xl font-black text-white mb-12 text-center">
+                Processo de <span className="text-emerald-500">Transcrição</span>
+              </h2>
+
+              <div className="space-y-12">
+                {/* Passo 1 */}
+                <div className="flex flex-col md:flex-row items-center gap-8">
+                  <div className="flex-shrink-0">
+                    <div className="w-24 h-24 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-3xl flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                      <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
                     </div>
-                    <span>+</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                      <span>Microfone</span>
+                  </div>
+                  <div className="flex-1 glass p-8 rounded-2xl border border-white/10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-cyan-400 font-black text-2xl">01</span>
+                      <h3 className="text-2xl font-black text-white">Captura de Áudio</h3>
                     </div>
-                    <span>→</span>
-                    <span className="font-bold text-white">Sistema</span>
+                    <p className="text-slate-300 text-lg mb-4">O LOMAD captura simultaneamente o áudio do navegador (reuniões, vídeos, músicas) e do seu microfone</p>
+                    <div className="flex items-center gap-4 text-sm text-slate-400">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-cyan-500 rounded-full animate-pulse"></div>
+                        <span>Navegador</span>
+                      </div>
+                      <span>+</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                        <span>Microfone</span>
+                      </div>
+                      <span>→</span>
+                      <span className="font-bold text-white">Sistema</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Passo 2 */}
-              <div className="flex flex-col md:flex-row items-center gap-8">
-                <div className="flex-shrink-0">
-                  <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-3xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                    <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+                {/* Passo 2 */}
+                <div className="flex flex-col md:flex-row items-center gap-8">
+                  <div className="flex-shrink-0">
+                    <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-3xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                      <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-1 glass p-8 rounded-2xl border border-white/10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-emerald-400 font-black text-2xl">02</span>
+                      <h3 className="text-2xl font-black text-white">Processamento</h3>
+                    </div>
+                    <p className="text-slate-300 text-lg mb-4">O áudio capturado é processado em tempo real e enviado para transcrição via IA</p>
+                    <div className="flex items-center gap-2 text-sm text-slate-400">
+                      <span>Ondas de áudio</span>
+                      <span>→</span>
+                      <span className="font-bold text-emerald-400">Processamento IA</span>
+                      <span>→</span>
+                      <span>Texto</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex-1 glass p-8 rounded-2xl border border-white/10">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-emerald-400 font-black text-2xl">02</span>
-                    <h3 className="text-2xl font-black text-white">Processamento</h3>
-                  </div>
-                  <p className="text-slate-300 text-lg mb-4">O áudio capturado é processado em tempo real e enviado para transcrição via IA</p>
-                  <div className="flex items-center gap-2 text-sm text-slate-400">
-                    <span>Ondas de áudio</span>
-                    <span>→</span>
-                    <span className="font-bold text-emerald-400">Processamento IA</span>
-                    <span>→</span>
-                    <span>Texto</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Passo 3 */}
-              <div className="flex flex-col md:flex-row items-center gap-8">
-                <div className="flex-shrink-0">
-                  <div className="w-24 h-24 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-3xl flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                    <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                {/* Passo 3 */}
+                <div className="flex flex-col md:flex-row items-center gap-8">
+                  <div className="flex-shrink-0">
+                    <div className="w-24 h-24 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-3xl flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                      <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
                   </div>
-                </div>
-                <div className="flex-1 glass p-8 rounded-2xl border border-white/10">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-cyan-400 font-black text-2xl">03</span>
-                    <h3 className="text-2xl font-black text-white">Transcrição</h3>
-                  </div>
-                  <p className="text-slate-300 text-lg mb-4">Tudo que é falado é transcrito automaticamente e fica disponível para você consultar, editar e exportar</p>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full font-bold">Tempo Real</span>
-                    <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full font-bold">Alta Precisão</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Seção 2.5: Diferenciais do LOMAD */}
-          <div className="mb-20">
-            <h2 className="text-4xl font-black text-white mb-4 text-center">
-              Por que escolher o <span className="bg-gradient-to-r from-cyan-500 to-emerald-500 bg-clip-text text-transparent">LOMAD</span>?
-            </h2>
-            <p className="text-slate-400 text-center mb-12 max-w-3xl mx-auto">
-              Recursos poderosos de IA que transformam suas reuniões em insights acionáveis
-            </p>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-              {/* Feature 1: Resumos Automáticos com IA */}
-              <div className="glass p-8 rounded-3xl border border-white/10 hover:border-cyan-500/30 transition-all group">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                    <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-black text-white mb-2">Resumos Automáticos com IA</h3>
-                    <p className="text-slate-300 text-base mb-4">
-                      Receba resumos inteligentes de suas reuniões à medida que acontecem, com perguntas personalizadas e itens de ação.
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Perguntas personalizadas de IA sobre o conteúdo</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Geração automática de itens de ação</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Acesso a resumos de reuniões anteriores</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Feature 2: Chat IA Acionável */}
-              <div className="glass p-8 rounded-3xl border border-white/10 hover:border-emerald-500/30 transition-all group">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                    <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-black text-white mb-2">Insights de IA com Um Clique</h3>
-                    <p className="text-slate-300 text-base mb-4">
-                      Transforme suas transcrições em insights acionáveis instantaneamente. Gere e-mails, itens de ação e solicitações reutilizáveis.
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Resumos de reuniões com um clique</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Criação de e-mails de acompanhamento automáticos</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Perguntas personalizadas reutilizáveis</span>
+                  <div className="flex-1 glass p-8 rounded-2xl border border-white/10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-cyan-400 font-black text-2xl">03</span>
+                      <h3 className="text-2xl font-black text-white">Transcrição</h3>
+                    </div>
+                    <p className="text-slate-300 text-lg mb-4">Tudo que é falado é transcrito automaticamente e fica disponível para você consultar, editar e exportar</p>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full font-bold">Tempo Real</span>
+                      <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full font-bold">Alta Precisão</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Feature 3: Transcrição Ao Vivo Sem Bots */}
-              <div className="glass p-8 rounded-3xl border border-white/10 hover:border-cyan-500/30 transition-all group">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                    <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+            {/* Seção 2.5: Diferenciais do LOMAD */}
+            <div className="mb-20">
+              <h2 className="text-4xl font-black text-white mb-4 text-center">
+                Por que escolher o <span className="bg-gradient-to-r from-cyan-500 to-emerald-500 bg-clip-text text-transparent">LOMAD</span>?
+              </h2>
+              <p className="text-slate-400 text-center mb-12 max-w-3xl mx-auto">
+                Recursos poderosos de IA que transformam suas reuniões em insights acionáveis
+              </p>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                {/* Feature 1: Resumos Automáticos com IA */}
+                <div className="glass p-8 rounded-3xl border border-white/10 hover:border-cyan-500/30 transition-all group">
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-black text-white mb-2">Resumos Automáticos com IA</h3>
+                      <p className="text-slate-300 text-base mb-4">
+                        Receba resumos inteligentes de suas reuniões à medida que acontecem, com perguntas personalizadas e itens de ação.
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-black text-white mb-2">Transcrição Ao Vivo Sem Bots</h3>
-                    <p className="text-slate-300 text-base mb-4">
-                      Capture reuniões sem que nenhum bot entre na chamada. Privacidade total e transcrição em tempo real.
-                    </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-slate-300">
+                      <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span>Perguntas personalizadas de IA sobre o conteúdo</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-300">
+                      <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span>Geração automática de itens de ação</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-300">
+                      <svg className="w-5 h-5 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span>Acesso a resumos de reuniões anteriores</span>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Nenhum bot entra na chamada</span>
+
+                {/* Feature 2: Chat IA Acionável */}
+                <div className="glass p-8 rounded-3xl border border-white/10 hover:border-emerald-500/30 transition-all group">
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-black text-white mb-2">Insights de IA com Um Clique</h3>
+                      <p className="text-slate-300 text-base mb-4">
+                        Transforme suas transcrições em insights acionáveis instantaneamente. Gere e-mails, itens de ação e solicitações reutilizáveis.
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Compatível com Google Meet, Zoom, MS Teams</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Transcrição em tempo real enquanto você fala</span>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-slate-300">
+                      <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span>Resumos de reuniões com um clique</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-300">
+                      <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span>Criação de e-mails de acompanhamento automáticos</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-300">
+                      <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span>Perguntas personalizadas reutilizáveis</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Feature 4: Identificação de Falantes + Idiomas */}
-              <div className="glass p-8 rounded-3xl border border-white/10 hover:border-pink-500/30 transition-all group">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                    <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Feature 3: Transcrição Ao Vivo Sem Bots */}
+                <div className="glass p-8 rounded-3xl border border-white/10 hover:border-cyan-500/30 transition-all group">
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-black text-white mb-2">Transcrição Ao Vivo Sem Bots</h3>
+                      <p className="text-slate-300 text-base mb-4">
+                        Capture reuniões sem que nenhum bot entre na chamada. Privacidade total e transcrição em tempo real.
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-black text-white mb-2">Identificação Inteligente</h3>
-                    <p className="text-slate-300 text-base mb-4">
-                      Identifique automaticamente quem está falando e suporte para mais de 60 idiomas diferentes.
-                    </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-slate-300">
+                      <svg className="w-5 h-5 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span>Nenhum bot entra na chamada</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-300">
+                      <svg className="w-5 h-5 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span>Compatível com Google Meet, Zoom, MS Teams</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-300">
+                      <svg className="w-5 h-5 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span>Transcrição em tempo real enquanto você fala</span>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-pink-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Identificação automática de alto-falante</span>
+
+                {/* Feature 4: Identificação de Falantes + Idiomas */}
+                <div className="glass p-8 rounded-3xl border border-white/10 hover:border-pink-500/30 transition-all group">
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-black text-white mb-2">Identificação Inteligente</h3>
+                      <p className="text-slate-300 text-base mb-4">
+                        Identifique automaticamente quem está falando e suporte para mais de 60 idiomas diferentes.
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-pink-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Suporte a mais de 60 idiomas</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-pink-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Transcrições precisas e contextualizadas</span>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-slate-300">
+                      <svg className="w-5 h-5 text-pink-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span>Identificação automática de alto-falante</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-300">
+                      <svg className="w-5 h-5 text-pink-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span>Suporte a mais de 60 idiomas</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-300">
+                      <svg className="w-5 h-5 text-pink-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span>Transcrições precisas e contextualizadas</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Seção 3: Conformidade e Segurança (LGPD) */}
-          <div className="mb-16">
-            <div className="glass p-8 rounded-2xl border border-emerald-500/20 bg-emerald-900/10">
-              <div className="flex items-start gap-6">
-                <div className="flex-shrink-0 hidden md:block">
-                  <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center">
-                    <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
+            {/* Seção 3: Conformidade e Segurança (LGPD) */}
+            <div className="mb-16">
+              <div className="glass p-8 rounded-2xl border border-emerald-500/20 bg-emerald-900/10">
+                <div className="flex items-start gap-6">
+                  <div className="flex-shrink-0 hidden md:block">
+                    <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center">
+                      <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-black text-white mb-2">Segurança e Retenção de Dados</h3>
-                  <p className="text-slate-300 text-lg mb-4">
-                    Para garantir sua privacidade e conformidade com a LGPD, implementamos uma política de retenção automática.
-                  </p>
-                  <div className="bg-slate-950/50 rounded-xl p-4 border border-white/5">
-                    <p className="text-slate-400 text-sm">
-                      <span className="font-bold text-emerald-400">Importante:</span> Todas as transcrições são armazenadas de forma segura e <span className="text-white font-bold">excluídas automaticamente após 30 dias</span> da data de gravação. Recomendamos exportar os dados importantes antes deste prazo.
+                  <div>
+                    <h3 className="text-2xl font-black text-white mb-2">Segurança e Retenção de Dados</h3>
+                    <p className="text-slate-300 text-lg mb-4">
+                      Para garantir sua privacidade e conformidade com a LGPD, implementamos uma política de retenção automática.
                     </p>
+                    <div className="bg-slate-950/50 rounded-xl p-4 border border-white/5">
+                      <p className="text-slate-400 text-sm">
+                        <span className="font-bold text-emerald-400">Importante:</span> Todas as transcrições são armazenadas de forma segura e <span className="text-white font-bold">excluídas automaticamente após 30 dias</span> da data de gravação. Recomendamos exportar os dados importantes antes deste prazo.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* CTA */}
+            <div className="text-center">
+              <button
+                onClick={() => setView('MAIN')}
+                className="px-12 py-4 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-black text-lg rounded-xl hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all"
+              >
+                Começar Agora
+              </button>
+            </div>
           </div>
 
-          {/* CTA */}
-          <div className="text-center">
-            <button
-              onClick={() => setView('MAIN')}
-              className="px-12 py-4 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-black text-lg rounded-xl hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all"
-            >
-              Começar Agora
-            </button>
-          </div>
-        </div>
-
-      )}
+        )
+      }
 
       {/* ABOUT PAGE (Quem Somos) */}
-      {view === 'ABOUT' && (
-        <div className="w-full max-w-4xl mx-auto py-16 px-6 animate-fade-in">
-          <div className="text-center mb-16">
-            <h1 className="text-5xl md:text-6xl font-black text-white mb-6">
-              Nossa <span className="bg-gradient-to-r from-cyan-500 to-emerald-500 bg-clip-text text-transparent">Missão</span>
-            </h1>
-            <p className="text-slate-400 text-xl max-w-2xl mx-auto">Transformando a maneira como o mundo captura e processa informações.</p>
-          </div>
-
-          <div className="space-y-12">
-            <div className="glass p-10 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
-                <LomadLogo size={300} withText={false} />
-              </div>
-              <h2 className="text-3xl font-black text-white mb-6 relative z-10">A Origem</h2>
-              <p className="text-slate-300 text-lg leading-relaxed relative z-10">
-                A LOMAD nasceu da necessidade de tornar reuniões mais produtivas, acessíveis e inteligentes.
-                Em um mundo onde a informação flui rapidamente, perder detalhes importantes de uma conversa pode custar caro.
-                Nossa fundação se baseia na crença de que a tecnologia deve servir como uma extensão da capacidade humana,
-                permitindo que profissionais foquem no que realmente importa: **criar, decidir e agir**, enquanto nós cuidamos de registrar e organizar.
-              </p>
+      {
+        view === 'ABOUT' && (
+          <div className="w-full max-w-4xl mx-auto py-16 px-6 animate-fade-in">
+            <div className="text-center mb-16">
+              <h1 className="text-5xl md:text-6xl font-black text-white mb-6">
+                Nossa <span className="bg-gradient-to-r from-cyan-500 to-emerald-500 bg-clip-text text-transparent">Missão</span>
+              </h1>
+              <p className="text-slate-400 text-xl max-w-2xl mx-auto">Transformando a maneira como o mundo captura e processa informações.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="glass p-8 rounded-[2rem] border border-cyan-500/20 bg-cyan-900/5">
-                <h3 className="text-xl font-black text-white mb-4 uppercase tracking-widest text-cyan-400">Visão</h3>
-                <p className="text-slate-300">
-                  Ser a plataforma referência global em inteligência de reuniões, eliminando barreiras de comunicação e garantindo que nenhuma ideia brilhante seja esquecida.
+            <div className="space-y-12">
+              <div className="glass p-10 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+                  <LomadLogo size={300} withText={false} />
+                </div>
+                <h2 className="text-3xl font-black text-white mb-6 relative z-10">A Origem</h2>
+                <p className="text-slate-300 text-lg leading-relaxed relative z-10">
+                  A LOMAD nasceu da necessidade de tornar reuniões mais produtivas, acessíveis e inteligentes.
+                  Em um mundo onde a informação flui rapidamente, perder detalhes importantes de uma conversa pode custar caro.
+                  Nossa fundação se baseia na crença de que a tecnologia deve servir como uma extensão da capacidade humana,
+                  permitindo que profissionais foquem no que realmente importa: **criar, decidir e agir**, enquanto nós cuidamos de registrar e organizar.
                 </p>
               </div>
-              <div className="glass p-8 rounded-[2rem] border border-emerald-500/20 bg-emerald-900/5">
-                <h3 className="text-xl font-black text-white mb-4 uppercase tracking-widest text-emerald-400">Valores</h3>
-                <ul className="space-y-3 text-slate-300">
-                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>Privacidade e Segurança em primeiro lugar</li>
-                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>Inovação contínua</li>
-                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>Transparência radical</li>
-                </ul>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="glass p-8 rounded-[2rem] border border-cyan-500/20 bg-cyan-900/5">
+                  <h3 className="text-xl font-black text-white mb-4 uppercase tracking-widest text-cyan-400">Visão</h3>
+                  <p className="text-slate-300">
+                    Ser a plataforma referência global em inteligência de reuniões, eliminando barreiras de comunicação e garantindo que nenhuma ideia brilhante seja esquecida.
+                  </p>
+                </div>
+                <div className="glass p-8 rounded-[2rem] border border-emerald-500/20 bg-emerald-900/5">
+                  <h3 className="text-xl font-black text-white mb-4 uppercase tracking-widest text-emerald-400">Valores</h3>
+                  <ul className="space-y-3 text-slate-300">
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>Privacidade e Segurança em primeiro lugar</li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>Inovação contínua</li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>Transparência radical</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* CONTACT PAGE (Contatos) */}
-      {view === 'CONTACT' && (
-        <div className="w-full max-w-4xl mx-auto py-16 px-6 animate-fade-in">
-          <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-5xl font-black text-white mb-4">Fale Conosco</h1>
-            <p className="text-slate-400 text-lg">Estamos aqui para ajudar você e sua empresa.</p>
+      {
+        view === 'CONTACT' && (
+          <div className="w-full max-w-4xl mx-auto py-16 px-6 animate-fade-in">
+            <div className="text-center mb-16">
+              <h1 className="text-4xl md:text-5xl font-black text-white mb-4">Fale Conosco</h1>
+              <p className="text-slate-400 text-lg">Estamos aqui para ajudar você e sua empresa.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="glass p-8 rounded-3xl border border-white/10 flex flex-col items-center text-center hover:scale-105 transition-transform duration-300">
+                <div className="w-14 h-14 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-6">
+                  <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Email</h3>
+                <p className="text-slate-400 text-sm mb-4">Para dúvidas gerais e suporte</p>
+                <a href="mailto:contato@lomad.com.br" className="text-blue-400 font-bold hover:text-blue-300 transition-colors">contato@lomad.com.br</a>
+              </div>
+
+              <div className="glass p-8 rounded-3xl border border-white/10 flex flex-col items-center text-center hover:scale-105 transition-transform duration-300">
+                <div className="w-14 h-14 rounded-2xl bg-green-500/20 text-green-400 flex items-center justify-center mb-6">
+                  <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Telefone</h3>
+                <p className="text-slate-400 text-sm mb-4">Segunda a Sexta, 9h às 18h</p>
+                <span className="text-white font-bold">(11) 99999-9999</span>
+              </div>
+
+              <div className="glass p-8 rounded-3xl border border-white/10 flex flex-col items-center text-center hover:scale-105 transition-transform duration-300">
+                <div className="w-14 h-14 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-6">
+                  <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Endereço</h3>
+                <p className="text-slate-400 text-sm mb-4">Venha nos visitar</p>
+                <span className="text-white font-bold text-sm">Av. Paulista, 1000<br />São Paulo, SP</span>
+              </div>
+            </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="glass p-8 rounded-3xl border border-white/10 flex flex-col items-center text-center hover:scale-105 transition-transform duration-300">
-              <div className="w-14 h-14 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-6">
-                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Email</h3>
-              <p className="text-slate-400 text-sm mb-4">Para dúvidas gerais e suporte</p>
-              <a href="mailto:contato@lomad.com.br" className="text-blue-400 font-bold hover:text-blue-300 transition-colors">contato@lomad.com.br</a>
-            </div>
-
-            <div className="glass p-8 rounded-3xl border border-white/10 flex flex-col items-center text-center hover:scale-105 transition-transform duration-300">
-              <div className="w-14 h-14 rounded-2xl bg-green-500/20 text-green-400 flex items-center justify-center mb-6">
-                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Telefone</h3>
-              <p className="text-slate-400 text-sm mb-4">Segunda a Sexta, 9h às 18h</p>
-              <span className="text-white font-bold">(11) 99999-9999</span>
-            </div>
-
-            <div className="glass p-8 rounded-3xl border border-white/10 flex flex-col items-center text-center hover:scale-105 transition-transform duration-300">
-              <div className="w-14 h-14 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-6">
-                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Endereço</h3>
-              <p className="text-slate-400 text-sm mb-4">Venha nos visitar</p>
-              <span className="text-white font-bold text-sm">Av. Paulista, 1000<br />São Paulo, SP</span>
-            </div>
-          </div>
-        </div>
-      )}
+        )
+      }
 
       {/* View: Termos de Uso */}
-      {view === 'TERMS' && (
-        <div className="pt-32 pb-20 px-6 max-w-4xl mx-auto">
-          <button onClick={() => setView('MAIN')} className="mb-8 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-            Voltar
-          </button>
-          <div className="glass p-8 rounded-2xl border border-white/10">
-            <h1 className="text-3xl font-black text-white mb-8">Termos de Uso</h1>
-            <div className="prose prose-invert max-w-none whitespace-pre-wrap text-slate-300">
-              {termsContent || "Carregando..."}
+      {
+        view === 'TERMS' && (
+          <div className="pt-32 pb-20 px-6 max-w-4xl mx-auto">
+            <button onClick={() => setView('MAIN')} className="mb-8 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              Voltar
+            </button>
+            <div className="glass p-8 rounded-2xl border border-white/10">
+              <h1 className="text-3xl font-black text-white mb-8">Termos de Uso</h1>
+              <div className="prose prose-invert max-w-none whitespace-pre-wrap text-slate-300">
+                {termsContent || "Carregando..."}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* View: Política de Privacidade */}
-      {view === 'PRIVACY' && (
-        <div className="pt-32 pb-20 px-6 max-w-4xl mx-auto">
-          <button onClick={() => setView('MAIN')} className="mb-8 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-            Voltar
-          </button>
-          <div className="glass p-8 rounded-2xl border border-white/10">
-            <h1 className="text-3xl font-black text-white mb-8">Política de Privacidade</h1>
-            <div className="prose prose-invert max-w-none whitespace-pre-wrap text-slate-300">
-              {privacyPolicy || "Carregando..."}
+      {
+        view === 'PRIVACY' && (
+          <div className="pt-32 pb-20 px-6 max-w-4xl mx-auto">
+            <button onClick={() => setView('MAIN')} className="mb-8 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              Voltar
+            </button>
+            <div className="glass p-8 rounded-2xl border border-white/10">
+              <h1 className="text-3xl font-black text-white mb-8">Política de Privacidade</h1>
+              <div className="prose prose-invert max-w-none whitespace-pre-wrap text-slate-300">
+                {privacyPolicy || "Carregando..."}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <PaymentModal
         isOpen={paymentModalOpen}
@@ -3354,121 +3419,125 @@ const App: React.FC = () => {
       />
 
       {/* View: Pricing */}
-      {view === 'PRICING' && (
-        <div className="pt-10 pb-20 px-6 max-w-7xl mx-auto w-full">
-          <button onClick={() => setView('MAIN')} className="mb-4 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-            Voltar
-          </button>
+      {
+        view === 'PRICING' && (
+          <div className="pt-10 pb-20 px-6 max-w-7xl mx-auto w-full">
+            <button onClick={() => setView('MAIN')} className="mb-4 flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              Voltar
+            </button>
 
-          <div className="text-center mb-10 animate-fade-in">
-            <h1 className="text-4xl md:text-5xl font-black text-white mb-6">Planos que cabem no seu bolso</h1>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">Comece gratuitamente e evolua conforme sua necessidade. Sem contratos de fidelidade.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* FREE PLAN */}
-            <div className="glass p-8 rounded-[2rem] border border-white/5 hover:border-white/10 transition-all flex flex-col">
-              <div className="mb-8">
-                <span className="px-3 py-1 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold uppercase tracking-wider">Gratuito</span>
-                <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-white">R$ 0</span>
-                  <span className="text-slate-500 font-bold">/mês</span>
-                </div>
-                <p className="text-slate-400 mt-2 text-sm">Para testes e uso ocasional.</p>
-              </div>
-
-              <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center gap-3 text-slate-300">
-                  <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span>Até 5 reuniões transcritas</span>
-                </li>
-                <li className="flex items-center gap-3 text-slate-300">
-                  <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span>Transcrição básica</span>
-                </li>
-                <li className="flex items-center gap-3 text-slate-500">
-                  <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  <span>Sem Chat IA</span>
-                </li>
-                <li className="flex items-center gap-3 text-slate-500">
-                  <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  <span>Suporte padrão</span>
-                </li>
-              </ul>
-
-              <button
-                onClick={() => user ? setView('MAIN') : setView('REGISTER')}
-                className="w-full py-4 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold border border-white/10 transition-all uppercase tracking-wide"
-              >
-                {user ? 'Continuar Grátis' : 'Criar Conta Grátis'}
-              </button>
+            <div className="text-center mb-10 animate-fade-in">
+              <h1 className="text-4xl md:text-5xl font-black text-white mb-6">Planos que cabem no seu bolso</h1>
+              <p className="text-slate-400 text-lg max-w-2xl mx-auto">Comece gratuitamente e evolua conforme sua necessidade. Sem contratos de fidelidade.</p>
             </div>
 
-            {/* PRO PLAN */}
-            <div className="relative glass p-8 rounded-[2rem] border border-cyan-500/30 flex flex-col overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-emerald-500 to-cyan-500"></div>
-              <div className="absolute -right-12 -top-12 w-40 h-40 bg-cyan-500/20 rounded-full blur-3xl group-hover:bg-cyan-500/30 transition-colors"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {/* FREE PLAN */}
+              <div className="glass p-8 rounded-[2rem] border border-white/5 hover:border-white/10 transition-all flex flex-col">
+                <div className="mb-8">
+                  <span className="px-3 py-1 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold uppercase tracking-wider">Gratuito</span>
+                  <div className="mt-4 flex items-baseline gap-1">
+                    <span className="text-4xl font-black text-white">R$ 0</span>
+                    <span className="text-slate-500 font-bold">/mês</span>
+                  </div>
+                  <p className="text-slate-400 mt-2 text-sm">Para testes e uso ocasional.</p>
+                </div>
 
-              <div className="mb-8 relative">
-                <div className="flex justify-between items-start">
-                  <span className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-lg shadow-cyan-500/20">Recomendado</span>
-                </div>
-                <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-5xl font-black text-white">R$ {publicPricing.monthly.toFixed(2)}</span>
-                  <span className="text-slate-400 font-bold">/mês</span>
-                </div>
-                <p className="text-cyan-400 mt-2 text-sm font-bold">ou R$ {publicPricing.yearly.toFixed(2)}/ano (economize ~15%)</p>
+                <ul className="space-y-4 mb-8 flex-1">
+                  <li className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Até 5 reuniões transcritas</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Transcrição básica</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-slate-500">
+                    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    <span>Sem Chat IA</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-slate-500">
+                    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    <span>Suporte padrão</span>
+                  </li>
+                </ul>
+
+                <button
+                  onClick={() => user ? setView('MAIN') : setView('REGISTER')}
+                  className="w-full py-4 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold border border-white/10 transition-all uppercase tracking-wide"
+                >
+                  {user ? 'Continuar Grátis' : 'Criar Conta Grátis'}
+                </button>
               </div>
 
-              <ul className="space-y-4 mb-8 flex-1 relative">
-                <li className="flex items-center gap-3 text-white font-bold">
-                  <div className="p-1 bg-cyan-500/20 rounded-full text-cyan-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></div>
-                  <span>Reuniões Ilimitadas</span>
-                </li>
-                <li className="flex items-center gap-3 text-slate-300">
-                  <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span>Chat IA com suas reuniões</span>
-                </li>
-                <li className="flex items-center gap-3 text-slate-300">
-                  <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span>Resumos automáticos</span>
-                </li>
-                <li className="flex items-center gap-3 text-slate-300">
-                  <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span>Acesso prioritário a atualizações</span>
-                </li>
-              </ul>
+              {/* PRO PLAN */}
+              <div className="relative glass p-8 rounded-[2rem] border border-cyan-500/30 flex flex-col overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-emerald-500 to-cyan-500"></div>
+                <div className="absolute -right-12 -top-12 w-40 h-40 bg-cyan-500/20 rounded-full blur-3xl group-hover:bg-cyan-500/30 transition-colors"></div>
 
-              <button
-                onClick={() => {
-                  if (!user) {
-                    setView('REGISTER');
-                  } else if (user.role === 'PRO' || user.role === 'MASTER') {
-                    // Do nothing or user feedback
-                  } else {
-                    setPaymentModalOpen(true);
-                  }
-                }}
-                disabled={user?.role === 'PRO' || user?.role === 'MASTER'}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-bold uppercase tracking-wide shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {user?.role === 'PRO' || user?.role === 'MASTER' ? 'Você já é PRO' : 'Assinar Agora'}
-              </button>
+                <div className="mb-8 relative">
+                  <div className="flex justify-between items-start">
+                    <span className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-lg shadow-cyan-500/20">Recomendado</span>
+                  </div>
+                  <div className="mt-4 flex items-baseline gap-1">
+                    <span className="text-5xl font-black text-white">R$ {publicPricing.monthly.toFixed(2)}</span>
+                    <span className="text-slate-400 font-bold">/mês</span>
+                  </div>
+                  <p className="text-cyan-400 mt-2 text-sm font-bold">ou R$ {publicPricing.yearly.toFixed(2)}/ano (economize ~15%)</p>
+                </div>
+
+                <ul className="space-y-4 mb-8 flex-1 relative">
+                  <li className="flex items-center gap-3 text-white font-bold">
+                    <div className="p-1 bg-cyan-500/20 rounded-full text-cyan-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></div>
+                    <span>Reuniões Ilimitadas</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Chat IA com suas reuniões</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Resumos automáticos</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-slate-300">
+                    <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Acesso prioritário a atualizações</span>
+                  </li>
+                </ul>
+
+                <button
+                  onClick={() => {
+                    if (!user) {
+                      setView('REGISTER');
+                    } else if (user.role === 'PRO' || user.role === 'MASTER') {
+                      // Do nothing or user feedback
+                    } else {
+                      setPaymentModalOpen(true);
+                    }
+                  }}
+                  disabled={user?.role === 'PRO' || user?.role === 'MASTER'}
+                  className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-bold uppercase tracking-wide shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {user?.role === 'PRO' || user?.role === 'MASTER' ? 'Você já é PRO' : 'Assinar Agora'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <CookieBanner onPrivacyClick={() => setView('PRIVACY')} />
       <VLibrasWidget />
 
-      {view !== 'MEETING_DETAILS' && (
-        <FooterCompliance
-          onTermsClick={() => setView('TERMS')}
-          onPrivacyClick={() => setView('PRIVACY')}
-        />
-      )}
+      {
+        view !== 'MEETING_DETAILS' && (
+          <FooterCompliance
+            onTermsClick={() => setView('TERMS')}
+            onPrivacyClick={() => setView('PRIVACY')}
+          />
+        )
+      }
 
     </div >
   );

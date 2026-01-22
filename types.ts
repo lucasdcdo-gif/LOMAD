@@ -46,6 +46,7 @@ export interface Meeting {
   notes?: string;
   timestamp: number;
   expires_at: number;
+  pinned_response?: string;
 }
 
 export type Language = 'pt' | 'en';

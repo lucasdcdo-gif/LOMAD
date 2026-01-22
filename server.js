@@ -440,6 +440,16 @@ app.patch('/api/meetings/:id/title', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Pin meeting response endpoint
+app.patch('/api/meetings/:id/pin', async (req, res) => {
+  try {
+    const { pinnedResponse } = req.body;
+    const { error } = await supabase.from('meetings').update({ pinned_response: pinnedResponse }).eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // --- TERMS OF USE ENDPOINTS ---
 
 // Check Terms Status
