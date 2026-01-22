@@ -1887,25 +1887,34 @@ const App: React.FC = () => {
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
                           <span className="text-xs font-bold uppercase tracking-wider">Resposta Fixada</span>
                         </div>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await fetch(`/api/meetings/${selectedMeeting.id}/pin`, {
-                                method: 'PATCH',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ pinnedResponse: null })
-                              });
-                              // Update both selected and list state
-                              const updated = { ...selectedMeeting, pinned_response: undefined };
-                              setSelectedMeeting(updated);
-                              setMeetings(prev => prev.map(m => m.id === updated.id ? updated : m));
-                            } catch (e) { console.error("Erro ao desafixar:", e); }
-                          }}
-                          className="text-amber-500/50 hover:text-amber-500 transition-colors"
-                          title="Desafixar"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => navigator.clipboard.writeText(selectedMeeting.pinned_response || "")}
+                            className="text-amber-500/50 hover:text-amber-500 transition-colors"
+                            title="Copiar resposta fixada"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await fetch(`/api/meetings/${selectedMeeting.id}/pin`, {
+                                  method: 'PATCH',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ pinnedResponse: null })
+                                });
+                                // Update both selected and list state
+                                const updated = { ...selectedMeeting, pinned_response: undefined };
+                                setSelectedMeeting(updated);
+                                setMeetings(prev => prev.map(m => m.id === updated.id ? updated : m));
+                              } catch (e) { console.error("Erro ao desafixar:", e); }
+                            }}
+                            className="text-amber-500/50 hover:text-amber-500 transition-colors"
+                            title="Desafixar"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </div>
                       </div>
                       <p className="text-sm text-slate-200 whitespace-pre-wrap">{selectedMeeting.pinned_response}</p>
                     </div>
