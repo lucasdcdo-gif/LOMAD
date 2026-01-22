@@ -94,6 +94,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [view, setView] = useState<'MAIN' | 'HISTORY' | 'MEETING_DETAILS' | 'LOGIN' | 'REGISTER' | 'PROFILE' | 'ADMIN_DASHBOARD' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD' | 'HOW_IT_WORKS' | 'TERMS' | 'PRIVACY' | 'PRICING'>('MAIN');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   // States for Meeting Management
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
@@ -1345,12 +1346,12 @@ const App: React.FC = () => {
     <div className="min-h-screen w-full flex flex-col items-center">
       {/* Header Fixo */}
       <nav className="sticky top-0 w-full z-50 p-4 backdrop-blur-xl">
-        <div className="w-full max-w-7xl mx-auto flex items-center justify-between px-8 py-5 glass rounded-[2rem] border border-white/10 shadow-2xl">
+        <div className="w-full max-w-7xl mx-auto flex items-center justify-between px-8 py-5 glass rounded-[2rem] border border-white/10 shadow-2xl relative">
           <div className="flex items-center gap-3 cursor-pointer hover:scale-105 transition-transform" onClick={() => setView('MAIN')}>
             <LomadLogo size={48} withText={false} />
             <span className="font-black text-white text-2xl tracking-tight">LOMAD</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
             {user && (
               <>
                 <button onClick={() => setView('MAIN')} className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all flex items-center gap-2">
@@ -1393,6 +1394,56 @@ const App: React.FC = () => {
               </>
             )}
           </div>
+
+          {/* Mobile Hamburger Button */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 text-slate-300 hover:text-white transition-colors"
+            >
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {isMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+          </div>
+
+          {/* Mobile Menu Overlay */}
+          {isMenuOpen && (
+            <div className="absolute top-full left-0 right-0 mt-4 p-6 glass rounded-[2rem] border border-white/10 shadow-2xl flex flex-col gap-4 animate-fade-in md:hidden bg-slate-900/95 backdrop-blur-xl z-[60]">
+              {user ? (
+                <>
+                  <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-white">{user.name}</span>
+                      <span className="text-xs font-bold text-cyan-400 uppercase">{user.role}</span>
+                    </div>
+                  </div>
+                  <button onClick={() => { setView('MAIN'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Início</button>
+                  <button onClick={() => { setView('PRICING'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Preços</button>
+                  <button onClick={() => { setView('HISTORY'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Histórico</button>
+                  <button onClick={() => { setView('PROFILE'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Minha Conta</button>
+                  {user.role === 'MASTER' && (
+                    <button onClick={() => { fetchAdminData(); setView('ADMIN_DASHBOARD'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl">Painel Admin</button>
+                  )}
+                  <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-400 hover:text-white hover:bg-white/5 rounded-xl border-t border-white/5 mt-2">Sair</button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => { setView('PRICING'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Preços</button>
+                  <button onClick={() => { setView('HOW_IT_WORKS'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Como Funciona</button>
+                  <button onClick={() => { setView('ABOUT'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Quem Somos</button>
+                  <button onClick={() => { setView('LOGIN'); setIsMenuOpen(false); }} className="p-4 text-center font-bold text-white bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-xl mt-2">Entrar</button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </nav>
 
@@ -1409,8 +1460,8 @@ const App: React.FC = () => {
 
                 <div className="flex flex-col items-center gap-6">
                   <LomadLogo size={140} withText={true} className="opacity-90" />
-                  <h1 className="text-5xl md:text-6xl font-black tracking-tight text-white">
-                    TRANSCRITOR <span className="bg-gradient-to-r from-cyan-500 via-emerald-500 to-emerald-600 bg-clip-text text-transparent italic">UNIVERSAL</span>
+                  <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight text-white text-center">
+                    TRANSCRITOR <span className="bg-gradient-to-r from-cyan-500 via-emerald-500 to-emerald-600 bg-clip-text text-transparent italic block md:inline">UNIVERSAL</span>
                   </h1>
                 </div>
               </div>
@@ -1429,7 +1480,7 @@ const App: React.FC = () => {
             </div>
 
             {status === SessionStatus.IDLE && (
-              <div className="w-full bg-gradient-to-br from-slate-900/50 via-slate-950/50 to-slate-900/50 p-10 md:p-14 rounded-[3rem] border border-white/10 glass shadow-2xl backdrop-blur-xl">
+              <div className="w-full bg-gradient-to-br from-slate-900/50 via-slate-950/50 to-slate-900/50 p-6 md:p-14 rounded-[2rem] md:rounded-[3rem] border border-white/10 glass shadow-2xl backdrop-blur-xl">
                 {user ? (
                   <>
                     {user.role === 'FREE' && (
