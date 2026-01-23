@@ -431,6 +431,95 @@ app.put('/api/profile', async (req, res) => {
   }
 });
 
+// Asaas Webhook Endpoint
+app.post('/api/webhooks/asaas', async (req, res) => {
+  try {
+    const event = req.body;
+    // Basic Security Check (Optional: verify secret header if configured)
+    const asaasToken = req.headers['asaas-access-token'];
+    if (process.env.ASAAS_WEBHOOK_TOKEN && asaasToken !== process.env.ASAAS_WEBHOOK_TOKEN) {
+      logger.warn('Webhook Unauthorized Attempt');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    logger.info(`[Webhook] Event: ${event.event} - ID: ${event.payment?.id || event.subscription?.id}`);
+
+    const { AsaasService } = await import('./lib/asaas.js');
+
+    // Handle Payment Events
+    if (event.event === 'PAYMENT_CONFIRMED' || event.event === 'PAYMENT_RECEIVED') {
+      const payment = event.payment;
+      // Find user by customer ID (subscription payments link back to subscription)
+      if (payment.subscription) {
+        // Renovar/Ativar Assinatura
+        const { data: user, error } = await supabase.from('profiles').select('*').eq('subscription_id', payment.subscription).single();
+
+        if (user) {
+          // Calculate new expiry
+          const cycle = event.payment.billingType === 'CREDIT_CARD' ? 'MONTHLY' : 'MONTHLY'; // Default fallbacks
+          // Actually, we should check the subscription cycle or just add 30 days depending on the payment
+          // Simpler: Set subscription_end to paymentDate + 30 days (or 1 year)
+          // Ideally, we fetch the subscription to know the cycle, but let's assume MONTHLY for safety or query sub
+
+          let durationDays = 30; // Default
+          // Try to infer from value if possible, or fetch sub detailed
+          // For now, let's fetch the subscription to be sure about the cycle
+          try {
+            const sub = await AsaasService.getSubscription(payment.subscription);
+            if (sub.cycle === 'YEARLY') durationDays = 365;
+          } catch (e) { logger.warn('Could not fetch sub details for webhook, defaulting 30 days'); }
+
+          const newEndDate = new Date();
+          newEndDate.setDate(newEndDate.getDate() + durationDays);
+
+          await supabase.from('profiles').update({
+            role: 'PRO',
+            subscription_status: 'ACTIVE',
+            subscription_end: newEndDate.getTime()
+          }).eq('id', user.id);
+
+          logger.info(`[Webhook] User ${user.email} renewed until ${newEndDate.toISOString()}`);
+        }
+      }
+    }
+
+    // Handle Refund/Overdue Events
+    if (event.event === 'PAYMENT_REFUNDED' || event.event === 'PAYMENT_OVERDUE') {
+      const payment = event.payment;
+      if (payment.subscription) {
+        // Revoke Access
+        // Careful with OVERDUE: we might want to give a grace period. But for now, strict rule.
+        const { error } = await supabase.from('profiles').update({
+          role: 'FREE',
+          subscription_status: event.event === 'PAYMENT_REFUNDED' ? 'REFUNDED' : 'OVERDUE',
+          subscription_end: Date.now()
+        }).eq('subscription_id', payment.subscription);
+
+        if (!error) logger.info(`[Webhook] Access revoked for subscription ${payment.subscription} (${event.event})`);
+      }
+    }
+
+    // Handle Subscription Deleted
+    if (event.event === 'SUBSCRIPTION_DELETED') {
+      const subscription = event.subscription;
+      await supabase.from('profiles').update({
+        subscription_status: 'CANCELED',
+        // We generally keep the end date if it was just canceled, 
+        // but if DELETED usually means removed by admin or fraud.
+        // Let's keep it safe: if deleted, check logic. Usually 'deleted' in asaas means gone.
+        // Let's not revoke role immediately unless we want to. 
+        // Better: Mark as CANCELED, let existing expiry logic handle it (server.js checkout checks expiry)
+      }).eq('subscription_id', subscription.id);
+      logger.info(`[Webhook] Subscription ${subscription.id} deleted`);
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    logger.error("Webhook Error: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Delete meeting endpoint
 app.delete('/api/meetings/:id', async (req, res) => {
   try {
