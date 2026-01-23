@@ -167,14 +167,30 @@ app.post('/api/checkout', async (req, res) => {
     // Integração Asaas
     const { AsaasService } = await import('./lib/asaas.js');
 
+    // Dados vêm do frontend agora
+    const cpfCnpj = cardData.cpf.replace(/\D/g, '');
+    const phone = cardData.phone.replace(/\D/g, '');
+    const postalCode = cardData.postalCode.replace(/\D/g, '');
+
     // 1. Buscar ou Criar Cliente no Asaas
     let customer = await AsaasService.getCustomer(userProfile.email);
+
+    const customerData = {
+      name: cardData.name,
+      email: userProfile.email,
+      id: userId,
+      cpfCnpj: cpfCnpj,
+      phone: phone,
+      mobilePhone: phone,
+      postalCode: postalCode,
+      addressNumber: cardData.addressNumber
+    };
+
     if (!customer) {
-      customer = await AsaasService.createCustomer({
-        name: cardData.name, // Use card name as fallback if profile name is generic
-        email: userProfile.email,
-        id: userId
-      });
+      customer = await AsaasService.createCustomer(customerData);
+    } else {
+      // Atualizar dados do cliente existente (especialmente se mudou endereço ou telefone)
+      await AsaasService.updateCustomer(customer.id, customerData);
     }
 
     // 2. Preparar dados do pagamento
@@ -194,11 +210,6 @@ app.post('/api/checkout', async (req, res) => {
     } else {
       value = pricingData?.monthly_price || defaultMonthly;
     }
-
-    // Dados vêm do frontend agora
-    const cpfCnpj = cardData.cpf.replace(/\D/g, '');
-    const phone = cardData.phone.replace(/\D/g, '');
-    const postalCode = cardData.postalCode.replace(/\D/g, '');
 
     // 3. Criar Assinatura (Recorrência)
     const subscriptionPayload = {
