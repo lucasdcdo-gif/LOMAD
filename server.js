@@ -28,7 +28,9 @@ app.use((err, req, res, next) => {
   next();
 });
 
-app.use(express.json());
+// Configure Body Parser with increased limits for large transcriptions
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Servir arquivos estáticos do diretório dist
 app.use(express.static(path.join(__dirname, 'dist')));
