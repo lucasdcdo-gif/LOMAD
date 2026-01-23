@@ -301,6 +301,9 @@ app.post('/api/subscription/cancel', async (req, res) => {
     let refunded = false;
     let message = "Assinatura cancelada com sucesso. Seu acesso continua até o fim do período.";
 
+    // Buscar detalhes da assinatura para ver a data de criação
+    const subscription = await AsaasService.getSubscription(user.subscription_id);
+
     if (lastPayment) {
       const paymentDate = new Date(lastPayment.paymentDate || lastPayment.dateCreated).getTime(); // Prefer paymentDate
       const diffDays = (now - paymentDate) / (1000 * 60 * 60 * 24);
@@ -310,7 +313,6 @@ app.post('/api/subscription/cancel', async (req, res) => {
         // 2. Realizar estorno automático
         await AsaasService.refundPayment(lastPayment.id);
         refunded = true;
-        message = "Assinatura cancelada. O reembolso do seu último pagamento foi solicitado (Prazo de 7 dias - CDC).";
       }
     }
 
@@ -322,12 +324,18 @@ app.post('/api/subscription/cancel', async (req, res) => {
       subscription_status: refunded ? 'REFUNDED' : 'CANCELED'
     };
 
-    // Se foi estornado, removemos o acesso PRO imediatamente
-    if (refunded) {
+    const subDate = new Date(subscription.dateCreated).getTime();
+    const subDiffDays = (now - subDate) / (1000 * 60 * 60 * 24);
+
+    // Se foi estornado OU se a assinatura tem menos de 7 dias (mesmo sem pagamento confirmado ainda - arrependimento)
+    if (refunded || subDiffDays <= 7) {
       updatePayload.role = 'FREE';
       updatePayload.subscription_end = Date.now(); // Expira agora
+      message = refunded
+        ? "Assinatura cancelada e estornada. (Prazo de 7 dias - CDC)."
+        : "Assinatura cancelada (Período de arrependimento).";
     }
-    // Se não foi estornado, mantemos o role e o subscription_end original (acesso até o fim)
+    // Se não foi estornado e tem mais de 7 dias, mantemos o role e o subscription_end original (acesso até o fim)
 
     const { error: updateError } = await supabase.from('profiles').update(updatePayload).eq('id', userId);
 
