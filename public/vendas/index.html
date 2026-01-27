@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOMAD - Transcrição Inteligente de Reuniões e Vídeos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-green: #10b981;
+            --primary-cyan: #06b6d4;
+            --dark-slate: #1e293b;
+            --light-gray: #f8fafc;
+            --medium-gray: #64748b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-slate);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            z-index: 1001;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--dark-slate);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-cyan);
+        }
+
+        .nav-cta {
+            display: block;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-cyan));
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: inline-block;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Menu Hamburger Tecnológico */
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 1002;
+            width: 40px;
+            height: 40px;
+            position: relative;
+        }
+
+        .menu-toggle span {
+            width: 28px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary-green), var(--primary-cyan));
+            margin: 4px 0;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            border-radius: 2px;
+            position: absolute;
+        }
+
+        .menu-toggle span:nth-child(1) {
+            top: 12px;
+        }
+
+        .menu-toggle span:nth-child(2) {
+            top: 19px;
+        }
+
+        .menu-toggle span:nth-child(3) {
+            top: 26px;
+        }
+
+        .menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg);
+            top: 19px;
+            background: white;
+        }
+
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+
+        .menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg);
+            top: 19px;
+            background: white;
+        }
+
+        /* Overlay do Menu */
+        .menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .menu-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(6, 182, 212, 0.05));
+            padding: 150px 0 100px;
+            text-align: center;
+            margin-top: 70px;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            color: var(--medium-gray);
+            margin-bottom: 40px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .secondary-button {
+            background: white;
+            color: var(--dark-slate);
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            border: 2px solid var(--primary-cyan);
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .secondary-button:hover {
+            background: var(--primary-cyan);
+            color: white;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 100px 0;
+            background: white;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--dark-slate);
+        }
+
+        .section-subtitle {
+            text-align: center;
+            font-size: 1.2rem;
+            color: var(--medium-gray);
+            margin-bottom: 60px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        .feature-card {
+            padding: 40px;
+            border-radius: 16px;
+            background: var(--light-gray);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-cyan));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--dark-slate);
+        }
+
+        .feature-card p {
+            color: var(--medium-gray);
+            line-height: 1.8;
+        }
+
+        /* Video Sections */
+        .video-section {
+            padding: 100px 0;
+            background: var(--light-gray);
+        }
+
+        .video-section:nth-child(even) {
+            background: white;
+        }
+
+        .video-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%;
+            overflow: hidden;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            background: #000;
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .video-text h2 {
+            font-size: 2.2rem;
+            margin-bottom: 20px;
+            color: var(--dark-slate);
+        }
+
+        .video-text p {
+            font-size: 1.1rem;
+            color: var(--medium-gray);
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .video-text ul {
+            list-style: none;
+            margin-top: 30px;
+        }
+
+        .video-text ul li {
+            padding: 12px 0;
+            padding-left: 30px;
+            position: relative;
+            color: var(--medium-gray);
+        }
+
+        .video-text ul li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--primary-green);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* Benefits Section */
+        .benefits {
+            padding: 100px 0;
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-cyan));
+            color: white;
+            text-align: center;
+        }
+
+        .benefits .section-title {
+            color: white;
+        }
+
+        .benefits .section-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .benefit-item {
+            padding: 30px;
+        }
+
+        .benefit-number {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .benefit-item h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .benefit-item p {
+            opacity: 0.9;
+        }
+
+        /* CTA Section */
+        .final-cta {
+            padding: 100px 0;
+            text-align: center;
+            background: white;
+        }
+
+        .final-cta h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: var(--dark-slate);
+        }
+
+        .final-cta p {
+            font-size: 1.2rem;
+            color: var(--medium-gray);
+            margin-bottom: 40px;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark-slate);
+            color: white;
+            padding: 60px 0 30px;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .footer-section h3 {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 10px;
+        }
+
+        .footer-section a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-section a:hover {
+            color: var(--primary-cyan);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* ===== RESPONSIVE MOBILE MINIMALISTA ===== */
+        @media (max-width: 968px) {
+            .container {
+                padding: 0 20px;
+            }
+
+            /* Hero minimalista */
+            .hero {
+                padding: 100px 0 60px;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+                line-height: 1.2;
+                margin-bottom: 16px;
+            }
+
+            .hero p {
+                font-size: 0.95rem;
+                padding: 0;
+                margin-bottom: 30px;
+                line-height: 1.5;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+                padding: 0 20px;
+            }
+
+            .hero-buttons .cta-button,
+            .hero-buttons .secondary-button {
+                width: 100%;
+                max-width: 100%;
+                text-align: center;
+                padding: 14px 24px;
+                font-size: 0.95rem;
+            }
+
+            /* Sections spacing minimalista */
+            .features,
+            .video-section,
+            .benefits,
+            .final-cta {
+                padding: 50px 0;
+            }
+
+            .section-title {
+                font-size: 1.6rem;
+                line-height: 1.2;
+                margin-bottom: 12px;
+            }
+
+            .section-subtitle {
+                font-size: 0.9rem;
+                margin-bottom: 35px;
+                line-height: 1.4;
+            }
+
+            /* Features grid minimalista */
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .feature-card {
+                padding: 24px 20px;
+                border-radius: 12px;
+            }
+
+            .feature-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 1.5rem;
+                margin-bottom: 14px;
+            }
+
+            .feature-card h3 {
+                font-size: 1.2rem;
+                margin-bottom: 10px;
+            }
+
+            .feature-card p {
+                font-size: 0.9rem;
+                line-height: 1.6;
+            }
+
+            /* Video sections minimalista */
+            .video-content {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .video-container {
+                border-radius: 12px;
+            }
+
+            .video-text h2 {
+                font-size: 1.4rem;
+                margin-bottom: 14px;
+            }
+
+            .video-text p {
+                font-size: 0.9rem;
+                line-height: 1.6;
+                margin-bottom: 10px;
+            }
+
+            .video-text ul {
+                margin-top: 16px;
+            }
+
+            .video-text ul li {
+                padding: 8px 0;
+                padding-left: 26px;
+                font-size: 0.9rem;
+            }
+
+            .video-text ul li::before {
+                font-size: 1rem;
+            }
+
+            /* Benefits minimalista */
+            .benefits-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 24px;
+            }
+
+            .benefit-item {
+                padding: 20px 10px;
+            }
+
+            .benefit-number {
+                font-size: 2.2rem;
+                margin-bottom: 6px;
+            }
+
+            .benefit-item h3 {
+                font-size: 1rem;
+                margin-bottom: 6px;
+            }
+
+            .benefit-item p {
+                font-size: 0.85rem;
+                line-height: 1.4;
+            }
+
+            /* Final CTA minimalista */
+            .final-cta h2 {
+                font-size: 1.6rem;
+                padding: 0 20px;
+                margin-bottom: 14px;
+            }
+
+            .final-cta p {
+                font-size: 0.9rem;
+                padding: 0 20px;
+                margin-bottom: 30px;
+            }
+
+            .final-cta .cta-button {
+                font-size: 0.95rem !important;
+                padding: 14px 32px !important;
+                width: auto;
+                max-width: 90%;
+            }
+
+            /* Footer minimalista */
+            footer {
+                padding: 40px 0 20px;
+            }
+
+            .footer-content {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 24px;
+            }
+
+            .footer-section h3 {
+                font-size: 1rem;
+                margin-bottom: 12px;
+            }
+
+            .footer-section ul li {
+                margin-bottom: 8px;
+                font-size: 0.9rem;
+            }
+
+            .footer-bottom {
+                padding-top: 20px;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            /* Menu mobile tecnológico */
+            .menu-toggle {
+                display: flex;
+            }
+
+            .nav-links {
+                position: fixed;
+                right: -100%;
+                top: 0;
+                flex-direction: column;
+                background: linear-gradient(180deg, var(--dark-slate) 0%, #0f172a 100%);
+                width: 75%;
+                max-width: 300px;
+                height: 100vh;
+                text-align: left;
+                transition: right 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+                padding: 80px 0 20px;
+                gap: 0;
+                z-index: 1000;
+            }
+
+            .nav-links.active {
+                right: 0;
+            }
+
+            .nav-links li {
+                padding: 0;
+                margin: 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .nav-links a {
+                display: block;
+                padding: 18px 30px;
+                color: white;
+                font-size: 1.1rem;
+                position: relative;
+                transition: all 0.3s;
+            }
+
+            .nav-links a:hover {
+                background: rgba(16, 185, 129, 0.1);
+                color: var(--primary-cyan);
+                padding-left: 40px;
+            }
+
+            .nav-links a::before {
+                content: "";
+                position: absolute;
+                left: 0;
+                top: 0;
+                height: 100%;
+                width: 3px;
+                background: linear-gradient(180deg, var(--primary-green), var(--primary-cyan));
+                transform: scaleY(0);
+                transition: transform 0.3s;
+            }
+
+            .nav-links a:hover::before {
+                transform: scaleY(1);
+            }
+
+            .nav-cta {
+                display: none;
+            }
+
+            /* Logo menor em mobile */
+            .logo-container svg {
+                width: 110px;
+            }
+
+            header nav {
+                padding: 12px 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 16px;
+            }
+
+            .hero {
+                padding: 90px 0 50px;
+            }
+
+            .hero h1 {
+                font-size: 1.75rem;
+            }
+
+            .hero p {
+                font-size: 0.9rem;
+            }
+
+            .section-title {
+                font-size: 1.4rem;
+            }
+
+            .section-subtitle {
+                font-size: 0.85rem;
+            }
+
+            .feature-card {
+                padding: 20px 16px;
+            }
+
+            .feature-icon {
+                width: 44px;
+                height: 44px;
+                font-size: 1.3rem;
+            }
+
+            .feature-card h3 {
+                font-size: 1.1rem;
+            }
+
+            .feature-card p {
+                font-size: 0.85rem;
+            }
+
+            .video-text h2 {
+                font-size: 1.3rem;
+            }
+
+            .video-text p,
+            .video-text ul li {
+                font-size: 0.85rem;
+            }
+
+            .benefits-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .benefit-number {
+                font-size: 2rem;
+            }
+
+            .final-cta h2 {
+                font-size: 1.4rem;
+            }
+
+            .final-cta p {
+                font-size: 0.85rem;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .logo-container svg {
+                width: 100px;
+            }
+
+            .nav-links {
+                width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Menu Overlay -->
+    <div class="menu-overlay" id="menu-overlay"></div>
+
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo-container">
+                    <svg viewBox="0 0 300 80" width="150" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="grad4" x1="0%" y1="100%" x2="0%" y2="0%">
+                                <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <rect x="10" y="25" width="10" height="30" fill="url(#grad4)" rx="5"/>
+                        <rect x="28" y="15" width="10" height="50" fill="url(#grad4)" rx="5"/>
+                        <rect x="46" y="20" width="10" height="40" fill="url(#grad4)" rx="5"/>
+                        <rect x="64" y="10" width="10" height="60" fill="url(#grad4)" rx="5"/>
+                        <rect x="82" y="23" width="10" height="35" fill="url(#grad4)" rx="5"/>
+                        <rect x="100" y="18" width="10" height="45" fill="url(#grad4)" rx="5"/>
+                        <text x="130" y="52" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#1e293b">LOMAD</text>
+                    </svg>
+                </div>
+                
+                <div class="menu-toggle" id="mobile-menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                
+                <ul class="nav-links" id="nav-links">
+                    <li><a href="#recursos">Recursos</a></li>
+                    <li><a href="#como-funciona">Como Funciona</a></li>
+                    <li><a href="#chat-ia">Chat IA</a></li>
+                    <li><a href="#beneficios">Benefícios</a></li>
+                </ul>
+                <div class="nav-cta">
+                    <a href="https://lomad.com.br/" class="cta-button">Começar Grátis</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Transcrição Inteligente com IA</h1>
+            <p>Transforme suas reuniões, aulas e vídeos em transcrições precisas. Converse com um chat inteligente para obter resumos personalizados instantaneamente.</p>
+            <div class="hero-buttons">
+                <a href="https://lomad.com.br/" class="cta-button">Experimente Gratuitamente</a>
+                <a href="#como-funciona" class="secondary-button">Ver Demonstração</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="recursos" class="features">
+        <div class="container">
+            <h2 class="section-title">Recursos Poderosos</h2>
+            <p class="section-subtitle">Tudo que você precisa para transformar áudio e vídeo em conteúdo acionável</p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Transcrição Precisa</h3>
+                    <p>Tecnologia de reconhecimento de voz de última geração com precisão superior a 95% em português e outros idiomas.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>Chat Inteligente com IA</h3>
+                    <p>Converse com suas transcrições! Peça resumos, extraia insights e obtenha respostas específicas sobre qualquer reunião ou aula.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Processamento Rápido</h3>
+                    <p>Transcreva horas de conteúdo em minutos. Nossa infraestrutura processa seus arquivos com velocidade impressionante.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Resumos Automáticos</h3>
+                    <p>Gere resumos executivos, pontos-chave e action items automaticamente com nossa IA avançada.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Segurança Garantida</h3>
+                    <p>Seus dados são criptografados e armazenados com segurança máxima. Conformidade com LGPD e GDPR.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Multi-idiomas</h3>
+                    <p>Suporte para mais de 50 idiomas com detecção automática e tradução integrada.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Video Section 1 - Como Usar -->
+    <section id="como-funciona" class="video-section">
+        <div class="container">
+            <div class="video-content">
+                <div class="video-text">
+                    <h2>Como Usar a Plataforma</h2>
+                    <p>Começar a usar o LOMAD é simples e intuitivo. Em apenas 4 passos você terá suas transcrições prontas:</p>
+                    <ul>
+                        <li>Primeiro conecte-se na plataforma</li>
+                        <li>Inicie a gravação da transcrição compartilhando a tela do navegador</li>
+                        <li>Acesse sua transcrição e comece a conversar com a IA</li>
+                        <li>Exporte no formato (TXT)</li>
+                    </ul>
+                    <p style="margin-top: 30px;">Assista ao vídeo e veja como é fácil transcrever e organizar todo seu conteúdo de áudio e vídeo.</p>
+                </div>
+                <div class="video-container">
+                    <iframe src="https://drive.google.com/file/d/17H5mALJmpslS72Fpp-GRe7IRu-wlNMMr/preview" allow="autoplay" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Video Section 2 - Chat IA -->
+    <section id="chat-ia" class="video-section">
+        <div class="container">
+            <div class="video-content">
+                <div class="video-container">
+                    <iframe src="https://drive.google.com/file/d/1jrij48U16YC4ySZw5fJwDPM74C4kBbtD/preview" allow="autoplay" allowfullscreen></iframe>
+                </div>
+                <div class="video-text">
+                    <h2>Chat Inteligente por IA</h2>
+                    <p><strong>O grande diferencial do LOMAD!</strong> Nosso chat inteligente permite que você interaja com suas transcrições de forma natural e conversacional.</p>
+                    
+                    <p>Pergunte qualquer coisa sobre suas reuniões, aulas ou vídeos:</p>
+                    <ul>
+                        <li>"Quais foram as principais decisões tomadas?"</li>
+                        <li>"Resuma os pontos discutidos sobre o projeto X"</li>
+                        <li>"Resumo detalhado"</li>
+                        <li>"Crie uma lista de tarefas desta reunião"</li>
+                        <li>"Resumo em tópicos"</li>
+                    </ul>
+                    
+                    <p style="margin-top: 20px;">A IA compreende o contexto e fornece respostas precisas, economizando horas de trabalho manual.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section id="beneficios" class="benefits">
+        <div class="container">
+            <h2 class="section-title">Por Que Escolher LOMAD?</h2>
+            <p class="section-subtitle">Resultados que fazem a diferença no seu dia a dia</p>
+            
+            <div class="benefits-grid">
+                <div class="benefit-item">
+                    <div class="benefit-number">10x</div>
+                    <h3>Mais Produtivo</h3>
+                    <p>Reduza drasticamente o tempo gasto revisando reuniões e aulas</p>
+                </div>
+                
+                <div class="benefit-item">
+                    <div class="benefit-number">95%</div>
+                    <h3>Precisão</h3>
+                    <p>Transcrições com altíssima taxa de acurácia em qualquer outra língua</p>
+                </div>
+                
+                <div class="benefit-item">
+                    <div class="benefit-number">24/7</div>
+                    <h3>Disponibilidade</h3>
+                    <p>Acesse suas transcrições e o chat IA a qualquer momento</p>
+                </div>
+                
+                <div class="benefit-item">
+                    <div class="benefit-number">∞</div>
+                    <h3>Possibilidades</h3>
+                    <p>Infinitas formas de extrair valor dos seus conteúdos</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="final-cta">
+        <div class="container">
+            <h2>Pronto para Transformar Suas Transcrições?</h2>
+            <p>Comece gratuitamente hoje e descubra o poder da transcrição inteligente com IA</p>
+            <a href="https://lomad.com.br/" class="cta-button" style="font-size: 1.1rem; padding: 15px 40px;">Começar Agora - É Grátis</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>LOMAD</h3>
+                    <p style="color: rgba(255, 255, 255, 0.7);">Transcrição inteligente com o poder da IA para reuniões, aulas e vídeos.</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Produto</h3>
+                    <ul>
+                        <li><a href="https://lomad.com.br/">Preços</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Empresa</h3>
+                    <ul>
+                        <li><a href="https://lomad.com.br/">Contato</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="https://lomad.com.br/">Privacidade</a></li>
+                        <li><a href="https://lomad.com.br/">Termos de Uso</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2026 LOMAD. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Menu Mobile Tecnológico
+        const mobileMenu = document.getElementById('mobile-menu');
+        const navLinks = document.getElementById('nav-links');
+        const menuOverlay = document.getElementById('menu-overlay');
+        const body = document.body;
+
+        function toggleMenu() {
+            mobileMenu.classList.toggle('active');
+            navLinks.classList.toggle('active');
+            menuOverlay.classList.toggle('active');
+            
+            // Prevenir scroll quando menu aberto
+            if (navLinks.classList.contains('active')) {
+                body.style.overflow = 'hidden';
+            } else {
+                body.style.overflow = '';
+            }
+        }
+
+        mobileMenu.addEventListener('click', toggleMenu);
+        menuOverlay.addEventListener('click', toggleMenu);
+
+        // Fechar menu ao clicar em um link
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.remove('active');
+                navLinks.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                body.style.overflow = '';
+            });
+        });
+
+        // Smooth scroll para links internos
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Animação ao scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Aplica animação aos cards de features
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.6s, transform 0.6s';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>
