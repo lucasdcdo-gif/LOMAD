@@ -14,7 +14,7 @@ import { VLibrasWidget } from './components/VLibrasWidget.tsx';
 import { MFAEnrollment } from './components/MFAEnrollment.tsx';
 import { MFAChallengeModal } from './components/MFAChallengeModal.tsx';
 
-const MODEL_NAME = 'gemini-2.5-flash';
+const MODEL_NAME = 'gemini-2.5-flash-native-audio-preview-12-2025';
 
 const getErrorMessage = (err: any): string => {
   if (!err) return "Erro desconhecido";
