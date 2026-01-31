@@ -14,7 +14,7 @@ import { VLibrasWidget } from './components/VLibrasWidget.tsx';
 import { MFAEnrollment } from './components/MFAEnrollment.tsx';
 import { MFAChallengeModal } from './components/MFAChallengeModal.tsx';
 
-const MODEL_NAME = import.meta.env.VITE_GEMINI_MODEL || 'gemini-1.5-flash';
+const MODEL_NAME = import.meta.env.VITE_GEMINI_LIVE_MODEL || 'gemini-2.0-flash-exp';
 
 const getErrorMessage = (err: any): string => {
   if (!err) return "Erro desconhecido";

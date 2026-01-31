@@ -770,7 +770,7 @@ app.post('/api/ai/chat', async (req, res) => {
     // A SDK @google/genai suporta config systemInstruction no generateContent ou no modelo, mas para garantir compatibilidade com o formato de mensagem:
 
     const result = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+      model: process.env.GEMINI_CHAT_MODEL || 'gemini-1.5-flash',
       config: {
         systemInstruction: { parts: [{ text: systemInstruction }] }
       },
