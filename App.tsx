@@ -1340,9 +1340,12 @@ const App: React.FC = () => {
                       className={`group relative w-full py-10 md:py-12 rounded-[2rem] font-black text-3xl md:text-4xl text-white shadow-2xl transition-all overflow-hidden ${consentGiven ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:shadow-cyan-500/30 hover:scale-[1.02] cursor-pointer' : 'bg-slate-700 opacity-50 cursor-not-allowed'}`}
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                      <span className="relative flex items-center justify-center gap-3">
-                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        INICIAR TRANSCRIÇÃO
+                      <span className="relative flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 text-center leading-none">
+                        <svg className="w-8 h-8 md:w-10 md:h-10 mb-2 md:mb-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span className="flex flex-col md:block">
+                          <span>INICIAR</span>
+                          <span className="md:ml-2">TRANSCRIÇÃO</span>
+                        </span>
                       </span>
                     </button>
                     <p className="mt-8 text-slate-400 text-sm font-semibold text-center leading-relaxed">Clique no botão e selecione a aba do navegador com sua reunião.<br />A transcrição iniciará automaticamente.</p>
@@ -2671,20 +2674,23 @@ const App: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <div className="text-center space-y-2">
-              <h3 className="text-xl font-black text-red-400 uppercase tracking-widest">Confirmar Exclusão</h3>
-              <p className="font-medium text-slate-300">Tem certeza que deseja excluir esta reunião? Esta ação não pode ser desfeita.</p>
+            <div className="text-center space-y-4">
+              <h3 className="text-2xl font-black text-red-500 uppercase tracking-widest leading-none flex flex-col gap-1">
+                <span>Confirmar</span>
+                <span>Exclusão</span>
+              </h3>
+              <p className="font-medium text-slate-300 px-4">Tem certeza que deseja excluir esta reunião? Esta ação não pode ser desfeita.</p>
             </div>
-            <div className="flex gap-3 w-full">
+            <div className="flex gap-3 w-full pt-2">
               <button
                 onClick={() => { setDeleteConfirmationOpen(false); setMeetingToDelete(null); }}
-                className="flex-1 px-8 py-3 bg-slate-700 hover:bg-slate-600 text-white font-black rounded-xl uppercase transition-colors"
+                className="flex-1 px-4 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-black rounded-xl uppercase transition-colors text-sm border border-white/10"
               >
                 Cancelar
               </button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl uppercase transition-colors"
+                className="flex-1 px-4 py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl uppercase transition-colors text-sm shadow-lg shadow-red-600/20"
               >
                 Excluir
               </button>
