@@ -1525,13 +1525,13 @@ const App: React.FC = () => {
         )}
 
         {view === 'MEETING_DETAIL' && selectedMeeting && (
-          <div className="w-full max-w-5xl py-16 text-left animate-fade-in">
-            <div className="mb-12">
+          <div className="w-full max-w-5xl py-6 md:py-16 text-left animate-fade-in">
+            <div className="mb-8 md:mb-12">
               <button onClick={() => setView('HISTORY')} className="mb-6 text-sm font-bold text-cyan-400 hover:text-white transition-colors flex items-center gap-2 group">
                 <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Voltar ao Histórico
               </button>
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col md:flex-row items-start justify-between gap-4">
                 <div className="flex-1">
                   {isEditingTitle ? (
                     <div className="flex items-center gap-2 mb-4">
@@ -1554,8 +1554,8 @@ const App: React.FC = () => {
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 mb-4 group">
-                      <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">{selectedMeeting.title}</h1>
+                    <div className="flex items-center gap-3 mb-2 md:mb-4 group">
+                      <h1 className="text-2xl md:text-5xl font-black text-white tracking-tight leading-tight">{selectedMeeting.title}</h1>
                       <button
                         onClick={() => { setEditTitle(selectedMeeting.title); setIsEditingTitle(true); }}
                         className="opacity-0 group-hover:opacity-100 p-2 text-slate-500 hover:text-cyan-400 transition-all rounded-lg hover:bg-white/5"
@@ -1570,7 +1570,7 @@ const App: React.FC = () => {
                     <p className="font-semibold text-sm">{new Date(selectedMeeting.timestamp).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })} às {new Date(selectedMeeting.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 w-full md:w-auto">
                   <button
                     onClick={() => {
                       if (!selectedMeeting) return;
@@ -1600,14 +1600,14 @@ const App: React.FC = () => {
                       link.click();
                       document.body.removeChild(link);
                     }}
-                    className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
+                    className="flex-1 md:flex-none justify-center px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     Baixar TXT
                   </button>
                   <button
                     onClick={() => handleDeleteMeeting(selectedMeeting.id)}
-                    className="px-4 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
+                    className="flex-1 md:flex-none justify-center px-4 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     Excluir
@@ -1618,7 +1618,7 @@ const App: React.FC = () => {
 
             <div className="flex flex-col gap-10">
               {/* Notes Section */}
-              <div className="glass p-8 rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-indigo-950/20 to-transparent">
+              <div className="glass p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-indigo-950/20 to-transparent">
                 <div className="flex items-center gap-3 mb-4">
                   <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                   <h3 className="text-xl font-black text-white uppercase tracking-wide">Notas & Comentários</h3>
@@ -1661,7 +1661,7 @@ const App: React.FC = () => {
               </div>
 
               {/* Transcriptions Section - Collapsible */}
-              <div className="glass p-8 rounded-[2.5rem] border border-white/5">
+              <div className="glass p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/5">
                 <button
                   onClick={() => setTranscriptionExpanded(!transcriptionExpanded)}
                   className="w-full flex items-center justify-between mb-6 hover:opacity-80 transition-opacity"
@@ -1694,13 +1694,13 @@ const App: React.FC = () => {
               </div>
 
               {/* AI Chat Section */}
-              <div className="glass p-8 rounded-[2.5rem] border border-cyan-500/20 bg-blue-900/5">
-                <div className="flex items-center gap-3 mb-6">
+              <div className="glass p-4 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-cyan-500/20 bg-blue-900/5">
+                <div className="flex items-center gap-3 mb-4 md:mb-6">
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-600 flex items-center justify-center text-white font-black italic">AI</div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-widest">Chat Inteligente</h3>
+                  <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-widest">Chat Inteligente</h3>
                 </div>
 
-                <div className="bg-slate-950/50 rounded-2xl p-6 min-h-[300px] max-h-[500px] overflow-y-auto mb-6 flex flex-col gap-4 border border-white/5 relative">
+                <div className="bg-slate-950/50 rounded-2xl p-4 md:p-6 min-h-[350px] max-h-[500px] overflow-y-auto mb-4 md:mb-6 flex flex-col gap-4 border border-white/5 relative">
                   {selectedMeeting.pinned_response && (
                     <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 relative group">
                       <div className="flex items-center justify-between mb-2">
@@ -1815,19 +1815,19 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex gap-2 md:gap-4">
                 <input
                   type="text"
                   value={chatInput}
                   onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
                   placeholder="Digite sua pergunta..."
-                  className="flex-1 bg-slate-950/50 border border-white/10 rounded-xl px-5 py-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all"
+                  className="flex-1 bg-slate-950/50 border border-white/10 rounded-xl px-4 md:px-5 py-3 md:py-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all text-sm md:text-base"
                 />
                 <button
                   onClick={() => handleChatSubmit()}
                   disabled={chatLoading}
-                  className="px-6 bg-cyan-500 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 md:px-6 bg-cyan-500 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                 </button>
