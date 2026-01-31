@@ -1376,18 +1376,18 @@ const App: React.FC = () => {
 
             {status === SessionStatus.RECORDING && (
               <div className="w-full flex flex-col gap-8 animate-fade-in">
-                <div className="flex justify-between items-center bg-gradient-to-r from-red-950/30 via-slate-950/80 to-red-950/30 p-8 md:p-10 rounded-[2rem] border border-red-500/20 glass shadow-2xl">
-                  <div className="flex items-center gap-5">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6 md:gap-0 bg-gradient-to-r from-red-950/30 via-slate-950/80 to-red-950/30 p-6 md:p-10 rounded-[2rem] border border-red-500/20 glass shadow-2xl">
+                  <div className="flex flex-col md:flex-row items-center gap-4 md:gap-5">
                     <div className="relative">
                       <div className="w-4 h-4 rounded-full bg-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.8)]"></div>
                       <div className="absolute inset-0 w-4 h-4 rounded-full bg-red-500 animate-ping opacity-75"></div>
                     </div>
-                    <div className="flex flex-col items-start gap-1">
-                      <span className="text-white font-black text-lg uppercase tracking-wide">Gravação em Andamento</span>
+                    <div className="flex flex-col items-center md:items-start gap-1">
+                      <span className="text-white font-black text-lg uppercase tracking-wide text-center md:text-left leading-tight">Gravação em Andamento</span>
                       <span className="text-slate-300 font-semibold text-sm">{transcriptions.length} {transcriptions.length === 1 ? 'frase capturada' : 'frases capturadas'}</span>
                     </div>
                   </div>
-                  <button onClick={stopRecording} className="px-10 md:px-14 py-4 md:py-5 font-black rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-500/30 hover:scale-105 text-sm uppercase tracking-wider">Encerrar</button>
+                  <button onClick={stopRecording} className="w-full md:w-auto px-8 md:px-14 py-4 md:py-5 font-black rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-500/30 hover:scale-105 text-sm uppercase tracking-wider">Encerrar</button>
                 </div>
 
                 {/* Persistent Warning Alert */}
