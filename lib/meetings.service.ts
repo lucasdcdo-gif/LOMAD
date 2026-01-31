@@ -71,7 +71,10 @@ export const MeetingsService = {
       body: JSON.stringify({ meetingContext, userPrompt, history })
     });
 
-    if (!response.ok) throw new Error('Erro ao processar chat');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || 'Erro ao processar chat');
+    }
     return response.json();
   },
 
