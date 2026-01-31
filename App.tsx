@@ -672,30 +672,35 @@ const App: React.FC = () => {
 
       setStatus(SessionStatus.PERMISSIONS);
 
-      console.log("Requesting Display Media...");
-      const displayStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true
-      });
-      console.log("Display Media obtained:", displayStream.id);
+      // Check if Screen Sharing is supported (Desktop)
+      if (navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
+        console.log("Requesting Display Media...");
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        });
+        console.log("Display Media obtained:", displayStream.id);
 
-      // Check for System Audio
-      if (displayStream.getAudioTracks().length === 0) {
-        console.warn("⚠️ No system audio track detected!");
-        setError("⚠️ Áudio do sistema NÃO detectado! Pare e compartilhe novamente marcando 'Compartilhar áudio'.");
-        // We don't stop here to allow mic-only recording if user really wants, 
-        // but the error message will be persistent and red.
+        // Check for System Audio
+        if (displayStream.getAudioTracks().length === 0) {
+          console.warn("⚠️ No system audio track detected!");
+          setError("⚠️ Áudio do sistema NÃO detectado! Pare e compartilhe novamente marcando 'Compartilhar áudio'.");
+        } else {
+          console.log("✓ System Audio detected.");
+        }
+
+        displayStreamRef.current = displayStream;
+
+        // Monitor track ending
+        displayStream.getVideoTracks()[0].onended = () => {
+          console.warn("Display Stream Track ended (User stopped sharing or browser revoked).");
+          stopRecording();
+        };
       } else {
-        console.log("✓ System Audio detected.");
+        console.warn("📱 Mobile/Unsupported device detected. Skipping Screen Share.");
+        setSuccessMessage("📱 Modo Mobile: Gravando apenas microfone.");
+        // We continue to Mic request below
       }
-
-      displayStreamRef.current = displayStream;
-
-      // Monitor track ending
-      displayStream.getVideoTracks()[0].onended = () => {
-        console.warn("Display Stream Track ended (User stopped sharing or browser revoked).");
-        stopRecording();
-      };
 
       console.log("Requesting User Media (Mic)...");
       const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
