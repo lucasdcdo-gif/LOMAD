@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
+
 import { TranscriptionEntry, SessionStatus, User, UserRole, Meeting, Language } from './types.ts';
 import { createBlob } from './utils/audio.ts';
 import { translations } from './utils/translations.ts';
@@ -176,18 +176,15 @@ const App: React.FC = () => {
 
   const displayStreamRef = useRef<MediaStream | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const currentInputTranscription = useRef<string>('');
-  const isRecordingRef = useRef<boolean>(false);
+  const recognitionRef = useRef<any>(null); // Web Speech API Reference
+  const recognitionRestartTimerRef = useRef<any>(null);
 
-  // Refs para processamento separado de áudio
-  const micSessionPromiseRef = useRef<Promise<any> | null>(null);
-  const screenSessionPromiseRef = useRef<Promise<any> | null>(null);
-  const currentMicTranscription = useRef<string>('');
-  const currentScreenTranscription = useRef<string>('');
+  const isRecordingRef = useRef<boolean>(false);
+  const transcriptionsRef = useRef<TranscriptionEntry[]>([]);
+
+
 
   const sessionPromiseRef = useRef<Promise<any> | null>(null); // Mantido para compatibilidade
-  const transcriptionsRef = useRef<TranscriptionEntry[]>([]);
 
   // Estados para notas
   const [notesSaving, setNotesSaving] = useState(false);
@@ -667,18 +664,10 @@ const App: React.FC = () => {
 
       // Reset State for new meeting
       setTranscriptions([]);
-      transcriptionsRef.current = [];
+      if (transcriptionsRef.current) transcriptionsRef.current = [];
       setPartialTranscript('');
       setChatMessages([]);
       setSelectedMeeting(null);
-      currentInputTranscription.current = '';
-
-      setTranscriptions([]);
-      transcriptionsRef.current = [];
-      setPartialTranscript('');
-      setChatMessages([]);
-      setSelectedMeeting(null);
-      currentInputTranscription.current = '';
       setConsentGiven(false); // Reset consent for next time
 
       setStatus(SessionStatus.PERMISSIONS);
@@ -705,7 +694,7 @@ const App: React.FC = () => {
       // Monitor track ending
       displayStream.getVideoTracks()[0].onended = () => {
         console.warn("Display Stream Track ended (User stopped sharing or browser revoked).");
-        handleStop();
+        stopRecording();
       };
 
       console.log("Requesting User Media (Mic)...");
@@ -714,7 +703,7 @@ const App: React.FC = () => {
       micStreamRef.current = micStream;
 
       setStatus(SessionStatus.CONNECTING);
-      connectToLiveAPI(false);
+      startWebSpeechRecognition();
     } catch (err: any) {
       console.error("Initiate Error:", err);
       setStatus(SessionStatus.IDLE);
@@ -722,316 +711,143 @@ const App: React.FC = () => {
     }
   };
 
-  const connectToLiveAPI = (isReconnect = false) => {
-    try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        console.error("CRITICAL: VITE_GEMINI_API_KEY is missing in environment variables!");
-        setStatus(SessionStatus.ERROR);
-        setError("Erro de Configuração: API Key não encontrada (VITE_GEMINI_API_KEY). Verifique as variáveis de ambiente no Render.");
-        return;
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
-
-      // Criar sessão para MICROFONE
-      const micSessionPromise = ai.live.connect({
-        model: MODEL_NAME,
-        callbacks: {
-          onopen: () => {
-            console.log("🎤 Sessão do Microfone conectada!");
-            reconnectAttemptsRef.current = 0; // Success reset
-            if (isReconnect) {
-              console.log("🔄 Reconexão bem-sucedida!");
-              setError(null); // Remove error modal automatically
-              // No need to setup processors again, just ensure status is correct
-              setStatus(SessionStatus.RECORDING);
-            }
-          },
-          onmessage: async (msg: LiveServerMessage) => {
-            if (msg.serverContent?.inputTranscription) {
-              const text = msg.serverContent.inputTranscription.text;
-              currentMicTranscription.current += text;
-              // Atualizar preview combinando ambas as fontes
-              setPartialTranscript(`🎤 ${currentMicTranscription.current} | 🖥️ ${currentScreenTranscription.current}`);
-            }
-            if (msg.serverContent?.turnComplete) {
-              const text = currentMicTranscription.current.trim();
-              if (text.length > 1) {
-                const newEntry: TranscriptionEntry = {
-                  id: Math.random().toString(36).slice(2),
-                  role: 'user',
-                  text,
-                  timestamp: Date.now()
-                };
-                setTranscriptions(prev => [...prev, newEntry].sort((a, b) => a.timestamp - b.timestamp));
-                transcriptionsRef.current.push(newEntry);
-                transcriptionsRef.current.sort((a, b) => a.timestamp - b.timestamp);
-              }
-              currentMicTranscription.current = '';
-              setPartialTranscript(`🖥️ ${currentScreenTranscription.current}`);
-            }
-          },
-          onerror: (e: any) => {
-            const safeError = e?.message || "Unknown error";
-            console.error("🎤 Erro na sessão do Microfone:", safeError);
-            // Don't reset status if we are already recording, just warn
-            if (!isRecordingRef.current) {
-              setStatus(SessionStatus.ERROR);
-            }
-          },
-          onclose: (event: any) => {
-            console.warn(`🎤 Sessão do Microfone fechada. Code: ${event.code}, Reason: ${event.reason || 'N/A'}`);
-
-            if (isRecordingRef.current) {
-              const isAbnormal = event.code === 1006 || event.code === 1011 || !event.code;
-
-              if (isAbnormal) {
-                if (reconnectAttemptsRef.current < MAX_RETRIES) {
-                  reconnectAttemptsRef.current++;
-                  const delay = 2000;
-                  console.log(`⚠️ Conexão perdida do Microfone (Tentativa ${reconnectAttemptsRef.current}/${MAX_RETRIES}). Reconectando em ${delay}ms...`);
-                  setError(`Conexão instável do Microfone... Reconectando (${reconnectAttemptsRef.current}/${MAX_RETRIES})`);
-                  // No need to call connectToLiveAPI again, screen session will handle the full reconnect
-                } else {
-                  console.log("❌ Máximo de tentativas excedido para o Microfone. A gravação pode continuar com áudio da tela.");
-                  setError(`A conexão do Microfone caiu definitivamente após ${MAX_RETRIES} tentativas.`);
-                  // We don't call handleStop here, as screen session might still be active
-                }
-              }
-            }
-          }
-        },
-        config: {
-          responseModalities: [Modality.AUDIO],
-          inputAudioTranscription: {}
-        }
-      });
-      micSessionPromiseRef.current = micSessionPromise;
-
-      // Criar sessão para TELA
-      const screenSessionPromise = ai.live.connect({
-        model: MODEL_NAME,
-        callbacks: {
-          onopen: () => {
-            console.log("🖥️ Sessão da Tela conectada!");
-            // Ambas as sessões conectadas, iniciar gravação
-            isRecordingRef.current = true;
-            setStatus(SessionStatus.RECORDING);
-            if (!isReconnect) {
-              setupAudioProcessors();
-            } else {
-              setError(null); // Remove error modal automatically
-            }
-          },
-          onmessage: async (msg: LiveServerMessage) => {
-            if (msg.serverContent?.inputTranscription) {
-              const text = msg.serverContent.inputTranscription.text;
-              currentScreenTranscription.current += text;
-              // Atualizar preview combinando ambas as fontes
-              setPartialTranscript(`🎤 ${currentMicTranscription.current} | 🖥️ ${currentScreenTranscription.current}`);
-            }
-            if (msg.serverContent?.turnComplete) {
-              const text = currentScreenTranscription.current.trim();
-              if (text.length > 1) {
-                const newEntry: TranscriptionEntry = {
-                  id: Math.random().toString(36).slice(2),
-                  role: 'user',
-                  text,
-                  timestamp: Date.now()
-                };
-                setTranscriptions(prev => [...prev, newEntry].sort((a, b) => a.timestamp - b.timestamp));
-                transcriptionsRef.current.push(newEntry);
-                transcriptionsRef.current.sort((a, b) => a.timestamp - b.timestamp);
-              }
-              currentScreenTranscription.current = '';
-              setPartialTranscript(`🎤 ${currentMicTranscription.current}`);
-            }
-          },
-          onerror: (e: any) => {
-            // Sanitize log: Remove any potential API key or sensitive URL params
-            const safeError = e?.message || "Unknown error";
-            console.error("🖥️ Erro na sessão da Tela:", safeError);
-
-            // Critical Fix: Don't change status to ERROR if we are active.
-            // This prevents the UI from flipping to IDLE/Start Screen during glitches.
-            if (!isRecordingRef.current) {
-              setStatus(SessionStatus.ERROR);
-            }
-            setError("Instabilidade na conexão. O sistema tentará reconectar...");
-          },
-          onclose: (event: any) => {
-            // Sanitize log: Don't log full event object which contains target URL with Key
-            console.warn(`🖥️ Sessão da Tela fechada. Code: ${event.code}, Reason: ${event.reason || 'N/A'}`);
-
-            if (isRecordingRef.current) {
-              // Auto-recovery attempt or graceful stop
-              // Include undefined code as abnormal just in case
-              const isAbnormal = event.code === 1006 || event.code === 1011 || !event.code;
-
-              if (isAbnormal) {
-                if (reconnectAttemptsRef.current < MAX_RETRIES) {
-                  reconnectAttemptsRef.current++;
-                  const delay = 2000;
-                  console.log(`⚠️ Conexão perdida (Tentativa ${reconnectAttemptsRef.current}/${MAX_RETRIES}). Reconectando em ${delay}ms...`);
-                  setError(`Conexão instável... Reconectando (${reconnectAttemptsRef.current}/${MAX_RETRIES})`);
-
-                  setTimeout(() => {
-                    if (isRecordingRef.current) connectToLiveAPI(true);
-                  }, delay);
-                  return; // Don't stop yet
-                } else {
-                  console.log("❌ Máximo de tentativas excedido. Salvando reunião.");
-                  setError(`A conexão caiu definitivamente após ${MAX_RETRIES} tentativas. Reunião salva.`);
-                  handleStop();
-                }
-              } else {
-                handleStop();
-              }
-            } else {
-              setStatus(SessionStatus.IDLE);
-            }
-
-            if (event.code === 4003 || (event.reason && event.reason.includes('API key'))) {
-              setError("Erro de Autenticação (Chave inválida ou expirada).");
-            }
-          }
-        },
-        config: {
-          responseModalities: [Modality.AUDIO],
-          inputAudioTranscription: {}
-        }
-      });
-      screenSessionPromiseRef.current = screenSessionPromise;
-      sessionPromiseRef.current = screenSessionPromise; // Para compatibilidade
-    } catch (err: any) {
-      console.error("Erro ao conectar com a Live API:", err);
-      setStatus(SessionStatus.ERROR);
-      setError(getErrorMessage(err));
-    }
-  };
-
-  const setupAudioProcessors = () => {
-    if (!micStreamRef.current || !displayStreamRef.current) {
-      console.warn("Cannot setup audio: missing streams");
-      return;
-    }
-
-    console.log("Setting up Audio Context...");
-    const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-    if (inputCtx.state === 'suspended') {
-      console.log("Resuming suspended AudioContext...");
-      inputCtx.resume();
-    }
-    audioContextRef.current = inputCtx;
-
-    // ========== PROCESSADOR DO MICROFONE ==========
-    const micGain = inputCtx.createGain();
-    micGain.gain.value = 1.5; // Aumentar volume do microfone
-
-    const micSource = inputCtx.createMediaStreamSource(micStreamRef.current);
-    console.log("✓ Microfone conectado - Tracks:", micStreamRef.current.getAudioTracks().length);
-    micSource.connect(micGain);
-
-    const micProcessor = inputCtx.createScriptProcessor(4096, 1, 1);
-    let micSampleCount = 0;
-    micProcessor.onaudioprocess = (e) => {
-      if (!isRecordingRef.current || !micSessionPromiseRef.current) return;
-
-      const channelData = e.inputBuffer.getChannelData(0);
-
-      // Log de debug a cada 100 amostras
-      if (micSampleCount++ % 100 === 0) {
-        const rms = Math.sqrt(channelData.reduce((sum, val) => sum + val * val, 0) / channelData.length);
-        if (rms > 0.01) {
-          console.log(`🎤 Microfone - RMS: ${rms.toFixed(4)}`);
-        }
-      }
-
-      const pcmBlob = createBlob(channelData);
-      micSessionPromiseRef.current.then(s => {
-        if (isRecordingRef.current) s.sendRealtimeInput({ media: pcmBlob });
-      });
-    };
-    micGain.connect(micProcessor);
-    micProcessor.connect(inputCtx.destination);
-
-    // ========== PROCESSADOR DA TELA ==========
-    if (displayStreamRef.current.getAudioTracks().length > 0) {
-      const displayGain = inputCtx.createGain();
-      displayGain.gain.value = 1.0;
-
-      const displaySource = inputCtx.createMediaStreamSource(new MediaStream([displayStreamRef.current.getAudioTracks()[0]]));
-      console.log("✓ Áudio da tela conectado - Tracks:", displayStreamRef.current.getAudioTracks().length);
-      displaySource.connect(displayGain);
-
-      const displayProcessor = inputCtx.createScriptProcessor(4096, 1, 1);
-      let displaySampleCount = 0;
-      displayProcessor.onaudioprocess = (e) => {
-        if (!isRecordingRef.current || !screenSessionPromiseRef.current) return;
-
-        const channelData = e.inputBuffer.getChannelData(0);
-
-        // Log de debug a cada 100 amostras
-        if (displaySampleCount++ % 100 === 0) {
-          const rms = Math.sqrt(channelData.reduce((sum, val) => sum + val * val, 0) / channelData.length);
-          if (rms > 0.01) {
-            console.log(`🖥️ Tela - RMS: ${rms.toFixed(4)}`);
-          }
-        }
-
-        const pcmBlob = createBlob(channelData);
-        screenSessionPromiseRef.current.then(s => {
-          if (isRecordingRef.current) s.sendRealtimeInput({ media: pcmBlob });
-        });
-      };
-      displayGain.connect(displayProcessor);
-      displayProcessor.connect(inputCtx.destination);
-    } else {
-      console.warn("⚠ Nenhum áudio da tela detectado");
-    }
-
-    console.log("✓ Audio processors configurados com sucesso!");
-  };
-
-  const handleStop = async () => {
-    if (!isRecordingRef.current) return;
+  const stopRecording = async () => {
     isRecordingRef.current = false;
+    console.log("Stopping recording...");
 
-    const finalData = [...transcriptionsRef.current];
-
-    [displayStreamRef, micStreamRef].forEach(r => {
-      r.current?.getTracks().forEach(track => track.stop());
-      r.current = null;
-    });
-
-    if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => { });
-      audioContextRef.current = null;
-    }
-    sessionPromiseRef.current = null;
-    setStatus(SessionStatus.COMPLETED);
-
-    if (finalData.length > 0 && user) {
-      setStatus(SessionStatus.SAVING); // Show saving UI
+    // Stop Web Speech API
+    if (recognitionRef.current) {
       try {
-        await MeetingsService.saveMeeting(user.id, finalData, user.role);
+        recognitionRef.current.stop();
+      } catch (e) { console.warn("Error stopping recognition:", e); }
+      recognitionRef.current = null;
+    }
 
-        // Atualizar estado local imediatamente para refletir o novo contador
+    if (recognitionRestartTimerRef.current) {
+      clearTimeout(recognitionRestartTimerRef.current);
+      recognitionRestartTimerRef.current = null;
+    }
+
+    // Stop Media Tracks
+    if (displayStreamRef.current) {
+      displayStreamRef.current.getTracks().forEach(track => track.stop());
+      displayStreamRef.current = null;
+    }
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach(track => track.stop());
+      micStreamRef.current = null;
+    }
+
+    setStatus(SessionStatus.IDLE);
+
+    // Auto Save if there is data
+    if (transcriptionsRef.current.length > 0 && user) {
+      setStatus(SessionStatus.SAVING);
+      try {
+        await MeetingsService.saveMeeting(user.id, transcriptionsRef.current, user.role);
+
+        // Update local user stats if available
         setUser(prev => prev ? ({
           ...prev,
           meetings_recorded: (prev.meetings_recorded || 0) + 1
         }) : null);
 
+        // Reload meetings list
         loadMeetings(user.id);
-        setStatus(SessionStatus.IDLE); // Reset to show start button
+        setStatus(SessionStatus.IDLE);
+        setSuccessMessage("Reunião salva com sucesso!");
       } catch (e) {
-        // Se o erro for do limite (403), a mensagem virá aqui
-        setError("Erro ao salvar: " + getErrorMessage(e));
+        console.error("Save Error:", e);
+        setError("Erro ao salvar reunião: " + getErrorMessage(e));
         setStatus(SessionStatus.IDLE);
       }
-    } else {
-      setStatus(SessionStatus.IDLE);
+    } else if (transcriptionsRef.current.length > 0 && !user) {
+      // Guest mode or not logged in? (Though flow usually requires login)
+      // Just show success
+      setSuccessMessage("Transcrição concluída!");
+    }
+  };
+
+  const startWebSpeechRecognition = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      setError("Seu navegador não suporta transcrição nativa (Web Speech API). Por favor, use o Google Chrome ou Edge.");
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'pt-BR'; // Default to Portuguese
+
+    recognition.onstart = () => {
+      console.log("🎙️ Web Speech API Started");
+      setStatus(SessionStatus.RECORDING);
+      isRecordingRef.current = true;
+    };
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          const text = event.results[i][0].transcript.trim();
+          if (text) {
+            const newEntry: TranscriptionEntry = {
+              id: Math.random().toString(36).slice(2),
+              role: 'user', // Web Speech can't distinguish speakers easily yet
+              text: text,
+              timestamp: Date.now()
+            };
+
+            // Functional Update to ensure latest state
+            setTranscriptions(prev => {
+              const updated = [...prev, newEntry].sort((a, b) => a.timestamp - b.timestamp);
+              return updated;
+            });
+            transcriptionsRef.current.push(newEntry);
+            console.log("📝 Final:", text);
+          }
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      setPartialTranscript(interimTranscript);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech Recognition Error:", event.error);
+      if (event.error === 'not-allowed') {
+        setError("Permissão de microfone negada.");
+        stopRecording();
+      } else if (event.error === 'network') {
+        // Retry logic handled by onend usually, but network is critical
+      }
+    };
+
+    recognition.onend = () => {
+      console.log("Speech Recognition Ended");
+      // Auto-restart if we are still supposed to be recording
+      if (isRecordingRef.current) {
+        console.log("🔄 Auto-restarting recognition...");
+        // Small delay to prevent tight loops
+        recognitionRestartTimerRef.current = setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) { console.error("Restart failed:", e); }
+        }, 500);
+      } else {
+        setStatus(SessionStatus.IDLE);
+      }
+    };
+
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (e) {
+      console.error("Failed to start recognition:", e);
+      setError("Falha ao iniciar transcrição.");
     }
   };
 
@@ -1563,7 +1379,7 @@ const App: React.FC = () => {
                       <span className="text-slate-300 font-semibold text-sm">{transcriptions.length} {transcriptions.length === 1 ? 'frase capturada' : 'frases capturadas'}</span>
                     </div>
                   </div>
-                  <button onClick={handleStop} className="px-10 md:px-14 py-4 md:py-5 font-black rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-500/30 hover:scale-105 text-sm uppercase tracking-wider">Encerrar</button>
+                  <button onClick={stopRecording} className="px-10 md:px-14 py-4 md:py-5 font-black rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-500/30 hover:scale-105 text-sm uppercase tracking-wider">Encerrar</button>
                 </div>
 
                 {/* Persistent Warning Alert */}
