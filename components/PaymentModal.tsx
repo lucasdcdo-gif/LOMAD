@@ -182,8 +182,8 @@ export const PaymentModal = ({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
+                    <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-6 md:col-span-5">
                             <label className="block text-sm font-bold text-slate-300 mb-2">CEP</label>
                             <input
                                 type="text"
@@ -199,28 +199,26 @@ export const PaymentModal = ({
                                 placeholder="00000-000"
                             />
                         </div>
-                        <div className="flex flex-col md:grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-bold text-slate-300 mb-2">NÚMERO</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={cardForm.addressNumber}
-                                    onChange={e => setCardForm({ ...cardForm, addressNumber: e.target.value })}
-                                    className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all"
-                                    placeholder="123"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-300 mb-2">COMPLEMENTO (OPCIONAL)</label>
-                                <input
-                                    type="text"
-                                    value={cardForm.complement || ''}
-                                    onChange={e => setCardForm({ ...cardForm, complement: e.target.value })}
-                                    className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all"
-                                    placeholder="Apto 101"
-                                />
-                            </div>
+                        <div className="col-span-6 md:col-span-3">
+                            <label className="block text-sm font-bold text-slate-300 mb-2">NÚMERO</label>
+                            <input
+                                type="text"
+                                required
+                                value={cardForm.addressNumber}
+                                onChange={e => setCardForm({ ...cardForm, addressNumber: e.target.value })}
+                                className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all"
+                                placeholder="123"
+                            />
+                        </div>
+                        <div className="col-span-12 md:col-span-4">
+                            <label className="block text-sm font-bold text-slate-300 mb-2 whitespace-nowrap overflow-hidden text-ellipsis">COMPLEMENTO</label>
+                            <input
+                                type="text"
+                                value={cardForm.complement || ''}
+                                onChange={e => setCardForm({ ...cardForm, complement: e.target.value })}
+                                className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all"
+                                placeholder="Ex: Apto 101"
+                            />
                         </div>
                     </div>
 
