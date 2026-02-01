@@ -199,16 +199,28 @@ export const PaymentModal = ({
                                 placeholder="00000-000"
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-bold text-slate-300 mb-2">NÚMERO</label>
-                            <input
-                                type="text"
-                                required
-                                value={cardForm.addressNumber}
-                                onChange={e => setCardForm({ ...cardForm, addressNumber: e.target.value })}
-                                className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all"
-                                placeholder="123"
-                            />
+                        <div className="flex flex-col md:grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-300 mb-2">NÚMERO</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={cardForm.addressNumber}
+                                    onChange={e => setCardForm({ ...cardForm, addressNumber: e.target.value })}
+                                    className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all"
+                                    placeholder="123"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-300 mb-2">COMPLEMENTO (OPCIONAL)</label>
+                                <input
+                                    type="text"
+                                    value={cardForm.complement || ''}
+                                    onChange={e => setCardForm({ ...cardForm, complement: e.target.value })}
+                                    className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all"
+                                    placeholder="Apto 101"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -217,7 +229,7 @@ export const PaymentModal = ({
                             type="button"
                             onClick={() => {
                                 onClose();
-                                setCardForm({ number: '', name: '', expiry: '', cvc: '', cpf: '', phone: '', postalCode: '', addressNumber: '' });
+                                setCardForm({ number: '', name: '', expiry: '', cvc: '', cpf: '', phone: '', postalCode: '', addressNumber: '', complement: '' });
                             }}
                             className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-colors"
                             disabled={paymentLoading}
