@@ -185,7 +185,9 @@ app.post('/api/checkout', async (req, res) => {
       phone: phone,
       mobilePhone: phone,
       postalCode: postalCode,
-      addressNumber: cardData.addressNumber
+      postalCode: postalCode,
+      addressNumber: cardData.addressNumber,
+      complement: cardData.complement // New Field
     };
 
     if (!customer) {
@@ -231,6 +233,8 @@ app.post('/api/checkout', async (req, res) => {
         cpfCnpj: cpfCnpj,
         postalCode: postalCode,
         addressNumber: cardData.addressNumber,
+        addressNumber: cardData.addressNumber,
+        complement: cardData.complement, // New Field
         phone: phone
       },
       remoteIp: req.ip
@@ -253,7 +257,9 @@ app.post('/api/checkout', async (req, res) => {
         cpf_cnpj: cpfCnpj,
         phone: phone,
         postal_code: postalCode,
+        postal_code: postalCode,
         address_number: cardData.addressNumber,
+        address_complement: cardData.complement, // New Field
         subscription_id: subscription.id,
         subscription_status: 'ACTIVE',
         subscription_end: expiryDate
@@ -387,7 +393,7 @@ app.post('/api/profiles/create', async (req, res) => {
 // Update Profile endpoint
 app.put('/api/profile', async (req, res) => {
   try {
-    const { userId, phone, postalCode, addressNumber } = req.body;
+    const { userId, phone, postalCode, addressNumber, addressComplement } = req.body;
 
     // 1. Atualizar no Supabase
     const { data: currentProfile, error: fetchError } = await supabase
@@ -401,7 +407,9 @@ app.put('/api/profile', async (req, res) => {
     const { error: updateError } = await supabase.from('profiles').update({
       phone,
       postal_code: postalCode,
-      address_number: addressNumber
+      postal_code: postalCode,
+      address_number: addressNumber,
+      address_complement: addressComplement
     }).eq('id', userId);
 
     if (updateError) throw updateError;
@@ -417,7 +425,9 @@ app.put('/api/profile', async (req, res) => {
           await AsaasService.updateCustomer(subscription.customer, {
             phone,
             postalCode,
-            addressNumber
+            postalCode,
+            addressNumber,
+            complement: addressComplement // Asaas uses 'complement'
           });
         }
       } catch (asaasErr) {

@@ -161,7 +161,8 @@ const App: React.FC = () => {
     cpf: '',
     phone: '',
     postalCode: '',
-    addressNumber: ''
+    addressNumber: '',
+    complement: ''
   });
 
   // Admin State
@@ -2121,6 +2122,10 @@ const App: React.FC = () => {
                       <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Número</label>
                       <input type="text" value={cardForm.addressNumber} onChange={e => setCardForm({ ...cardForm, addressNumber: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors" placeholder="123" />
                     </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Complemento (Opcional)</label>
+                    <input type="text" value={cardForm.complement} onChange={e => setCardForm({ ...cardForm, complement: e.target.value })} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors" placeholder="Apto 101, Bloco B" />
                   </div>
                 </div>
 
