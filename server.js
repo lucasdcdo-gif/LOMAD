@@ -730,8 +730,9 @@ app.post('/api/ai/transcribe', async (req, res) => {
       return res.status(400).json({ error: 'No audio data provided' });
     }
 
-    // Use environment variable for model, default to gemini-1.5-flash (stable in standard SDK)
-    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    // Force usage of the stable gemini-1.5-flash model
+    // gemini-2.0-flash in v1beta is causing 400 Bad Request errors with audio/webm
+    const modelName = 'gemini-1.5-flash';
 
     // Robustly remove the Data URI prefix (handles codecs parameters too)
     const base64Data = audioData.includes('base64,')
