@@ -739,9 +739,20 @@ app.post('/api/ai/transcribe', async (req, res) => {
       ? audioData.split('base64,')[1]
       : audioData;
 
-    // Use the GLOBAL 'ai' instance (GoogleGenAI) initialized at the top of server.js
-    // This assumes 'ai' has been correctly initialized with the API Key
-    const result = await ai.models.generateContent({
+    // Initialize locally to ensure fresh config from env
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      logger.error("TRANSCRIPTION ERROR: GEMINI_API_KEY is missing in request scope.");
+      return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
+    }
+
+    const aiClient = new GoogleGenAI({ apiKey });
+
+
+
+    logger.info(`Starting transcription with model: ${modelName}`);
+
+    const result = await aiClient.models.generateContent({
       model: modelName,
       contents: [
         {
@@ -759,10 +770,24 @@ app.post('/api/ai/transcribe', async (req, res) => {
       ]
     });
 
-    // Handle SDK response variations
-    const transcription = typeof result.text === 'function' ? result.text() : (result.text || "");
+    // Handle SDK response variations safely with fallback
+    let transcription = "";
+    if (result && typeof result.text === 'function') {
+      try { transcription = result.text(); } catch (e) { /* ignore */ }
+    }
 
-    res.json({ transcription });
+    // Fallback property access if function failed or didn't exist
+    if (!transcription && result && result.text && typeof result.text === 'string') {
+      transcription = result.text;
+    }
+
+    // Fallback specifically for @google/generative-ai return structure
+    if (!transcription && result && result.response) {
+      if (typeof result.response.text === 'function') transcription = result.response.text();
+      else if (result.response.text) transcription = result.response.text;
+    }
+
+    res.json({ transcription: transcription || "" });
 
   } catch (err) {
     logger.error("Transcription Error Full: " + (err.stack || err.message));
