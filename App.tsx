@@ -803,10 +803,21 @@ const App: React.FC = () => {
           };
 
           setTranscriptions(prev => {
+            const lastEntry = prev[prev.length - 1];
+            // Deduplication: Don't add if identical to the very last one (prevents loops)
+            if (lastEntry && lastEntry.text === newEntry.text) {
+              console.log("Duplicate transcription suppressed:", newEntry.text);
+              return prev;
+            }
             const updated = [...prev, newEntry].sort((a, b) => a.timestamp - b.timestamp);
             return updated;
           });
-          transcriptionsRef.current.push(newEntry);
+          if (transcriptionsRef.current) {
+            const lastRef = transcriptionsRef.current[transcriptionsRef.current.length - 1];
+            if (!lastRef || lastRef.text !== newEntry.text) {
+              transcriptionsRef.current.push(newEntry);
+            }
+          }
           setPartialTranscript(""); // Clear "Processing..."
         } else {
           setPartialTranscript("");

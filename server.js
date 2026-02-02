@@ -761,14 +761,17 @@ app.post('/api/ai/transcribe', async (req, res) => {
 
     const model = genAI.getGenerativeModel({
       model: modelName,
-      generationConfig: { temperature: 0 }
+      generationConfig: {
+        temperature: 0,
+        responseMimeType: "application/json"
+      }
     });
 
     logger.info(`Starting transcription with model: ${modelName}`);
     logger.info(`Payload Debug: Mime=${cleanMimeType}, DataLength=${base64Data.length}`);
 
     const result = await model.generateContent([
-      "ATENÇÃO: Transcreva o áudio. O áudio pode conter silêncio ou ruído. Se não houver fala clara, retorne VAZIO. CUIDADO COM ALUCINAÇÕES: Não invente frases filosóficas, não repita textos anteriores. Se ouvir apenas estática, retorne VAZIO.",
+      "Analise o áudio e retorne um JSON com: 1) 'detected_speech': booleano (true se houver fala humana clara, false se for silêncio, ruído, música ou estática); 2) 'transcript': string com a transcrição EXATA em português do Brasil. Se detected_speech for false, transcript deve ser vazia. NÃO ALUCINE TEXTO.",
       {
         inlineData: {
           mimeType: cleanMimeType,
@@ -779,23 +782,29 @@ app.post('/api/ai/transcribe', async (req, res) => {
 
 
     // Handle SDK response variations safely with fallback
-    let transcription = "";
+    let rawText = "";
     if (result && typeof result.text === 'function') {
-      try { transcription = result.text(); } catch (e) { /* ignore */ }
+      try { rawText = result.text(); } catch (e) { /* ignore */ }
+    } else if (result && result.response) {
+      if (typeof result.response.text === 'function') rawText = result.response.text();
+      else rawText = result.response.text;
     }
 
-    // Fallback property access if function failed or didn't exist
-    if (!transcription && result && result.text && typeof result.text === 'string') {
-      transcription = result.text;
+    let finalTranscription = "";
+    try {
+      const parsed = JSON.parse(rawText);
+      if (parsed.detected_speech && parsed.transcript) {
+        finalTranscription = parsed.transcript;
+      } else {
+        logger.info("Silence/Noise detected by Model (detected_speech=false).");
+      }
+    } catch (parseErr) {
+      logger.warn("JSON Parse Failed, falling back to raw text cleanup: " + parseErr.message);
+      // Fallback: if it's not JSON, maybe it's just text? 
+      finalTranscription = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
     }
 
-    // Fallback specifically for @google/generative-ai return structure
-    if (!transcription && result && result.response) {
-      if (typeof result.response.text === 'function') transcription = result.response.text();
-      else if (result.response.text) transcription = result.response.text;
-    }
-
-    res.json({ transcription: transcription || "" });
+    res.json({ transcription: finalTranscription || "" });
 
   } catch (err) {
     logger.error("Transcription Error Full: " + (err.stack || err.message));
