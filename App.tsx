@@ -656,6 +656,10 @@ const App: React.FC = () => {
   const audioDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioLevelRef = useRef<number>(0);
+  const monitorIntervalRef = useRef<any>(null);
+
   const handleInitiate = async () => {
     try {
       if (user && user.role === 'FREE' && (user.meetings_recorded || 0) >= 5) {
@@ -664,8 +668,6 @@ const App: React.FC = () => {
       }
 
       setError(null);
-
-      // Reset State
       setTranscriptions([]);
       if (transcriptionsRef.current) transcriptionsRef.current = [];
       setPartialTranscript('');
@@ -675,59 +677,79 @@ const App: React.FC = () => {
 
       setStatus(SessionStatus.PERMISSIONS);
 
-      // 1. Initialize Audio Context & Mixer
       const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
       const audioCtx = new AudioContextClass();
       const destination = audioCtx.createMediaStreamDestination();
 
+      // VAD: Create Analyser Node for Volume Detection
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyserRef.current = analyser;
+      audioLevelRef.current = 0;
+
+      // Connect destination to analyser to monitor what we are recording
+      // Note: we need to connect the sources also to this analyser, OR connect destination -> analyser.
+      // destination is a MediaStreamAudioDestinationNode. It doesn't have an output to connect from in standard graph way 
+      // typically you connect SOURCE -> Analyser -> Destination.
+
       audioContextRef.current = audioCtx;
       audioDestinationRef.current = destination;
 
-      // CRITICAL: Ensure AudioContext is active (browsers suspend it by default)
       if (audioCtx.state === 'suspended') {
         await audioCtx.resume();
         console.log("AudioContext resumed");
       }
 
-      // 2. Obtain Screen Share (Display Media)
+      // 2. Obtain Screen Share
+      let hasSystemAudio = false;
       if (navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
-        console.log("Requesting Display Media...");
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: true // Important: Request system audio
-        });
-
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         displayStreamRef.current = displayStream;
 
-        // Check for Audio Tracks in Display Stream
         if (displayStream.getAudioTracks().length > 0) {
           const displaySource = audioCtx.createMediaStreamSource(displayStream);
           displaySource.connect(destination);
+          displaySource.connect(analyser); // Monitor this source
           console.log("✓ System Audio mixed.");
+          hasSystemAudio = true;
         } else {
-          console.warn("⚠️ No system audio track detected. Proceeding with Mic only.");
-          setError("Aviso: Áudio do sistema não detectado. Verifique se marcou 'Compartilhar áudio' ao selecionar a tela.");
+          console.warn("⚠️ No system audio track detected.");
+          setError("Aviso: Áudio do sistema não detectado.");
         }
 
-        // Monitor track ending
         displayStream.getVideoTracks()[0].onended = () => {
-          console.warn("Display Stream Track ended.");
           stopRecording();
         };
-      } else {
-        console.warn("📱 Mobile/Unsupported device. Skipping Screen Share.");
       }
 
       // 3. Obtain Microphone
-      console.log("Requesting User Media (Mic)...");
       const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micStreamRef.current = micStream;
-
       const micSource = audioCtx.createMediaStreamSource(micStream);
       micSource.connect(destination);
+      micSource.connect(analyser); // Monitor this source
       console.log("✓ Mic Audio mixed.");
 
-      // 4. Start Cloud Recording
+      // Start Volume Monitoring Loop
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      monitorIntervalRef.current = setInterval(() => {
+        analyser.getByteFrequencyData(dataArray);
+
+        // Calculate average volume
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        const average = sum / bufferLength;
+
+        // Keep track of MAX volume seen in the current chunk window
+        if (average > audioLevelRef.current) {
+          audioLevelRef.current = average;
+        }
+      }, 100); // Check every 100ms
+
       setStatus(SessionStatus.CONNECTING);
       startCloudRecording(destination.stream);
 
@@ -735,14 +757,12 @@ const App: React.FC = () => {
       console.error("Initiate Error:", err);
       setStatus(SessionStatus.IDLE);
       setError(`Erro permissões: ${getErrorMessage(err)}`);
-      // Cleanup on error
       if (audioContextRef.current) audioContextRef.current.close();
     }
   };
 
   const startCloudRecording = (mixedStream: MediaStream) => {
     try {
-      // Use efficient codec
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : 'audio/webm';
@@ -752,13 +772,22 @@ const App: React.FC = () => {
 
       recorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
-          // Send chunk to server
-          await sendAudioChunk(event.data, mimeType);
+          // VAD CHECK: Only send if we heard something significant
+          // Threshold 10 is very low/sensitive (scale 0-255). 
+          // Silence is usually 0-5. Speech is 30+.
+          if (audioLevelRef.current > 10) {
+            console.log(`🎤 Voice Detected (Level: ${audioLevelRef.current.toFixed(1)}). Sending chunk...`);
+            await sendAudioChunk(event.data, mimeType);
+          } else {
+            console.log(`🔇 Silence Detected (Level: ${audioLevelRef.current.toFixed(1)}). Skipping chunk.`);
+            setPartialTranscript("");
+          }
+          // Reset max level for next chunk
+          audioLevelRef.current = 0;
         }
       };
 
-      // Record in small chunks (e.g., 5 seconds) to allow near real-time transcription
-      recorder.start(5000);
+      recorder.start(5000); // 5 seconds chunks
       isRecordingRef.current = true;
       setStatus(SessionStatus.RECORDING);
       console.log("☁️ Cloud Recording Started (Gemini)");
@@ -850,6 +879,11 @@ const App: React.FC = () => {
         mediaRecorderRef.current.stop();
       } catch (e) { console.warn("Error stopping MediaRecorder:", e); }
       mediaRecorderRef.current = null;
+    }
+
+    if (monitorIntervalRef.current) {
+      clearInterval(monitorIntervalRef.current);
+      monitorIntervalRef.current = null;
     }
 
     // Close AudioContext
