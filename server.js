@@ -46,7 +46,7 @@ logger.info(`[Config] Supabase URL: ${process.env.SUPABASE_URL}`);
 // Security: Don't log full keys
 logger.info(`[Config] Key Check: ${(process.env.SUPABASE_SERVICE_KEY || '').length > 10 ? 'OK' : 'MISSING'}`);
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || process.env.GEMINI_API_KEY });
+const ai = new GoogleGenerativeAI(process.env.API_KEY || process.env.GEMINI_API_KEY);
 
 // API Endpoints
 app.post('/api/meetings', async (req, res) => {
