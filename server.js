@@ -750,24 +750,17 @@ app.post('/api/ai/transcribe', async (req, res) => {
       return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
     }
 
-    // DEFINITIVE DIAGNOSTIC: List models via raw HTTP to bypass SDK confusion
-    try {
-      const resp = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-      const modelList = resp.data.models || [];
-      const modelNames = modelList.map(m => m.name); // e.g., models/gemini-1.5-flash
-      logger.info(`DEFINITIVE MODEL LIST: ${JSON.stringify(modelNames)}`);
-    } catch (apiErr) {
-      logger.warn(`Diagnostic List Failed: ${apiErr.message}`);
-    }
-
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: modelName });
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      generationConfig: { temperature: 0 }
+    });
 
     logger.info(`Starting transcription with model: ${modelName}`);
     logger.info(`Payload Debug: Mime=${cleanMimeType}, DataLength=${base64Data.length}`);
 
     const result = await model.generateContent([
-      "Transcreva o áudio a seguir para português do Brasil. Retorne APENAS o texto transcrito, sem comentários adicionais. Se não houver fala clara, retorne uma string vazia.",
+      "Transcreva o áudio a seguir para português do Brasil. Se houver silêncio, música de fundo, ruído ou fala ininteligível, retorne APENAS uma string vazia. NÃO invente texto e NÃO descreva o áudio.",
       {
         inlineData: {
           mimeType: cleanMimeType,
