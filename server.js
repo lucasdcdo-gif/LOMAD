@@ -731,8 +731,9 @@ app.post('/api/ai/transcribe', async (req, res) => {
       return res.status(400).json({ error: 'No audio data provided' });
     }
 
-    // Force usage of gemini-2.0-flash (it exists, while 1.5-flash returned 404)
-    const modelName = 'gemini-2.0-flash';
+    // Switch to gemini-flash-latest as 'gemini-1.5-flash' caused 404s and 2.0 caused 400s
+    // The diagnostic log confirmed 'gemini-flash-latest' is available in the user's account.
+    const modelName = 'gemini-flash-latest';
 
     // Robustly remove the Data URI prefix (handles codecs parameters too)
     const base64Data = audioData.includes('base64,')
