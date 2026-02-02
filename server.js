@@ -751,6 +751,14 @@ app.post('/api/ai/transcribe', async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
+
+    // HEURISTIC: Skip very small payloads (likely silence/headers only) to prevent hallucinations
+    // A 5-second valid speech chunk is usually > 10KB. Silence is ~400-800 bytes.
+    if (base64Data.length < 3000) {
+      logger.info(`Skipping small payload (${base64Data.length} chars) - likely silence.`);
+      return res.json({ transcription: "" });
+    }
+
     const model = genAI.getGenerativeModel({
       model: modelName,
       generationConfig: { temperature: 0 }
@@ -760,7 +768,7 @@ app.post('/api/ai/transcribe', async (req, res) => {
     logger.info(`Payload Debug: Mime=${cleanMimeType}, DataLength=${base64Data.length}`);
 
     const result = await model.generateContent([
-      "Transcreva o áudio a seguir para português do Brasil. Se houver silêncio, música de fundo, ruído ou fala ininteligível, retorne APENAS uma string vazia. NÃO invente texto e NÃO descreva o áudio.",
+      "ATENÇÃO: Transcreva o áudio. Se houver APENAS silêncio, música, ruído estático ou sons sem fala: RETORNE UMA STRING VAZIA. Ignorar alucinações. NÃO complete frases. Apenas o que for audível.",
       {
         inlineData: {
           mimeType: cleanMimeType,
