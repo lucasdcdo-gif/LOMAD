@@ -741,12 +741,12 @@ app.post('/api/ai/transcribe', async (req, res) => {
     const aiClient = new GoogleGenAI({ apiKey });
     // Use the configured model from environment variables, fallback to 1.5-flash
     const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-    const model = aiClient.getGenerativeModel({ model: modelName });
 
     // Clean base64 if needed (remove data:audio/webm;base64, prefix)
     const cleanBase64 = audioData.replace(/^data:audio\/[a-z]+;base64,/, "");
 
-    const result = await model.generateContent({
+    const result = await aiClient.models.generateContent({
+      model: modelName,
       contents: [
         {
           role: 'user',
@@ -763,11 +763,17 @@ app.post('/api/ai/transcribe', async (req, res) => {
       ]
     });
 
-    const transcription = result.response.text();
+    // Check if result.text is available directly (Unified SDK style) 
+    // or if we need pathing. Based on line 139 usage in this file, it's .text
+    const transcription = result.text || "";
+
     res.json({ transcription });
 
   } catch (err) {
     logger.error("Transcription Error: " + err.message);
+    // Enhanced error logging to understand 500 causes better
+    console.error("Transcription Stack:", err.stack);
+
     if (err.message.includes('429')) {
       return res.status(429).json({ error: 'Limite de uso da API excedido (Cota). Tente novamente em instantes.' });
     }
