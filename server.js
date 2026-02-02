@@ -730,8 +730,8 @@ app.post('/api/ai/transcribe', async (req, res) => {
       return res.status(400).json({ error: 'No audio data provided' });
     }
 
-    // Use environment variable for model, fallback to 1.5-flash
-    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    // Use environment variable for model, fallback to gemini-1.5-flash-latest which is safer for v1beta
+    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash-latest';
 
     // Robustly remove the Data URI prefix (handles codecs parameters too)
     // input: "data:audio/webm;codecs=opus;base64,GkX..."
