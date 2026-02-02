@@ -739,7 +739,9 @@ app.post('/api/ai/transcribe', async (req, res) => {
     }
 
     const aiClient = new GoogleGenAI({ apiKey });
-    const model = aiClient.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // Use the configured model from environment variables, fallback to 1.5-flash
+    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    const model = aiClient.getGenerativeModel({ model: modelName });
 
     // Clean base64 if needed (remove data:audio/webm;base64, prefix)
     const cleanBase64 = audioData.replace(/^data:audio\/[a-z]+;base64,/, "");
