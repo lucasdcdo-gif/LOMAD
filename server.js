@@ -745,16 +745,12 @@ app.post('/api/ai/transcribe', async (req, res) => {
       ? audioData.split('base64,')[1]
       : audioData;
 
-    // Initialize locally to ensure fresh config from env
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      logger.error("TRANSCRIPTION ERROR: GEMINI_API_KEY is missing in request scope.");
-      return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
-    }
-
-    const aiClient = new GoogleGenAI({ apiKey });
+    // Sanitize MIME type (remove parameters like ;codecs=opus)
+    // API expects simple "audio/webm", "audio/mp3", etc.
+    const cleanMimeType = (mimeType || 'audio/webm').split(';')[0].trim();
 
     logger.info(`Starting transcription with model: ${modelName}`);
+    logger.info(`Payload Debug: Mime=${cleanMimeType}, DataLength=${base64Data.length}`);
 
     // DIAGNOSTIC: List available models to find the correct name
     try {
@@ -777,7 +773,7 @@ app.post('/api/ai/transcribe', async (req, res) => {
             { text: "Transcreva o áudio a seguir para português do Brasil. Retorne APENAS o texto transcrito, sem comentários adicionais. Se não houver fala clara, retorne uma string vazia." },
             {
               inlineData: {
-                mimeType: mimeType || 'audio/webm',
+                mimeType: cleanMimeType,
                 data: base64Data
               }
             }
@@ -785,6 +781,7 @@ app.post('/api/ai/transcribe', async (req, res) => {
         }
       ]
     });
+
 
     // Handle SDK response variations safely with fallback
     let transcription = "";
