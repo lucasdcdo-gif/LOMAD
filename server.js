@@ -2,6 +2,7 @@
 console.log("Starting server process...");
 import express from 'express';
 import cors from 'cors';
+import axios from 'axios';
 import * as dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -730,9 +731,8 @@ app.post('/api/ai/transcribe', async (req, res) => {
       return res.status(400).json({ error: 'No audio data provided' });
     }
 
-    // Force usage of the stable gemini-1.5-flash model
-    // gemini-2.0-flash in v1beta is causing 400 Bad Request errors with audio/webm
-    const modelName = 'gemini-1.5-flash';
+    // Force usage of gemini-2.0-flash (it exists, while 1.5-flash returned 404)
+    const modelName = 'gemini-2.0-flash';
 
     // Robustly remove the Data URI prefix (handles codecs parameters too)
     const base64Data = audioData.includes('base64,')
@@ -747,6 +747,16 @@ app.post('/api/ai/transcribe', async (req, res) => {
     if (!apiKey) {
       logger.error("TRANSCRIPTION ERROR: GEMINI_API_KEY is missing.");
       return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
+    }
+
+    // DEFINITIVE DIAGNOSTIC: List models via raw HTTP to bypass SDK confusion
+    try {
+      const resp = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      const modelList = resp.data.models || [];
+      const modelNames = modelList.map(m => m.name); // e.g., models/gemini-1.5-flash
+      logger.info(`DEFINITIVE MODEL LIST: ${JSON.stringify(modelNames)}`);
+    } catch (apiErr) {
+      logger.warn(`Diagnostic List Failed: ${apiErr.message}`);
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
