@@ -721,6 +721,58 @@ app.post('/api/request-data-deletion', async (req, res) => {
   }
 });
 
+// Transcription Endpoint for Gemini 1.5 Flash
+app.post('/api/ai/transcribe', async (req, res) => {
+  try {
+    const { audioData, mimeType } = req.body;
+
+    if (!audioData) {
+      return res.status(400).json({ error: 'No audio data provided' });
+    }
+
+    // Initialize/Re-initialize to ensure we have the latest key if env changes (though usually static)
+    // Using environment variable explicitly as requested
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      logger.error("GEMINI_API_KEY not found in environment variables");
+      return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
+    }
+
+    const aiClient = new GoogleGenAI({ apiKey });
+    const model = aiClient.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    // Clean base64 if needed (remove data:audio/webm;base64, prefix)
+    const cleanBase64 = audioData.replace(/^data:audio\/[a-z]+;base64,/, "");
+
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: "Transcreva o áudio a seguir para português do Brasil. Retorne APENAS o texto transcrito, sem comentários adicionais. Se não houver fala clara, retorne uma string vazia." },
+            {
+              inlineData: {
+                mimeType: mimeType || 'audio/webm',
+                data: cleanBase64
+              }
+            }
+          ]
+        }
+      ]
+    });
+
+    const transcription = result.response.text();
+    res.json({ transcription });
+
+  } catch (err) {
+    logger.error("Transcription Error: " + err.message);
+    if (err.message.includes('429')) {
+      return res.status(429).json({ error: 'Limite de uso da API excedido (Cota). Tente novamente em instantes.' });
+    }
+    res.status(500).json({ error: "Erro na transcrição: " + err.message });
+  }
+});
+
 // Get Pricing (Admin)
 app.get('/api/admin/pricing', async (req, res) => {
   try {

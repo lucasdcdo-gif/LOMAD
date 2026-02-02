@@ -650,6 +650,12 @@ const App: React.FC = () => {
     } catch (e) { console.error("Load meetings error:", e); }
   };
 
+  // Refs for Cloud Transcription
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
   const handleInitiate = async () => {
     try {
       if (user && user.role === 'FREE' && (user.meetings_recorded || 0) >= 5) {
@@ -658,83 +664,181 @@ const App: React.FC = () => {
       }
 
       setError(null);
-      setError(null);
 
-      // Reset Reconnect Counter
-      reconnectAttemptsRef.current = 0;
-
-      // Reset State for new meeting
+      // Reset State
       setTranscriptions([]);
       if (transcriptionsRef.current) transcriptionsRef.current = [];
       setPartialTranscript('');
       setChatMessages([]);
       setSelectedMeeting(null);
-      setConsentGiven(false); // Reset consent for next time
+      setConsentGiven(false);
 
       setStatus(SessionStatus.PERMISSIONS);
 
-      // Check if Screen Sharing is supported (Desktop)
+      // 1. Initialize Audio Context & Mixer
+      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const audioCtx = new AudioContextClass();
+      const destination = audioCtx.createMediaStreamDestination();
+
+      audioContextRef.current = audioCtx;
+      audioDestinationRef.current = destination;
+
+      // 2. Obtain Screen Share (Display Media)
       if (navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
         console.log("Requesting Display Media...");
         const displayStream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
-          audio: true
+          audio: true // Important: Request system audio
         });
-        console.log("Display Media obtained:", displayStream.id);
-
-        // Check for System Audio
-        if (displayStream.getAudioTracks().length === 0) {
-          console.warn("⚠️ No system audio track detected!");
-          setError("⚠️ Áudio do sistema NÃO detectado! Pare e compartilhe novamente marcando 'Compartilhar áudio'.");
-        } else {
-          console.log("✓ System Audio detected.");
-        }
 
         displayStreamRef.current = displayStream;
 
+        // Check for Audio Tracks in Display Stream
+        if (displayStream.getAudioTracks().length > 0) {
+          const displaySource = audioCtx.createMediaStreamSource(displayStream);
+          displaySource.connect(destination);
+          console.log("✓ System Audio mixed.");
+        } else {
+          console.warn("⚠️ No system audio track detected. Proceeding with Mic only.");
+          setError("Aviso: Áudio do sistema não detectado. Verifique se marcou 'Compartilhar áudio' ao selecionar a tela.");
+        }
+
         // Monitor track ending
         displayStream.getVideoTracks()[0].onended = () => {
-          console.warn("Display Stream Track ended (User stopped sharing or browser revoked).");
+          console.warn("Display Stream Track ended.");
           stopRecording();
         };
       } else {
-        console.warn("📱 Mobile/Unsupported device detected. Skipping Screen Share.");
-        setSuccessMessage("📱 Modo Mobile: Gravando apenas microfone.");
-        // We continue to Mic request below
+        console.warn("📱 Mobile/Unsupported device. Skipping Screen Share.");
       }
 
+      // 3. Obtain Microphone
       console.log("Requesting User Media (Mic)...");
       const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log("Mic Stream obtained:", micStream.id);
       micStreamRef.current = micStream;
 
+      const micSource = audioCtx.createMediaStreamSource(micStream);
+      micSource.connect(destination);
+      console.log("✓ Mic Audio mixed.");
+
+      // 4. Start Cloud Recording
       setStatus(SessionStatus.CONNECTING);
-      startWebSpeechRecognition();
+      startCloudRecording(destination.stream);
+
     } catch (err: any) {
       console.error("Initiate Error:", err);
       setStatus(SessionStatus.IDLE);
       setError(`Erro permissões: ${getErrorMessage(err)}`);
+      // Cleanup on error
+      if (audioContextRef.current) audioContextRef.current.close();
     }
   };
+
+  const startCloudRecording = (mixedStream: MediaStream) => {
+    try {
+      // Use efficient codec
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+
+      const recorder = new MediaRecorder(mixedStream, { mimeType });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = async (event) => {
+        if (event.data.size > 0) {
+          // Send chunk to server
+          await sendAudioChunk(event.data, mimeType);
+        }
+      };
+
+      // Record in small chunks (e.g., 5 seconds) to allow near real-time transcription
+      recorder.start(5000);
+      isRecordingRef.current = true;
+      setStatus(SessionStatus.RECORDING);
+      console.log("☁️ Cloud Recording Started (Gemini)");
+
+    } catch (e) {
+      console.error("Failed to start MediaRecorder:", e);
+      setError("Falha ao iniciar gravação na nuvem.");
+    }
+  };
+
+  const sendAudioChunk = async (blob: Blob, mimeType: string) => {
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async () => {
+        const base64data = reader.result as string;
+
+        // Visual indicator
+        setPartialTranscript("Processando áudio...");
+
+        const response = await fetch('/api/ai/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audioData: base64data, mimeType })
+        });
+
+        if (response.status === 429) {
+          console.warn("API Rate Limit Hit");
+          // Optionally show a warning, but don't stop recording
+          return;
+        }
+
+        if (!response.ok) throw new Error('Server Error');
+
+        const data = await response.json();
+        if (data.transcription && data.transcription.trim()) {
+          const newEntry: TranscriptionEntry = {
+            id: Math.random().toString(36).slice(2),
+            role: 'user', // Cloud doesn't separate speakers yet
+            text: data.transcription.trim(),
+            timestamp: Date.now()
+          };
+
+          setTranscriptions(prev => {
+            const updated = [...prev, newEntry].sort((a, b) => a.timestamp - b.timestamp);
+            return updated;
+          });
+          transcriptionsRef.current.push(newEntry);
+          setPartialTranscript(""); // Clear "Processing..."
+        } else {
+          setPartialTranscript("");
+        }
+      };
+    } catch (e) {
+      console.error("Audio Chunk Upload Error:", e);
+      // Don't error out the UI completely, just log
+    }
+  };
+
+  // Deprecated/Removed: startWebSpeechRecognition
+  // We keep the function name just to prevent dead code ref issues if called elsewhere, 
+  // but it's now internal to the old logic. 
+  // Ideally we remove it, but for safety in this diff we just commented it out or let handleInitiate use the new one.
+  const startWebSpeechRecognition = () => { };
 
   const stopRecording = async () => {
     isRecordingRef.current = false;
     console.log("Stopping recording...");
 
-    // Stop Web Speech API
-    if (recognitionRef.current) {
+    // Stop Cloud MediaRecorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
-        recognitionRef.current.stop();
-      } catch (e) { console.warn("Error stopping recognition:", e); }
-      recognitionRef.current = null;
+        mediaRecorderRef.current.stop();
+      } catch (e) { console.warn("Error stopping MediaRecorder:", e); }
+      mediaRecorderRef.current = null;
     }
 
-    if (recognitionRestartTimerRef.current) {
-      clearTimeout(recognitionRestartTimerRef.current);
-      recognitionRestartTimerRef.current = null;
+    // Close AudioContext
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch (e) { console.warn("Error closing AudioContext:", e); }
+      audioContextRef.current = null;
     }
 
-    // Stop Media Tracks
+    // Stop Media Streams (Mic/Display)
     if (displayStreamRef.current) {
       displayStreamRef.current.getTracks().forEach(track => track.stop());
       displayStreamRef.current = null;
@@ -746,19 +850,18 @@ const App: React.FC = () => {
 
     setStatus(SessionStatus.IDLE);
 
-    // Auto Save if there is data
+    // Initial Save Logic
     if (transcriptionsRef.current.length > 0 && user) {
       setStatus(SessionStatus.SAVING);
       try {
         await MeetingsService.saveMeeting(user.id, transcriptionsRef.current, user.role);
 
-        // Update local user stats if available
+        // Update local status
         setUser(prev => prev ? ({
           ...prev,
           meetings_recorded: (prev.meetings_recorded || 0) + 1
         }) : null);
 
-        // Reload meetings list
         loadMeetings(user.id);
         setStatus(SessionStatus.IDLE);
         setSuccessMessage("Reunião salva com sucesso!");
@@ -768,94 +871,11 @@ const App: React.FC = () => {
         setStatus(SessionStatus.IDLE);
       }
     } else if (transcriptionsRef.current.length > 0 && !user) {
-      // Guest mode or not logged in? (Though flow usually requires login)
-      // Just show success
       setSuccessMessage("Transcrição concluída!");
     }
   };
 
-  const startWebSpeechRecognition = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      setError("Seu navegador não suporta transcrição nativa (Web Speech API). Por favor, use o Google Chrome ou Edge.");
-      return;
-    }
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'pt-BR'; // Default to Portuguese
-
-    recognition.onstart = () => {
-      console.log("🎙️ Web Speech API Started");
-      setStatus(SessionStatus.RECORDING);
-      isRecordingRef.current = true;
-    };
-
-    recognition.onresult = (event: any) => {
-      let interimTranscript = '';
-
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          const text = event.results[i][0].transcript.trim();
-          if (text) {
-            const newEntry: TranscriptionEntry = {
-              id: Math.random().toString(36).slice(2),
-              role: 'user', // Web Speech can't distinguish speakers easily yet
-              text: text,
-              timestamp: Date.now()
-            };
-
-            // Functional Update to ensure latest state
-            setTranscriptions(prev => {
-              const updated = [...prev, newEntry].sort((a, b) => a.timestamp - b.timestamp);
-              return updated;
-            });
-            transcriptionsRef.current.push(newEntry);
-            console.log("📝 Final:", text);
-          }
-        } else {
-          interimTranscript += event.results[i][0].transcript;
-        }
-      }
-      setPartialTranscript(interimTranscript);
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech Recognition Error:", event.error);
-      if (event.error === 'not-allowed') {
-        setError("Permissão de microfone negada.");
-        stopRecording();
-      } else if (event.error === 'network') {
-        // Retry logic handled by onend usually, but network is critical
-      }
-    };
-
-    recognition.onend = () => {
-      console.log("Speech Recognition Ended");
-      // Auto-restart if we are still supposed to be recording
-      if (isRecordingRef.current) {
-        console.log("🔄 Auto-restarting recognition...");
-        // Small delay to prevent tight loops
-        recognitionRestartTimerRef.current = setTimeout(() => {
-          try {
-            recognition.start();
-          } catch (e) { console.error("Restart failed:", e); }
-        }, 500);
-      } else {
-        setStatus(SessionStatus.IDLE);
-      }
-    };
-
-    try {
-      recognition.start();
-      recognitionRef.current = recognition;
-    } catch (e) {
-      console.error("Failed to start recognition:", e);
-      setError("Falha ao iniciar transcrição.");
-    }
-  };
 
   const handleChatSubmit = async (overridePrompt?: string) => {
     if ((!chatInput.trim() && !overridePrompt) || !selectedMeeting) return;
