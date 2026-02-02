@@ -683,6 +683,12 @@ const App: React.FC = () => {
       audioContextRef.current = audioCtx;
       audioDestinationRef.current = destination;
 
+      // CRITICAL: Ensure AudioContext is active (browsers suspend it by default)
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+        console.log("AudioContext resumed");
+      }
+
       // 2. Obtain Screen Share (Display Media)
       if (navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
         console.log("Requesting Display Media...");

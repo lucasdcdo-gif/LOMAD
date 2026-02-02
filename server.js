@@ -768,7 +768,7 @@ app.post('/api/ai/transcribe', async (req, res) => {
     logger.info(`Payload Debug: Mime=${cleanMimeType}, DataLength=${base64Data.length}`);
 
     const result = await model.generateContent([
-      "ATENÇÃO: Transcreva o áudio. Se houver APENAS silêncio, música, ruído estático ou sons sem fala: RETORNE UMA STRING VAZIA. Ignorar alucinações. NÃO complete frases. Apenas o que for audível.",
+      "ATENÇÃO: Transcreva o áudio. O áudio pode conter silêncio ou ruído. Se não houver fala clara, retorne VAZIO. CUIDADO COM ALUCINAÇÕES: Não invente frases filosóficas, não repita textos anteriores. Se ouvir apenas estática, retorne VAZIO.",
       {
         inlineData: {
           mimeType: cleanMimeType,
