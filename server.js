@@ -4,7 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import * as dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -730,61 +730,39 @@ app.post('/api/ai/transcribe', async (req, res) => {
       return res.status(400).json({ error: 'No audio data provided' });
     }
 
-    // Use environment variable for model, fallback to gemini-2.0-flash (1.5 is deprecated or problematic in v1beta)
-    let modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-
-    // Config Fix: Auto-upgrade legacy 1.5 models to 2.0-flash if detected
-    if (modelName.includes('gemini-1.5')) {
-      logger.warn(`Legacy model ${modelName} detected. Auto-upgrading to gemini-2.0-flash.`);
-      modelName = 'gemini-2.0-flash';
-    }
+    // Use environment variable for model, default to gemini-1.5-flash (stable in standard SDK)
+    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
     // Robustly remove the Data URI prefix (handles codecs parameters too)
-    // input: "data:audio/webm;codecs=opus;base64,GkX..."
     const base64Data = audioData.includes('base64,')
       ? audioData.split('base64,')[1]
       : audioData;
 
     // Sanitize MIME type (remove parameters like ;codecs=opus)
-    // API expects simple "audio/webm", "audio/mp3", etc.
     const cleanMimeType = (mimeType || 'audio/webm').split(';')[0].trim();
 
-    // Initialize local client
+    // Initialize local client (Standard SDK)
     const apiKey = process.env.GEMINI_API_KEY;
-    const aiClient = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY });
+    if (!apiKey) {
+      logger.error("TRANSCRIPTION ERROR: GEMINI_API_KEY is missing.");
+      return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: modelName });
 
     logger.info(`Starting transcription with model: ${modelName}`);
     logger.info(`Payload Debug: Mime=${cleanMimeType}, DataLength=${base64Data.length}`);
 
-    // DIAGNOSTIC: List available models to find the correct name
-    try {
-      const listResp = await aiClient.models.list();
-      // The Unified SDK returns { models: [...] } or just [...] depend on version. Handling both.
-      const models = Array.isArray(listResp) ? listResp : (listResp.models || []);
-      const names = models.map(m => m.name || m.displayName);
-      logger.info(`Available Models via SDK for debugging: ${JSON.stringify(names)}`);
-    } catch (listErr) {
-      // Don't crash on diagnostic failure
-      logger.warn(`Failed to list models (Diagnostic): ${listErr.message}`);
-    }
-
-    const result = await aiClient.models.generateContent({
-      model: modelName,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: "Transcreva o áudio a seguir para português do Brasil. Retorne APENAS o texto transcrito, sem comentários adicionais. Se não houver fala clara, retorne uma string vazia." },
-            {
-              inlineData: {
-                mimeType: cleanMimeType,
-                data: base64Data
-              }
-            }
-          ]
+    const result = await model.generateContent([
+      "Transcreva o áudio a seguir para português do Brasil. Retorne APENAS o texto transcrito, sem comentários adicionais. Se não houver fala clara, retorne uma string vazia.",
+      {
+        inlineData: {
+          mimeType: cleanMimeType,
+          data: base64Data
         }
-      ]
-    });
+      }
+    ]);
 
 
     // Handle SDK response variations safely with fallback
