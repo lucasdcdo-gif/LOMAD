@@ -749,6 +749,10 @@ app.post('/api/ai/transcribe', async (req, res) => {
     // API expects simple "audio/webm", "audio/mp3", etc.
     const cleanMimeType = (mimeType || 'audio/webm').split(';')[0].trim();
 
+    // Initialize local client
+    const apiKey = process.env.GEMINI_API_KEY;
+    const aiClient = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY });
+
     logger.info(`Starting transcription with model: ${modelName}`);
     logger.info(`Payload Debug: Mime=${cleanMimeType}, DataLength=${base64Data.length}`);
 
