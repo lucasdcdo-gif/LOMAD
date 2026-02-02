@@ -730,22 +730,18 @@ app.post('/api/ai/transcribe', async (req, res) => {
       return res.status(400).json({ error: 'No audio data provided' });
     }
 
-    // Initialize/Re-initialize to ensure we have the latest key if env changes (though usually static)
-    // Using environment variable explicitly as requested
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      logger.error("GEMINI_API_KEY not found in environment variables");
-      return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
-    }
-
-    const aiClient = new GoogleGenAI({ apiKey });
-    // Use the configured model from environment variables, fallback to 1.5-flash
+    // Use environment variable for model, fallback to 1.5-flash
     const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
-    // Clean base64 if needed (remove data:audio/webm;base64, prefix)
-    const cleanBase64 = audioData.replace(/^data:audio\/[a-z]+;base64,/, "");
+    // Robustly remove the Data URI prefix (handles codecs parameters too)
+    // input: "data:audio/webm;codecs=opus;base64,GkX..."
+    const base64Data = audioData.includes('base64,')
+      ? audioData.split('base64,')[1]
+      : audioData;
 
-    const result = await aiClient.models.generateContent({
+    // Use the GLOBAL 'ai' instance (GoogleGenAI) initialized at the top of server.js
+    // This assumes 'ai' has been correctly initialized with the API Key
+    const result = await ai.models.generateContent({
       model: modelName,
       contents: [
         {
@@ -755,7 +751,7 @@ app.post('/api/ai/transcribe', async (req, res) => {
             {
               inlineData: {
                 mimeType: mimeType || 'audio/webm',
-                data: cleanBase64
+                data: base64Data
               }
             }
           ]
@@ -763,21 +759,19 @@ app.post('/api/ai/transcribe', async (req, res) => {
       ]
     });
 
-    // Check if result.text is available directly (Unified SDK style) 
-    // or if we need pathing. Based on line 139 usage in this file, it's .text
-    const transcription = result.text || "";
+    // Handle SDK response variations
+    const transcription = typeof result.text === 'function' ? result.text() : (result.text || "");
 
     res.json({ transcription });
 
   } catch (err) {
-    logger.error("Transcription Error: " + err.message);
-    // Enhanced error logging to understand 500 causes better
-    console.error("Transcription Stack:", err.stack);
+    logger.error("Transcription Error Full: " + (err.stack || err.message));
 
-    if (err.message.includes('429')) {
-      return res.status(429).json({ error: 'Limite de uso da API excedido (Cota). Tente novamente em instantes.' });
+    if (err.message && err.message.includes('429')) {
+      return res.status(429).json({ error: 'Limite de uso da API excedido. Tente novamente.' });
     }
-    res.status(500).json({ error: "Erro na transcrição: " + err.message });
+
+    res.status(500).json({ error: "Erro interno na transcrição: " + err.message });
   }
 });
 
