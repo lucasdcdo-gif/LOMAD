@@ -804,6 +804,25 @@ app.post('/api/ai/transcribe', async (req, res) => {
       finalTranscription = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
     }
 
+    // STRICT BLACKLIST: Filter out common Gemini hallucinations when it hears silence
+    const BLACKLIST = [
+      "Eu sou um modelo de linguagem",
+      "treinado pelo Google",
+      "teste de transcrição",
+      "Olá, este é um teste",
+      "transcrição de áudio em português",
+      "Insira o áudio aqui",
+      "Retorne uma string vazia"
+    ];
+
+    if (finalTranscription) {
+      const lowerT = finalTranscription.toLowerCase();
+      if (BLACKLIST.some(phrase => lowerT.includes(phrase.toLowerCase()))) {
+        logger.warn(`Blocked Hallucination: "${finalTranscription}"`);
+        finalTranscription = "";
+      }
+    }
+
     res.json({ transcription: finalTranscription || "" });
 
   } catch (err) {

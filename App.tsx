@@ -803,10 +803,15 @@ const App: React.FC = () => {
           };
 
           setTranscriptions(prev => {
+            // Enhanced Deduplication: Check last 3 messages to prevent A-B-A-B loops
             const lastEntry = prev[prev.length - 1];
-            // Deduplication: Don't add if identical to the very last one (prevents loops)
-            if (lastEntry && lastEntry.text === newEntry.text) {
-              console.log("Duplicate transcription suppressed:", newEntry.text);
+            const secondLast = prev[prev.length - 2];
+
+            const isDuplicate = lastEntry && lastEntry.text === newEntry.text;
+            const isLoop = secondLast && secondLast.text === newEntry.text && lastEntry && lastEntry.text !== newEntry.text;
+
+            if (isDuplicate || isLoop) {
+              console.log("Duplicate/Loop transcription suppressed:", newEntry.text);
               return prev;
             }
             const updated = [...prev, newEntry].sort((a, b) => a.timestamp - b.timestamp);
