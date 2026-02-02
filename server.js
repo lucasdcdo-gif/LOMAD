@@ -730,12 +730,13 @@ app.post('/api/ai/transcribe', async (req, res) => {
       return res.status(400).json({ error: 'No audio data provided' });
     }
 
-    // Use environment variable for model, fallback to gemini-1.5-flash-latest
-    let modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash-latest';
+    // Use environment variable for model, fallback to gemini-2.0-flash (1.5 is deprecated or problematic in v1beta)
+    let modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
-    // Config Fix: Map generic alias to specific version if v1beta fails with it
-    if (modelName === 'gemini-1.5-flash') {
-      modelName = 'gemini-1.5-flash-001';
+    // Config Fix: Auto-upgrade legacy 1.5 models to 2.0-flash if detected
+    if (modelName.includes('gemini-1.5')) {
+      logger.warn(`Legacy model ${modelName} detected. Auto-upgrading to gemini-2.0-flash.`);
+      modelName = 'gemini-2.0-flash';
     }
 
     // Robustly remove the Data URI prefix (handles codecs parameters too)
@@ -753,18 +754,18 @@ app.post('/api/ai/transcribe', async (req, res) => {
 
     const aiClient = new GoogleGenAI({ apiKey });
 
-
-
     logger.info(`Starting transcription with model: ${modelName}`);
 
     // DIAGNOSTIC: List available models to find the correct name
     try {
-      const models = await aiClient.models.list();
-      // Log only the names to avoid massive logs
+      const listResp = await aiClient.models.list();
+      // The Unified SDK returns { models: [...] } or just [...] depend on version. Handling both.
+      const models = Array.isArray(listResp) ? listResp : (listResp.models || []);
       const names = models.map(m => m.name || m.displayName);
-      logger.info(`Available Models via SDK: ${JSON.stringify(names)}`);
+      logger.info(`Available Models via SDK for debugging: ${JSON.stringify(names)}`);
     } catch (listErr) {
-      logger.warn(`Failed to list models: ${listErr.message}`);
+      // Don't crash on diagnostic failure
+      logger.warn(`Failed to list models (Diagnostic): ${listErr.message}`);
     }
 
     const result = await aiClient.models.generateContent({
