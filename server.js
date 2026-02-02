@@ -757,6 +757,16 @@ app.post('/api/ai/transcribe', async (req, res) => {
 
     logger.info(`Starting transcription with model: ${modelName}`);
 
+    // DIAGNOSTIC: List available models to find the correct name
+    try {
+      const models = await aiClient.models.list();
+      // Log only the names to avoid massive logs
+      const names = models.map(m => m.name || m.displayName);
+      logger.info(`Available Models via SDK: ${JSON.stringify(names)}`);
+    } catch (listErr) {
+      logger.warn(`Failed to list models: ${listErr.message}`);
+    }
+
     const result = await aiClient.models.generateContent({
       model: modelName,
       contents: [
