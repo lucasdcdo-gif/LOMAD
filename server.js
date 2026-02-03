@@ -827,7 +827,7 @@ app.post('/api/meetings/process-recording', async (req, res) => {
     const apiKey = process.env.GEMINI_API_KEY;
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash', // Use 1.5 Flash for large context
+      model: 'gemini-1.5-flash-latest', // Updated to latest alias to avoid 404
       generationConfig: { responseMimeType: "application/json" }
     });
 

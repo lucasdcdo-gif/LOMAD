@@ -1467,10 +1467,10 @@ const App: React.FC = () => {
                     </div>
                     <div className="flex flex-col items-center md:items-start gap-1">
                       <span className="text-white font-black text-lg uppercase tracking-wide text-center md:text-left leading-tight">Gravação em Andamento</span>
-                      <span className="text-slate-300 font-semibold text-sm">{transcriptions.length} {transcriptions.length === 1 ? 'frase capturada' : 'frases capturadas'}</span>
+                      <span className="text-slate-300 font-semibold text-sm">O áudio será processado ao final.</span>
                     </div>
                   </div>
-                  <button onClick={stopRecording} className="w-full md:w-auto px-8 md:px-14 py-4 md:py-5 font-black rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-500/30 hover:scale-105 text-sm uppercase tracking-wider">Encerrar</button>
+                  <button onClick={stopRecording} className="w-full md:w-auto px-8 md:px-14 py-4 md:py-5 font-black rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-500/30 hover:scale-105 text-sm uppercase tracking-wider">Encerrar e Transcrever</button>
                 </div>
 
                 {/* Persistent Warning Alert */}
@@ -1483,29 +1483,21 @@ const App: React.FC = () => {
                     <p className="text-amber-200/80 text-sm leading-relaxed">
                       Para que a gravação funcione, você <strong>DEVE</strong> ter marcado a opção <span className="text-amber-100 font-bold">"Compartilhar áudio do sistema"</span> ao selecionar a tela.
                     </p>
-                    <p className="text-amber-200/60 text-xs mt-2 italic">
-                      * A transcrição é realizada por IA de terceiros e pode apresentar instabilidades momentâneas.
-                    </p>
                   </div>
                 </div>
 
-                <div className="glass rounded-[2.5rem] p-10 md:p-12 overflow-y-auto h-[450px] border border-white/10 text-left flex flex-col-reverse gap-5 shadow-2xl bg-gradient-to-b from-slate-950/50 to-slate-900/50">
-                  {transcriptions.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full gap-4">
-                      <svg className="w-16 h-16 text-slate-600 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-                      <p className="text-slate-500 italic text-center text-lg font-medium">Aguardando áudio...</p>
+                {/* Visualizer Placeholder / Info Area */}
+                <div className="glass rounded-[2.5rem] p-10 md:p-12 h-[300px] border border-white/10 flex flex-col items-center justify-center text-center shadow-2xl bg-gradient-to-b from-slate-950/50 to-slate-900/50">
+                  <div className="flex flex-col items-center justify-center gap-6">
+                    <div className="relative">
+                      <div className="w-24 h-24 rounded-full bg-red-500/10 animate-pulse absolute inset-0"></div>
+                      <svg className="w-24 h-24 text-red-500 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
                     </div>
-                  )}
-                  {[...transcriptions].reverse().map(e => (
-                    <div key={e.id} className="p-6 bg-white/[0.04] hover:bg-white/[0.06] rounded-2xl border border-white/10 transition-all">
-                      <p className="text-slate-100 text-base md:text-lg leading-relaxed">{e.text}</p>
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-bold text-white">Capturando Áudio...</h3>
+                      <p className="text-slate-400 max-w-lg">Mantenha esta aba aberta. Quando finalizar a reunião, clique em "Encerrar" para gerar a ata completa e o resumo.</p>
                     </div>
-                  ))}
-                  {partialTranscript && (
-                    <div className="p-6 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-2xl border border-blue-400/30 animate-pulse">
-                      <p className="text-blue-300 text-base md:text-lg italic leading-relaxed">{partialTranscript}...</p>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             )}
