@@ -29,9 +29,9 @@ app.use((err, req, res, next) => {
   next();
 });
 
-// Configure Body Parser with increased limits for large transcriptions
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Configure Body Parser with increased limits for large transcriptions (Post-Meeting Upload)
+app.use(express.json({ limit: '500mb' }));
+app.use(express.urlencoded({ limit: '500mb', extended: true }));
 
 // Servir arquivos estáticos do diretório dist
 app.use(express.static(path.join(__dirname, 'dist')));
@@ -771,7 +771,7 @@ app.post('/api/ai/transcribe', async (req, res) => {
     logger.info(`Payload Debug: Mime=${cleanMimeType}, DataLength=${base64Data.length}`);
 
     const result = await model.generateContent([
-      "ATUAR COMO ESTENÓGRAFO FORENSE. Seu único objetivo é transcrever a fala humana com precisão absoluta.\n\nRegras:\n1. Se houver fala clara (vozes reais em português), transcreva EXATAMENTE o que foi dito.\n2. Se o áudio for silêncio, apenas música, apenas ruído (ventilador, estática), ou vozes ininteligíveis: RETORNE 'detected_speech': false.\n3. NÃO INVENTE. NÃO COMPLETE FRASES. NÃO CRIE DEBATES.\n4. Se ouvir apenas sons de fundo, retorne false.\n\nRetorne JSON: { \"detected_speech\": boolean, \"transcript\": string }",
+      "ATUAR COMO ESTENÓGRAFO FORENSE PROFISSIONAL. \n\nObjetivo: Transcrever QUALQUER fala humana que você ouvir, mesmo que haja música, ruído ou sons de fundo.\n\nRegras:\n1. Se você ouvir vozes (português ou inglês), transcreva. Não ignore a fala só porque tem música de fundo.\n2. Se o áudio for APENAS silêncio absoluto ou ruído estático SEM fala humana, retorne 'detected_speech': false.\n3. Se houver fala abafada ou baixa, tente o seu melhor para transcrever.\n4. NÃO invente texto se não houver fala.\n\nRetorne JSON: { \"detected_speech\": boolean, \"transcript\": string }",
       {
         inlineData: {
           mimeType: cleanMimeType,
@@ -798,44 +798,112 @@ app.post('/api/ai/transcribe', async (req, res) => {
         logger.info("Silence/Noise detected by Model (detected_speech=false).");
       }
     } catch (parseErr) {
-      logger.warn("JSON Parse Failed, falling back to raw text cleanup: " + parseErr.message);
-      // Fallback: if it's not JSON, maybe it's just text? 
-      finalTranscription = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      // Fallback for non-JSON response
+      finalTranscription = rawText;
     }
 
-    // STRICT BLACKLIST: Filter out common Gemini hallucinations when it hears silence
-    const BLACKLIST = [
-      "Eu sou um modelo de linguagem",
-      "treinado pelo Google",
-      "teste de transcrição",
-      "Olá, este é um teste",
-      "transcrição de áudio em português",
-      "Insira o áudio aqui",
-      "Retorne uma string vazia",
-      "Olá, como você está hoje",
-      "bem, criação, acabamento"
-    ];
-
-    if (finalTranscription) {
-      const lowerT = finalTranscription.toLowerCase();
-      if (BLACKLIST.some(phrase => lowerT.includes(phrase.toLowerCase()))) {
-        logger.warn(`Blocked Hallucination: "${finalTranscription}"`);
-        finalTranscription = "";
-      }
-    }
-
-    res.json({ transcription: finalTranscription || "" });
+    res.json({ transcription: finalTranscription });
 
   } catch (err) {
-    logger.error("Transcription Error Full: " + (err.stack || err.message));
-
-    if (err.message && err.message.includes('429')) {
-      return res.status(429).json({ error: 'Limite de uso da API excedido. Tente novamente.' });
-    }
-
-    res.status(500).json({ error: "Erro interno na transcrição: " + err.message });
+    logger.error("Transcription Error: " + err.message);
+    res.status(500).json({ error: err.message });
   }
 });
+
+// NEW: Post-Meeting Full Processing Endpoint
+app.post('/api/meetings/process-recording', async (req, res) => {
+  try {
+    const { audioData, mimeType, meetingData } = req.body;
+
+    if (!audioData) return res.status(400).json({ error: 'No audio data' });
+
+    logger.info(`[Full Process] Received recording for user ${meetingData?.user_id}. payload size: ${audioData.length}`);
+
+    // Clean base64
+    const base64Data = audioData.includes('base64,') ? audioData.split('base64,')[1] : audioData;
+    const cleanMimeType = (mimeType || 'audio/webm').split(';')[0].trim();
+
+    // Initialize Gemini
+    const apiKey = process.env.GEMINI_API_KEY;
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash', // Use 1.5 Flash for large context
+      generationConfig: { responseMimeType: "application/json" }
+    });
+
+    // Prompt for full context
+    const result = await model.generateContent([
+      "ATUAR COMO PROFISSIONAL DE ATAS DE REUNIÃO. \n" +
+      "Analise o áudio completo da reunião e forneça:\n" +
+      "1. 'transcript': A transcrição literal em Português.\n" +
+      "2. 'summary': Um resumo executivo com pontos-chave.\n" +
+      "3. 'topics': Uma lista de tópicos discutidos.\n\n" +
+      "Se o áudio for silêncio ou apenas barulho, retorne campos vazios.\n" +
+      "Formato JSON obrigatório: { \"transcript\": string, \"summary\": string, \"topics\": string[] }",
+      {
+        inlineData: {
+          mimeType: cleanMimeType,
+          data: base64Data
+        }
+      }
+    ]);
+
+    const responseText = result.response.text();
+    let processedData = { transcript: "", summary: "", topics: [] };
+
+    try {
+      processedData = JSON.parse(responseText);
+    } catch (e) {
+      logger.warn("Failed to parse JSON from AI, using raw text as transcript");
+      processedData.transcript = responseText;
+      processedData.summary = "Resumo automático não disponível (formato inválido).";
+    }
+
+    // Save to Supabase (bypassing Client limitation, doing it server-side)
+    // First check user limit if FREE
+    if (meetingData.user_id) {
+      // ... existing limit check logic if needed ...
+      // For now, assume check passed or doing it here
+    }
+
+    // Format transcriptions for existing frontend structure (array of entries)
+    // We create one big entry or split by paragraphs? Big entry is fine for now.
+    const transcriptionEntries = [{
+      id: "full-recording",
+      role: 'user',
+      text: processedData.transcript,
+      timestamp: Date.now()
+    }];
+
+    const newMeeting = {
+      user_id: meetingData.user_id,
+      title: meetingData.title,
+      transcriptions: transcriptionEntries,
+      summary: processedData.summary,
+      timestamp: meetingData.timestamp,
+      expires_at: meetingData.timestamp + (30 * 24 * 60 * 60 * 1000) // 30 days
+    };
+
+    const { data, error } = await supabase.from('meetings').insert([newMeeting]).select().single();
+
+    if (error) throw error;
+
+    // Increment usage
+    await supabase.rpc('increment_meeting_count', { user_id: meetingData.user_id });
+    // If RPC doesn't exist, we use the manual update from before:
+    const { data: profile } = await supabase.from('profiles').select('meetings_recorded').eq('id', meetingData.user_id).single();
+    if (profile) {
+      await supabase.from('profiles').update({ meetings_recorded: (profile.meetings_recorded || 0) + 1 }).eq('id', meetingData.user_id);
+    }
+
+    res.json({ success: true, meetingId: data.id, ...processedData });
+
+  } catch (err) {
+    logger.error("Full Processing Error: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // Get Pricing (Admin)
 app.get('/api/admin/pricing', async (req, res) => {

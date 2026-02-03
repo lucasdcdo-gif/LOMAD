@@ -786,115 +786,106 @@ const App: React.FC = () => {
       const recorder = new MediaRecorder(mixedStream, { mimeType });
       mediaRecorderRef.current = recorder;
 
-      recorder.ondataavailable = async (event) => {
+      recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          // VAD CHECK: Only send if we heard something significant
-          // Threshold 20 (approx 8% volume) filters out fan noise/hum.
-          if (audioLevelRef.current > 20) {
-            console.log(`🎤 Voice Detected (Level: ${audioLevelRef.current.toFixed(1)}). Sending chunk...`);
-            await sendAudioChunk(event.data, mimeType);
-          } else {
-            console.log(`🔇 Silence/Background Detected (Level: ${audioLevelRef.current.toFixed(1)}). Skipping chunk.`);
-            setPartialTranscript("");
+          // BUFFERING: Store chunks locally instead of streaming
+          audioChunksRef.current.push(event.data);
+          // Optional: Visual feedback of "recording" based on volume, but no upload
+          if (audioLevelRef.current > 5) {
+            // We could update a visualizer here
           }
-          // Reset max level for next chunk
           audioLevelRef.current = 0;
         }
       };
 
-      recorder.start(5000); // 5 seconds chunks
+      recorder.start(1000); // 1-second chunks for smoother UI stopping
       isRecordingRef.current = true;
       setStatus(SessionStatus.RECORDING);
-      console.log("☁️ Cloud Recording Started (Gemini)");
+      console.log("☁️ Local Buffering Started (will process at end)");
 
     } catch (e) {
       console.error("Failed to start MediaRecorder:", e);
-      setError("Falha ao iniciar gravação na nuvem.");
+      setError("Falha ao iniciar gravação.");
     }
   };
 
-  const sendAudioChunk = async (blob: Blob, mimeType: string) => {
+  // New function to handle full file upload
+  const uploadMeetingRecording = async (blob: Blob) => {
     try {
+      console.log("Uploading full meeting audio...", blob.size);
+
       const reader = new FileReader();
       reader.readAsDataURL(blob);
       reader.onloadend = async () => {
         const base64data = reader.result as string;
 
-        // Visual indicator
-        setPartialTranscript("Processando áudio...");
-
-        const response = await fetch('/api/ai/transcribe', {
+        const response = await fetch('/api/meetings/process-recording', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ audioData: base64data, mimeType })
+          body: JSON.stringify({
+            audioData: base64data,
+            mimeType: blob.type,
+            meetingData: {
+              user_id: user?.id,
+              title: selectedMeeting?.title || `Reunião ${new Date().toLocaleString()}`,
+              timestamp: Date.now()
+            }
+          })
         });
 
-        if (response.status === 429) {
-          console.warn("API Rate Limit Hit");
-          // Optionally show a warning, but don't stop recording
-          return;
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error || 'Erro no processamento.');
         }
-
-        if (!response.ok) throw new Error('Server Error');
 
         const data = await response.json();
-        if (data.transcription && data.transcription.trim()) {
-          const newEntry: TranscriptionEntry = {
-            id: Math.random().toString(36).slice(2),
-            role: 'user', // Cloud doesn't separate speakers yet
-            text: data.transcription.trim(),
-            timestamp: Date.now()
-          };
+        console.log("Processing complete:", data);
 
-          setTranscriptions(prev => {
-            // Enhanced Deduplication: Check last 3 messages to prevent A-B-A-B loops
-            const lastEntry = prev[prev.length - 1];
-            const secondLast = prev[prev.length - 2];
+        // Save success, refresh list
+        setStatus(SessionStatus.COMPLETED);
+        if (user) loadMeetings(user.id);
 
-            const isDuplicate = lastEntry && lastEntry.text === newEntry.text;
-            const isLoop = secondLast && secondLast.text === newEntry.text && lastEntry && lastEntry.text !== newEntry.text;
-
-            if (isDuplicate || isLoop) {
-              console.log("Duplicate/Loop transcription suppressed:", newEntry.text);
-              return prev;
-            }
-            const updated = [...prev, newEntry].sort((a, b) => a.timestamp - b.timestamp);
-            return updated;
-          });
-          if (transcriptionsRef.current) {
-            const lastRef = transcriptionsRef.current[transcriptionsRef.current.length - 1];
-            if (!lastRef || lastRef.text !== newEntry.text) {
-              transcriptionsRef.current.push(newEntry);
-            }
-          }
-          setPartialTranscript(""); // Clear "Processing..."
-        } else {
-          setPartialTranscript("");
-        }
+        // Redirect to details or show success
+        setSuccessMessage("Reunião processada e salva com sucesso!");
+        setTimeout(() => setView('HISTORY'), 1500);
       };
-    } catch (e) {
-      console.error("Audio Chunk Upload Error:", e);
-      // Don't error out the UI completely, just log
+    } catch (e: any) {
+      console.error("Processing Error:", e);
+      setStatus(SessionStatus.ERROR);
+      setError("Erro ao processar reunião: " + e.message);
     }
   };
 
-  // Deprecated/Removed: startWebSpeechRecognition
-  // We keep the function name just to prevent dead code ref issues if called elsewhere, 
-  // but it's now internal to the old logic. 
-  // Ideally we remove it, but for safety in this diff we just commented it out or let handleInitiate use the new one.
-  const startWebSpeechRecognition = () => { };
-
   const stopRecording = async () => {
+    if (!isRecordingRef.current) return;
     isRecordingRef.current = false;
     console.log("Stopping recording...");
 
     // Stop Cloud MediaRecorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.onstop = async () => {
+        console.log("Recorder stopped. Processing buffer...");
+        setStatus(SessionStatus.SAVING); // Show "Processing..." in UI
+
+        const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+
+        // Clear buffer
+        audioChunksRef.current = [];
+
+        await uploadMeetingRecording(blob);
+      };
+
       try {
         mediaRecorderRef.current.stop();
+        // Stop all tracks
+        if (displayStreamRef.current) displayStreamRef.current.getTracks().forEach(t => t.stop());
+        if (micStreamRef.current) micStreamRef.current.getTracks().forEach(t => t.stop());
+        if (audioContextRef.current) audioContextRef.current.close();
       } catch (e) { console.warn("Error stopping MediaRecorder:", e); }
       mediaRecorderRef.current = null;
     }
+
 
     if (monitorIntervalRef.current) {
       clearInterval(monitorIntervalRef.current);
