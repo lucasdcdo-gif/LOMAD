@@ -818,16 +818,35 @@ app.post('/api/meetings/process-recording', async (req, res) => {
     if (!audioData) return res.status(400).json({ error: 'No audio data' });
 
     // 1. Create Placeholder Meeting in DB (Status: PROCESSANDO)
-    // We create an entry immediately so the user sees it in history (optional, or we just rely on future completion)
-    // For now, let's just return success so frontend is happy, and do the heavy lifting in background.
+    // We create an entry immediately so the user sees it in history
+    const initialMeeting = {
+      user_id: meetingData.user_id,
+      title: meetingData.title,
+      summary: "Processando transcrição... Aguarde alguns instantes.",
+      transcriptions: [{
+        id: "processing",
+        role: 'system',
+        text: "⏳ Áudio recebido. Processando transcrição...",
+        timestamp: Date.now()
+      }],
+      timestamp: meetingData.timestamp,
+      expires_at: meetingData.timestamp + (30 * 24 * 60 * 60 * 1000) // 30 days
+    };
 
-    // Respond IMMEDIATELY to Client
-    res.json({ success: true, message: "Upload received. Processing in background." });
+    const { data: insertedMeeting, error: insertError } = await supabase.from('meetings').insert([initialMeeting]).select().single();
+
+    if (insertError) {
+      logger.error("DB Insert Initial Error: " + insertError.message);
+      return res.status(500).json({ error: "Failed to save initial meeting status." });
+    }
+
+    // Respond IMMEDIATELY to Client with the ID
+    res.json({ success: true, meetingId: insertedMeeting.id, message: "Upload received. Processing in background." });
 
     // 2. BACKGROUND PROCESSING (Don't await this block for the response)
     (async () => {
       try {
-        logger.info(`[Async Process] Starting for user ${meetingData?.user_id}`);
+        logger.info(`[Async Process] Starting for user ${meetingData?.user_id} (Meeting ID: ${insertedMeeting.id})`);
 
         // Clean base64
         const base64Data = audioData.includes('base64,') ? audioData.split('base64,')[1] : audioData;
@@ -880,20 +899,14 @@ app.post('/api/meetings/process-recording', async (req, res) => {
           timestamp: Date.now()
         }];
 
-        const newMeeting = {
-          user_id: meetingData.user_id,
-          title: meetingData.title,
+        // UPDATE the existing meeting record
+        const { error: updateError } = await supabase.from('meetings').update({
           transcriptions: transcriptionEntries,
-          summary: processedData.summary,
-          timestamp: meetingData.timestamp,
-          expires_at: meetingData.timestamp + (30 * 24 * 60 * 60 * 1000) // 30 days
-        };
+          summary: processedData.summary
+        }).eq('id', insertedMeeting.id);
 
-        // Save to Supabase (bypassing Client limitation, doing it server-side)
-        const { error } = await supabase.from('meetings').insert([newMeeting]);
-
-        if (error) {
-          logger.error("DB Insert Error: " + error.message);
+        if (updateError) {
+          logger.error("DB Update Error: " + updateError.message);
           return;
         }
 
@@ -908,7 +921,12 @@ app.post('/api/meetings/process-recording', async (req, res) => {
 
       } catch (bgError) {
         logger.error(`[Async Process] FAILED for user ${meetingData?.user_id}: ${bgError.message}`);
-        // Optionally save a "Failed Meeting" record so user knows
+
+        // Update DB to show failure
+        await supabase.from('meetings').update({
+          summary: "Falha no processamento: " + bgError.message,
+          transcriptions: [{ id: 'error', role: 'system', text: "Erro ao processar áudio.", timestamp: Date.now() }]
+        }).eq('id', insertedMeeting.id);
       }
     })();
 
