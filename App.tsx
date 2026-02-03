@@ -708,9 +708,16 @@ const App: React.FC = () => {
 
         if (displayStream.getAudioTracks().length > 0) {
           const displaySource = audioCtx.createMediaStreamSource(displayStream);
-          displaySource.connect(destination);
-          displaySource.connect(analyser); // Monitor this source
-          console.log("✓ System Audio mixed.");
+
+          // Boost System Audio Volume (often quieter than Mic)
+          const systemGain = audioCtx.createGain();
+          systemGain.gain.value = 1.5;
+
+          displaySource.connect(systemGain);
+          systemGain.connect(destination);
+          systemGain.connect(analyser); // Monitor boosted source
+
+          console.log("✓ System Audio mixed (Boosted 1.5x).");
           hasSystemAudio = true;
         } else {
           console.warn("⚠️ No system audio track detected.");

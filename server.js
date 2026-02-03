@@ -771,7 +771,7 @@ app.post('/api/ai/transcribe', async (req, res) => {
     logger.info(`Payload Debug: Mime=${cleanMimeType}, DataLength=${base64Data.length}`);
 
     const result = await model.generateContent([
-      "Analise o áudio e retorne um JSON com: 1) 'detected_speech': booleano (true se houver fala humana clara, false se for silêncio, ruído, música ou estática); 2) 'transcript': string com a transcrição EXATA em português do Brasil. Se detected_speech for false, transcript deve ser vazia. NÃO ALUCINE TEXTO.",
+      "Analise o áudio e retorne um JSON com: 1) 'detected_speech': booleano (true se houver fala humana clara, INCLUINDO falas de vídeos, reuniões ou palestras. False apenas para silêncio total, estática ou música instrumental sem voz); 2) 'transcript': string com a transcrição EXATA em português do Brasil. Se detected_speech for false, transcript deve ser vazia.",
       {
         inlineData: {
           mimeType: cleanMimeType,
@@ -779,7 +779,6 @@ app.post('/api/ai/transcribe', async (req, res) => {
         }
       }
     ]);
-
 
     // Handle SDK response variations safely with fallback
     let rawText = "";
@@ -812,7 +811,9 @@ app.post('/api/ai/transcribe', async (req, res) => {
       "Olá, este é um teste",
       "transcrição de áudio em português",
       "Insira o áudio aqui",
-      "Retorne uma string vazia"
+      "Retorne uma string vazia",
+      "Olá, como você está hoje",
+      "bem, criação, acabamento"
     ];
 
     if (finalTranscription) {
