@@ -837,9 +837,10 @@ app.post('/api/meetings/process-recording', async (req, res) => {
         const apiKey = process.env.GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        // Fix Model Name: Using standard "gemini-1.5-flash"
+        // Fix Model Name: "gemini-1.5-flash" was NOT found in user's available models. 
+        // Switching to "gemini-2.0-flash" which is available and supports 1M token context.
         const model = genAI.getGenerativeModel({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-2.0-flash',
           generationConfig: { responseMimeType: "application/json" }
         });
 
