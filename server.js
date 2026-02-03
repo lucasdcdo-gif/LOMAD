@@ -918,6 +918,21 @@ app.post('/api/meetings/process-recording', async (req, res) => {
 });
 
 
+// Debug: List available models
+app.get('/api/debug/models', async (req, res) => {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
+
+    // Using fetch because Google Generative AI SDK listModels might behave differently or be absent in some versions
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get Pricing (Admin)
 app.get('/api/admin/pricing', async (req, res) => {
   try {
