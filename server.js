@@ -978,7 +978,7 @@ app.post('/api/ai/chat', async (req, res) => {
     // Construct the prompt with context
     logger.info(`[Chat] Receiving context length: ${meetingContext?.length || 0}`);
 
-    // Validar se há contexto
+    // Validate context
     if (!meetingContext || meetingContext.trim().length === 0) {
       logger.warn("[Chat] Empty meeting context rejected");
       return res.json({ response: "Por favor, selecione uma reunião com transcrição válida antes de iniciar o chat." });
@@ -999,26 +999,34 @@ app.post('/api/ai/chat', async (req, res) => {
     
     Responda à pergunta do usuário abaixo com base APENAS na transcrição acima.`;
 
-    const contents = [
-      ...(history || []).map(h => ({
-        role: h.role === 'user' ? 'user' : 'model',
-        parts: [{ text: h.text }]
-      })),
-      { role: 'user', parts: [{ text: userPrompt }] }
-    ];
+    // Initialize Gemini with the correct model (Gemini 2.0 Flash)
+    // We instantiate locally to ensure fresh config
+    const apiKey = process.env.GEMINI_API_KEY;
+    const genAI = new GoogleGenerativeAI(apiKey);
 
-    // Utilizando systemInstruction se suportado ou injetando como primeira mensagem de usuário com reforço
-    // A SDK @google/genai suporta config systemInstruction no generateContent ou no modelo, mas para garantir compatibilidade com o formato de mensagem:
-
-    const result = await ai.models.generateContent({
-      model: process.env.GEMINI_CHAT_MODEL || 'gemini-1.5-flash',
-      config: {
-        systemInstruction: { parts: [{ text: systemInstruction }] }
-      },
-      contents: contents
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      systemInstruction: systemInstruction
     });
 
-    res.json({ response: result.text });
+    const chatHistory = (history || []).map(h => ({
+      role: h.role === 'user' ? 'user' : 'model',
+      parts: [{ text: h.text }]
+    }));
+
+    const chat = model.startChat({
+      history: chatHistory,
+      generationConfig: {
+        maxOutputTokens: 2000,
+      },
+    });
+
+    const result = await chat.sendMessage(userPrompt);
+    const response = await result.response;
+    const text = response.text();
+
+    res.json({ response: text });
+
   } catch (err) {
     logger.error("Chat Error: " + err.message);
     res.status(500).json({ error: err.message });
