@@ -810,97 +810,110 @@ app.post('/api/ai/transcribe', async (req, res) => {
   }
 });
 
-// NEW: Post-Meeting Full Processing Endpoint
+// NEW: Post-Meeting Full Processing Endpoint (ASYNC / FIRE-AND-FORGET)
 app.post('/api/meetings/process-recording', async (req, res) => {
   try {
     const { audioData, mimeType, meetingData } = req.body;
 
     if (!audioData) return res.status(400).json({ error: 'No audio data' });
 
-    logger.info(`[Full Process] Received recording for user ${meetingData?.user_id}. payload size: ${audioData.length}`);
+    // 1. Create Placeholder Meeting in DB (Status: PROCESSANDO)
+    // We create an entry immediately so the user sees it in history (optional, or we just rely on future completion)
+    // For now, let's just return success so frontend is happy, and do the heavy lifting in background.
 
-    // Clean base64
-    const base64Data = audioData.includes('base64,') ? audioData.split('base64,')[1] : audioData;
-    const cleanMimeType = (mimeType || 'audio/webm').split(';')[0].trim();
+    // Respond IMMEDIATELY to Client
+    res.json({ success: true, message: "Upload received. Processing in background." });
 
-    // Initialize Gemini
-    const apiKey = process.env.GEMINI_API_KEY;
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-latest', // Updated to latest alias to avoid 404
-      generationConfig: { responseMimeType: "application/json" }
-    });
+    // 2. BACKGROUND PROCESSING (Don't await this block for the response)
+    (async () => {
+      try {
+        logger.info(`[Async Process] Starting for user ${meetingData?.user_id}`);
 
-    // Prompt for full context
-    const result = await model.generateContent([
-      "ATUAR COMO PROFISSIONAL DE ATAS DE REUNIÃO. \n" +
-      "Analise o áudio completo da reunião e forneça:\n" +
-      "1. 'transcript': A transcrição literal em Português.\n" +
-      "2. 'summary': Um resumo executivo com pontos-chave.\n" +
-      "3. 'topics': Uma lista de tópicos discutidos.\n\n" +
-      "Se o áudio for silêncio ou apenas barulho, retorne campos vazios.\n" +
-      "Formato JSON obrigatório: { \"transcript\": string, \"summary\": string, \"topics\": string[] }",
-      {
-        inlineData: {
-          mimeType: cleanMimeType,
-          data: base64Data
+        // Clean base64
+        const base64Data = audioData.includes('base64,') ? audioData.split('base64,')[1] : audioData;
+        const cleanMimeType = (mimeType || 'audio/webm').split(';')[0].trim();
+
+        // Initialize Gemini
+        const apiKey = process.env.GEMINI_API_KEY;
+        const genAI = new GoogleGenerativeAI(apiKey);
+
+        // Fix Model Name: "latest" alias was causing 404s. Using specific Flash model.
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-1.5-flash',
+          generationConfig: { responseMimeType: "application/json" }
+        });
+
+        // Prompt for full context
+        const result = await model.generateContent([
+          "ATUAR COMO PROFISSIONAL DE ATAS DE REUNIÃO. \n" +
+          "Analise o áudio completo da reunião e forneça:\n" +
+          "1. 'transcript': A transcrição literal em Português.\n" +
+          "2. 'summary': Um resumo executivo com pontos-chave.\n" +
+          "3. 'topics': Uma lista de tópicos discutidos.\n\n" +
+          "Se o áudio for silêncio ou apenas barulho, retorne campos vazios.\n" +
+          "Formato JSON obrigatório: { \"transcript\": string, \"summary\": string, \"topics\": string[] }",
+          {
+            inlineData: {
+              mimeType: cleanMimeType,
+              data: base64Data
+            }
+          }
+        ]);
+
+        const responseText = result.response.text();
+        let processedData = { transcript: "", summary: "", topics: [] };
+
+        try {
+          processedData = JSON.parse(responseText);
+        } catch (e) {
+          logger.warn("Failed to parse JSON from AI, using raw text as transcript");
+          processedData.transcript = responseText;
+          processedData.summary = "Resumo automático não disponível (formato inválido).";
         }
+
+        // Format transcriptions
+        const transcriptionEntries = [{
+          id: "full-recording",
+          role: 'user',
+          text: processedData.transcript,
+          timestamp: Date.now()
+        }];
+
+        const newMeeting = {
+          user_id: meetingData.user_id,
+          title: meetingData.title,
+          transcriptions: transcriptionEntries,
+          summary: processedData.summary,
+          timestamp: meetingData.timestamp,
+          expires_at: meetingData.timestamp + (30 * 24 * 60 * 60 * 1000) // 30 days
+        };
+
+        // Save to Supabase (bypassing Client limitation, doing it server-side)
+        const { error } = await supabase.from('meetings').insert([newMeeting]);
+
+        if (error) {
+          logger.error("DB Insert Error: " + error.message);
+          return;
+        }
+
+        // Increment usage
+        await supabase.rpc('increment_meeting_count', { user_id: meetingData.user_id });
+        const { data: profile } = await supabase.from('profiles').select('meetings_recorded').eq('id', meetingData.user_id).single();
+        if (profile) {
+          await supabase.from('profiles').update({ meetings_recorded: (profile.meetings_recorded || 0) + 1 }).eq('id', meetingData.user_id);
+        }
+
+        logger.info(`[Async Process] Completed successfull for user ${meetingData?.user_id}`);
+
+      } catch (bgError) {
+        logger.error(`[Async Process] FAILED for user ${meetingData?.user_id}: ${bgError.message}`);
+        // Optionally save a "Failed Meeting" record so user knows
       }
-    ]);
-
-    const responseText = result.response.text();
-    let processedData = { transcript: "", summary: "", topics: [] };
-
-    try {
-      processedData = JSON.parse(responseText);
-    } catch (e) {
-      logger.warn("Failed to parse JSON from AI, using raw text as transcript");
-      processedData.transcript = responseText;
-      processedData.summary = "Resumo automático não disponível (formato inválido).";
-    }
-
-    // Save to Supabase (bypassing Client limitation, doing it server-side)
-    // First check user limit if FREE
-    if (meetingData.user_id) {
-      // ... existing limit check logic if needed ...
-      // For now, assume check passed or doing it here
-    }
-
-    // Format transcriptions for existing frontend structure (array of entries)
-    // We create one big entry or split by paragraphs? Big entry is fine for now.
-    const transcriptionEntries = [{
-      id: "full-recording",
-      role: 'user',
-      text: processedData.transcript,
-      timestamp: Date.now()
-    }];
-
-    const newMeeting = {
-      user_id: meetingData.user_id,
-      title: meetingData.title,
-      transcriptions: transcriptionEntries,
-      summary: processedData.summary,
-      timestamp: meetingData.timestamp,
-      expires_at: meetingData.timestamp + (30 * 24 * 60 * 60 * 1000) // 30 days
-    };
-
-    const { data, error } = await supabase.from('meetings').insert([newMeeting]).select().single();
-
-    if (error) throw error;
-
-    // Increment usage
-    await supabase.rpc('increment_meeting_count', { user_id: meetingData.user_id });
-    // If RPC doesn't exist, we use the manual update from before:
-    const { data: profile } = await supabase.from('profiles').select('meetings_recorded').eq('id', meetingData.user_id).single();
-    if (profile) {
-      await supabase.from('profiles').update({ meetings_recorded: (profile.meetings_recorded || 0) + 1 }).eq('id', meetingData.user_id);
-    }
-
-    res.json({ success: true, meetingId: data.id, ...processedData });
+    })();
 
   } catch (err) {
-    logger.error("Full Processing Error: " + err.message);
-    res.status(500).json({ error: err.message });
+    logger.error("Full Processing Setup Error: " + err.message);
+    if (!res.headersSent) res.status(500).json({ error: err.message });
   }
 });
 

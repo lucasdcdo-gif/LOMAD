@@ -819,6 +819,7 @@ const App: React.FC = () => {
       reader.onloadend = async () => {
         const base64data = reader.result as string;
 
+        // Fire request but don't wait for full processing if server supports async
         const response = await fetch('/api/meetings/process-recording', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -835,24 +836,30 @@ const App: React.FC = () => {
 
         if (!response.ok) {
           const errData = await response.json();
-          throw new Error(errData.error || 'Erro no processamento.');
+          throw new Error(errData.error || 'Erro no envio.');
         }
 
         const data = await response.json();
-        console.log("Processing complete:", data);
+        console.log("Upload accepted:", data);
 
-        // Save success, refresh list
+        // Save success, refresh list (it might show 'Processing' state if we implemented that DB field)
         setStatus(SessionStatus.COMPLETED);
         if (user) loadMeetings(user.id);
 
-        // Redirect to details or show success
-        setSuccessMessage("Reunião processada e salva com sucesso!");
-        setTimeout(() => setView('HISTORY'), 1500);
+        // Show success and UNBLOCK immediately
+        setSuccessMessage("Reunião enviada! O processamento continuará em segundo plano.");
+
+        // Reset to IDLE immediately so user can record again
+        setTimeout(() => {
+          setStatus(SessionStatus.IDLE);
+          setTranscriptions([]);
+          setView('MAIN');
+        }, 1500);
       };
     } catch (e: any) {
       console.error("Processing Error:", e);
       setStatus(SessionStatus.ERROR);
-      setError("Erro ao processar reunião: " + e.message);
+      setError("Erro ao enviar reunião: " + e.message);
     }
   };
 
@@ -865,7 +872,7 @@ const App: React.FC = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.onstop = async () => {
         console.log("Recorder stopped. Processing buffer...");
-        setStatus(SessionStatus.SAVING); // Show "Processing..." in UI
+        setStatus(SessionStatus.SAVING); // Show "Processing..." briefly
 
         const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
@@ -881,7 +888,11 @@ const App: React.FC = () => {
         // Stop all tracks
         if (displayStreamRef.current) displayStreamRef.current.getTracks().forEach(t => t.stop());
         if (micStreamRef.current) micStreamRef.current.getTracks().forEach(t => t.stop());
-        if (audioContextRef.current) audioContextRef.current.close();
+
+        // FIX: Check state before closing AudioContext
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+          audioContextRef.current.close();
+        }
       } catch (e) { console.warn("Error stopping MediaRecorder:", e); }
       mediaRecorderRef.current = null;
     }
