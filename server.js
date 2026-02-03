@@ -837,9 +837,9 @@ app.post('/api/meetings/process-recording', async (req, res) => {
         const apiKey = process.env.GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        // Fix Model Name: "latest" alias was causing 404s. Using specific Flash model.
+        // Fix Model Name: "latest" and "flash" aliases were causing 404s in v1beta. Using specific 001 version.
         const model = genAI.getGenerativeModel({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-1.5-flash-001',
           generationConfig: { responseMimeType: "application/json" }
         });
 
