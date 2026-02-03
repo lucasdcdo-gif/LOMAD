@@ -729,13 +729,22 @@ const App: React.FC = () => {
         };
       }
 
-      // 3. Obtain Microphone
-      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // 3. Obtain Microphone with Audio Processing Constraints
+      console.log("Requesting User Media (Mic) with Advanced Processing...");
+      const micStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1
+        }
+      });
       micStreamRef.current = micStream;
+
       const micSource = audioCtx.createMediaStreamSource(micStream);
       micSource.connect(destination);
       micSource.connect(analyser); // Monitor this source
-      console.log("✓ Mic Audio mixed.");
+      console.log("✓ Mic Audio mixed (Echo/Noise Cancel Active).");
 
       // Start Volume Monitoring Loop
       const bufferLength = analyser.frequencyBinCount;
@@ -780,13 +789,12 @@ const App: React.FC = () => {
       recorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
           // VAD CHECK: Only send if we heard something significant
-          // Threshold 10 is very low/sensitive (scale 0-255). 
-          // Silence is usually 0-5. Speech is 30+.
-          if (audioLevelRef.current > 10) {
+          // Threshold 20 (approx 8% volume) filters out fan noise/hum.
+          if (audioLevelRef.current > 20) {
             console.log(`🎤 Voice Detected (Level: ${audioLevelRef.current.toFixed(1)}). Sending chunk...`);
             await sendAudioChunk(event.data, mimeType);
           } else {
-            console.log(`🔇 Silence Detected (Level: ${audioLevelRef.current.toFixed(1)}). Skipping chunk.`);
+            console.log(`🔇 Silence/Background Detected (Level: ${audioLevelRef.current.toFixed(1)}). Skipping chunk.`);
             setPartialTranscript("");
           }
           // Reset max level for next chunk

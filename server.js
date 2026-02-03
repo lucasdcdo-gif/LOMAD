@@ -771,7 +771,7 @@ app.post('/api/ai/transcribe', async (req, res) => {
     logger.info(`Payload Debug: Mime=${cleanMimeType}, DataLength=${base64Data.length}`);
 
     const result = await model.generateContent([
-      "Analise o áudio e retorne um JSON com: 1) 'detected_speech': booleano (true se houver fala humana clara, INCLUINDO falas de vídeos, reuniões ou palestras. False apenas para silêncio total, estática ou música instrumental sem voz); 2) 'transcript': string com a transcrição EXATA em português do Brasil. Se detected_speech for false, transcript deve ser vazia.",
+      "ATUAR COMO ESTENÓGRAFO FORENSE. Seu único objetivo é transcrever a fala humana com precisão absoluta.\n\nRegras:\n1. Se houver fala clara (vozes reais em português), transcreva EXATAMENTE o que foi dito.\n2. Se o áudio for silêncio, apenas música, apenas ruído (ventilador, estática), ou vozes ininteligíveis: RETORNE 'detected_speech': false.\n3. NÃO INVENTE. NÃO COMPLETE FRASES. NÃO CRIE DEBATES.\n4. Se ouvir apenas sons de fundo, retorne false.\n\nRetorne JSON: { \"detected_speech\": boolean, \"transcript\": string }",
       {
         inlineData: {
           mimeType: cleanMimeType,
