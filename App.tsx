@@ -13,11 +13,24 @@ import { CookieBanner } from './components/CookieBanner.tsx';
 import { VLibrasWidget } from './components/VLibrasWidget.tsx';
 import { MFAEnrollment } from './components/MFAEnrollment.tsx';
 import { MFAChallengeModal } from './components/MFAChallengeModal.tsx';
+import { RecallConfig } from './components/RecallConfig.tsx';
+import { FullAgenda } from './components/FullAgenda.tsx';
+import { PrivacyPage } from './components/PrivacyPage.tsx';
+import { TermsPage } from './components/TermsPage.tsx';
 
 const MODEL_NAME = import.meta.env.VITE_GEMINI_LIVE_MODEL || 'gemini-2.0-flash-exp';
 
 const getErrorMessage = (err: any): string => {
   if (!err) return "Erro desconhecido";
+  // ... (rest of getErrorMessage function is unchanged, skipping for brevity in replacement if possible, but replace_file_content needs contiguous block)
+  // Actually I need to be careful not to delete getErrorMessage.
+  // Let's just add imports at the top and update view type separately to avoid large replacements.
+
+  // Re-reading instructions: "Use this tool ONLY when you are making a SINGLE CONTIGUOUS block of edits".
+  // I will split this into two calls.
+  // 1. Imports.
+  // 2. View type.
+
 
   // Try to find the message string from various common properties
   let message = '';
@@ -93,7 +106,7 @@ const App: React.FC = () => {
 
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView] = useState<'MAIN' | 'HISTORY' | 'MEETING_DETAILS' | 'LOGIN' | 'REGISTER' | 'PROFILE' | 'ADMIN_DASHBOARD' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD' | 'HOW_IT_WORKS' | 'TERMS' | 'PRIVACY' | 'PRICING'>('MAIN');
+  const [view, setView] = useState<'MAIN' | 'HISTORY' | 'MEETING_DETAILS' | 'LOGIN' | 'REGISTER' | 'PROFILE' | 'ADMIN_DASHBOARD' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD' | 'HOW_IT_WORKS' | 'TERMS' | 'PRIVACY' | 'PRICING' | 'RECALL_CONFIG' | 'FULL_AGENDA' | 'CONTACT' | 'ABOUT' | 'PRIVACY_PAGE' | 'TERMS_PAGE'>('MAIN');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   // States for Meeting Management
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -137,7 +150,7 @@ const App: React.FC = () => {
 
   // Payment State
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly');
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'ADDON_10H'>('monthly');
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [cancelSubscriptionModalOpen, setCancelSubscriptionModalOpen] = useState(false);
   const [mfaChallengeOpen, setMfaChallengeOpen] = useState(false);
@@ -147,6 +160,38 @@ const App: React.FC = () => {
   const [editForm, setEditForm] = useState({ phone: '', postalCode: '', addressNumber: '' });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [consentGiven, setConsentGiven] = useState(false); // Compliance LGPD
+
+  // Quick Bot Join State (Dashboard)
+  const [quickMeetingUrl, setQuickMeetingUrl] = useState('');
+  const [joiningBot, setJoiningBot] = useState(false);
+
+  const handleQuickBotJoin = async () => {
+    if (!quickMeetingUrl || !user) return;
+    setJoiningBot(true);
+    try {
+      const response = await fetch('/api/recall/bot-join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          meetingUrl: quickMeetingUrl,
+          botName: user.botName
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao enviar bot');
+
+      // Show success and clear
+      setQuickMeetingUrl('');
+      setSuccessMessage('Bot enviado com sucesso! Ele entrará na reunião em instantes.');
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: any) {
+      setError(err.message || 'Erro ao enviar bot');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setJoiningBot(false);
+    }
+  };
 
   // Terms Enforcement State
   const [termsAccepted, setTermsAccepted] = useState(true); // Default true until checked to avoid flash
@@ -168,8 +213,33 @@ const App: React.FC = () => {
   // Admin State
   const [adminStats, setAdminStats] = useState({ totalUsers: 0, activeUsers: 0, proUsers: 0, revenue: 0 });
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
-  const [adminPricing, setAdminPricing] = useState({ monthly: 27.90, yearly: 287.90 });
-  const [publicPricing, setPublicPricing] = useState({ monthly: 27.90, yearly: 287.90 });
+  const [adminPricing, setAdminPricing] = useState<any>({
+    monthly: { price: 27.90, active: true },
+    yearly: { price: 287.90, active: true },
+    pro_plus: { price: 98.00, active: true },
+    lomad_plus: { price: 199.00, active: true },
+    addon_10h: { price: 129.00, active: true }
+  });
+  const [publicPricing, setPublicPricing] = useState<any>({
+    monthly: { price: 27.90, active: true },
+    yearly: { price: 287.90, active: true },
+    pro_plus: { price: 98.00, active: true },
+    lomad_plus: { price: 199.00, active: true },
+    addon_10h: { price: 129.00, active: true }
+  });
+
+  // Routing Handler for clean URLs
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path === '/privacidade') {
+      setView('PRIVACY_PAGE');
+      return;
+    }
+    if (path === '/termouso') {
+      setView('TERMS_PAGE');
+      return;
+    }
+  }, []);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [userSearch, setUserSearch] = useState('');
 
@@ -377,7 +447,13 @@ const App: React.FC = () => {
           phone: data.phone,
           postalCode: data.postal_code,
           addressNumber: data.address_number,
-          meetings_recorded: data.meetings_recorded || 0
+          meetings_recorded: data.meetings_recorded || 0,
+          botName: data.bot_name,
+          recallId: data.recall_id,
+          calendarConnected: data.calendar_connected,
+          planLimitMinutes: data.plan_limit_minutes,
+          usageMinutes: data.usage_minutes,
+          extraMinutes: data.extra_minutes
         });
         setEditForm({
           phone: data.phone || '',
@@ -1275,6 +1351,12 @@ const App: React.FC = () => {
                   </svg>
                   Iniciar Transcrição
                 </button>
+                {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
+                  <button onClick={() => setView('FULL_AGENDA')} className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    Agenda + BOT
+                  </button>
+                )}
                 <button onClick={() => setView('PRICING')} className="px-3 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Preços</button>
                 <button onClick={() => setView('HOW_IT_WORKS')} className="px-3 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Como Funciona</button>
                 <button onClick={() => setView('ABOUT')} className="px-3 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Quem Somos</button>
@@ -1381,11 +1463,11 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              <p className="text-slate-300 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">Transcreva reuniões em tempo real com inteligência artificial, diretamente do seu navegador.</p>
+              <p className="text-slate-300 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">Grave reuniões e obtenha transcrições precisas com inteligência artificial.</p>
               <div className="flex items-center justify-center gap-6 pt-4">
                 <div className="flex items-center gap-2 text-slate-400">
                   <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                  <span className="text-sm font-medium">Transcrição em Tempo Real</span>
+                  <span className="text-sm font-medium">Transcrição Inteligente</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
@@ -1412,6 +1494,53 @@ const App: React.FC = () => {
                       </div>
                     )}
                     {/* Checkbox de Consentimento LGPD */}
+                    {/* Recall.ai Intelligent Calendar Widget for PRO+/LOMAD+ */}
+                    {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
+                      <div className="w-full max-w-4xl mx-auto mb-8 animate-fade-in relative z-10">
+                        <div className="glass p-6 rounded-2xl border border-blue-500/30 bg-blue-500/5 relative overflow-hidden group">
+                          {/* Decoration */}
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/30 transition-all"></div>
+
+                          <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400">
+                                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                              </div>
+                              <div className="text-left">
+                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                  Agenda Inteligente
+                                  {user.calendarConnected && <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/20 text-green-400 border border-green-500/30">ATIVO</span>}
+                                </h3>
+                                <p className="text-slate-400 text-sm">
+                                  {user.calendarConnected
+                                    ? "Seu bot está pronto para entrar nas próximas reuniões."
+                                    : "Conecte sua agenda para ativar o Assistente de Reuniões."}
+                                </p>
+                              </div>
+                            </div>
+
+                            {user.calendarConnected ? (
+                              <div className="flex flex-col items-end gap-1">
+                                <div className="px-4 py-2 bg-slate-900/50 rounded-lg border border-white/10 text-sm text-slate-300">
+                                  <span className="text-xs text-slate-500 block uppercase">Próxima Reunião (Exemplo)</span>
+                                  <strong>Daily Scrum</strong> • Hoje, 10:00
+                                </div>
+                                <button onClick={() => setView('RECALL_CONFIG')} className="text-xs text-blue-400 hover:text-white transition-colors">Gerenciar Bot & Agenda</button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setView('RECALL_CONFIG')}
+                                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 flex items-center gap-2 whitespace-nowrap"
+                              >
+                                Conectar Agora
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex items-start gap-3 bg-slate-800/50 p-4 rounded-xl border border-white/5 max-w-md mx-auto mb-6">
                       <div className="relative flex items-center">
                         <input
@@ -1942,46 +2071,115 @@ const App: React.FC = () => {
                   </div>
                   <div>
                     <label className="text-xs font-bold text-slate-500 uppercase">Plano Atual</label>
-                    <div className={`mt-2 inline-flex px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider ${user.role === 'PRO' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black' : 'bg-slate-700 text-white'}`}>
-                      {user.role}
+                    <div className={`mt-2 inline-flex px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider ${['PRO', 'PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black' : 'bg-slate-700 text-white'}`}>
+                      {user.role.replace('_', ' ')}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {user.role === 'PRO' ? (
-                <div className="glass p-8 rounded-[2rem] border border-yellow-500/20 bg-yellow-500/5">
-                  <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider text-yellow-500">Assinatura Ativa</h3>
-                  <div className="flex flex-col gap-4">
-                    <p className="text-slate-300">Você tem acesso ilimitado a todos os recursos.</p>
-                    {user.cardLast4 && (
-                      <div className="flex items-center gap-3 p-4 bg-black/20 rounded-xl border border-white/5">
-                        <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+              {['PRO', 'PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) ? (
+                <div className="space-y-6">
+                  {/* Active Subscription Card */}
+                  <div className="glass p-8 rounded-[2rem] border border-yellow-500/20 bg-yellow-500/5">
+                    <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider text-yellow-500">Assinatura Ativa</h3>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                          <p className="text-sm text-white font-bold">{user.cardBrand} •••• {user.cardLast4}</p>
-                          <p className="text-xs text-slate-500">Próxima cobrança em 30 dias</p>
+                          <p className="text-white font-bold text-lg">{user.role.replace('_', ' ')}</p>
+                          <p className="text-slate-400 text-sm">Renova em {new Date(user.subscriptionEnd || Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                        </div>
+                        {/* Usage Bar for Minutes based plans */}
+                        {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
+                          <div className="text-left md:text-right bg-black/20 p-3 rounded-xl border border-white/5 w-full md:w-auto">
+                            <p className="text-xs font-bold text-slate-500 uppercase">Uso de Gravação</p>
+                            <p className="text-xl font-black text-white">
+                              {Math.floor((user.usage_minutes || 0) / 60)}h {(user.usage_minutes || 0) % 60}m
+                              <span className="text-sm text-slate-500 font-medium"> / {user.role === 'LOMAD_PLUS' ? 'ILIMITADO' : `${Math.floor((user.plan_limit_minutes || 600) / 60)}h`}</span>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {user.cardLast4 && (
+                        <div className="flex items-center gap-3 p-4 bg-black/20 rounded-xl border border-white/5 mt-2">
+                          <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                          <div>
+                            <p className="text-sm text-white font-bold">{user.cardBrand} •••• {user.cardLast4}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-4 mt-2">
+                        <button onClick={() => setPaymentModalOpen(true)} className="text-xs font-bold text-cyan-400 hover:text-white transition-colors uppercase">Alterar Plano</button>
+                        {user.subscriptionStatus !== 'CANCELED' && (
+                          <button onClick={() => setCancelSubscriptionModalOpen(true)} className="text-xs font-bold text-red-400 hover:text-white transition-colors uppercase">Cancelar</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AI & Automation Card for PLUS users */}
+                  {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
+                    <div className="glass p-8 rounded-[2rem] border border-blue-500/20 bg-blue-500/5 relative overflow-hidden transition-all hover:border-blue-500/40">
+                      <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                        <svg className="w-40 h-40 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        Integração & Inteligência
+                      </h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                        <div className="bg-slate-950/50 p-4 rounded-xl border border-white/10">
+                          <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Nome do Bot</label>
+                          <div className="text-white font-bold text-lg truncate">{user.botName || 'Não configurado'}</div>
+                        </div>
+                        <div className="bg-slate-950/50 p-4 rounded-xl border border-white/10">
+                          <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Status da Agenda</label>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded-full ${user.calendarConnected ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-slate-600'}`}></div>
+                            <span className="text-white font-bold">{user.calendarConnected ? 'Conectado' : 'Desconectado'}</span>
+                          </div>
                         </div>
                       </div>
-                    )}
-                    {user.subscriptionStatus === 'CANCELED' ? (
-                      <div className="mt-4">
-                        <p className="text-yellow-500 text-sm font-bold mb-2">Cancelamento agendado. Acesso até {new Date(user.subscriptionEnd || Date.now()).toLocaleDateString()}.</p>
-                        <button
-                          onClick={() => setPaymentModalOpen(true)}
-                          className="text-green-400 text-sm font-bold hover:text-green-300 transition-colors uppercase"
-                        >
-                          Reativar Assinatura
-                        </button>
+
+                      <div className="mt-8 bg-gradient-to-br from-blue-900/40 to-slate-900/40 p-5 rounded-2xl border border-blue-500/20 relative z-10 shadow-lg">
+                        <label className="text-xs font-black text-blue-400 uppercase mb-3 block flex items-center gap-2 tracking-wider">
+                          <div className="p-1 bg-blue-500/20 rounded text-blue-400"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
+                          Bot Instantâneo
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Cole o link da reunião aqui..."
+                            value={quickMeetingUrl}
+                            onChange={(e) => setQuickMeetingUrl(e.target.value)}
+                            className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 shadow-inner placeholder:text-slate-600 transition-all font-medium"
+                          />
+                          <button
+                            onClick={handleQuickBotJoin}
+                            disabled={!quickMeetingUrl || joiningBot}
+                            className="bg-blue-600 hover:bg-blue-500 text-white px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20 active:scale-95"
+                          >
+                            {joiningBot ? (
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            ) : (
+                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                            )}
+                          </button>
+                        </div>
                       </div>
-                    ) : (
+
                       <button
-                        onClick={() => setCancelSubscriptionModalOpen(true)}
-                        className="mt-4 text-red-400 text-sm font-bold hover:text-red-300 transition-colors self-start"
+                        onClick={() => setView('FULL_AGENDA')}
+                        className="mt-4 w-full py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold uppercase tracking-wide transition-all hover:border-white/20 relative z-10 text-sm flex items-center justify-center gap-3 group"
                       >
-                        Cancelar Assinatura
+                        <svg className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        Ver Agenda Completa
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="glass p-8 rounded-[2rem] border border-white/10 relative overflow-hidden">
@@ -2258,21 +2456,48 @@ const App: React.FC = () => {
                 <div className="glass rounded-[2rem] border border-white/10 p-8 h-fit">
                   <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider flex items-center gap-3">
                     <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    Configurar Preços
+                    Configurar Preços & Planos
                   </h3>
                   <div className="space-y-6">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Plano Mensal (R$)</label>
-                      <input type="number" step="0.01" value={adminPricing.monthly} onChange={e => setAdminPricing({ ...adminPricing, monthly: parseFloat(e.target.value) })} className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Plano Anual (R$)</label>
-                      <input type="number" step="0.01" value={adminPricing.yearly} onChange={e => setAdminPricing({ ...adminPricing, yearly: parseFloat(e.target.value) })} className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors" />
-                    </div>
+                    {/* Helper to render plan input */}
+                    {[
+                      { key: 'monthly', label: 'PRO Mensal' },
+                      { key: 'yearly', label: 'PRO Anual' },
+                      { key: 'pro_plus', label: 'PRO+ Mensal' },
+                      { key: 'lomad_plus', label: 'LOMAD+ Mensal' },
+                      { key: 'addon_10h', label: 'Add-on 10 Horas' }
+                    ].map(plan => (
+                      <div key={plan.key} className="p-4 rounded-xl bg-white/5 border border-white/5">
+                        <div className="flex justify-between items-center mb-3">
+                          <label className="text-xs font-bold text-slate-400 uppercase">{plan.label}</label>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={adminPricing[plan.key]?.active !== false}
+                              onChange={e => setAdminPricing({ ...adminPricing, [plan.key]: { ...adminPricing[plan.key], active: e.target.checked } })}
+                            />
+                            <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                            <span className="ml-2 text-xs font-bold text-slate-400 peer-checked:text-green-400">{adminPricing[plan.key]?.active !== false ? 'Ativo' : 'Suspenso'}</span>
+                          </label>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">R$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={adminPricing[plan.key]?.price || 0}
+                            onChange={e => setAdminPricing({ ...adminPricing, [plan.key]: { ...adminPricing[plan.key], price: parseFloat(e.target.value) } })}
+                            className="w-full bg-slate-950/50 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition-colors font-bold"
+                          />
+                        </div>
+                      </div>
+                    ))}
+
                     <button onClick={updatePricing} className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-blue-500 hover:to-indigo-500 text-white font-bold uppercase tracking-wide shadow-lg transition-all hover:scale-[1.02]">
                       Salvar Alterações
                     </button>
-                    <p className="text-xs text-slate-500 text-center">Alterações refletem imediatamente para novos upgrades.</p>
+                    <p className="text-xs text-slate-500 text-center">Planos suspensos aparecerão como "Em Breve".</p>
                   </div>
                 </div>
               </div>
@@ -2864,7 +3089,7 @@ const App: React.FC = () => {
                     </svg>
                   </div>
                   <h3 className="text-white font-bold mb-2">Conexão Estável</h3>
-                  <p className="text-slate-400 text-sm">Internet estável para processamento em tempo real</p>
+                  <p className="text-slate-400 text-sm">Internet estável para envio do áudio ao servidor</p>
                 </div>
 
                 {/* Requisito 5 */}
@@ -2901,7 +3126,7 @@ const App: React.FC = () => {
                       <span className="text-cyan-400 font-black text-2xl">01</span>
                       <h3 className="text-2xl font-black text-white">Captura de Áudio</h3>
                     </div>
-                    <p className="text-slate-300 text-lg mb-4">O LOMAD captura simultaneamente o áudio do navegador (reuniões, vídeos, músicas) e do seu microfone</p>
+                    <p className="text-slate-300 text-lg mb-4">O LOMAD grava simultaneamente o áudio do navegador (reuniões, vídeos) e do seu microfone durante a chamada</p>
                     <div className="flex items-center gap-4 text-sm text-slate-400">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-cyan-500 rounded-full animate-pulse"></div>
@@ -2933,7 +3158,7 @@ const App: React.FC = () => {
                       <span className="text-emerald-400 font-black text-2xl">02</span>
                       <h3 className="text-2xl font-black text-white">Processamento</h3>
                     </div>
-                    <p className="text-slate-300 text-lg mb-4">O áudio capturado é processado em tempo real e enviado para transcrição via IA</p>
+                    <p className="text-slate-300 text-lg mb-4">O áudio gravado é enviado para nossos servidores seguros para processamento via IA</p>
                     <div className="flex items-center gap-2 text-sm text-slate-400">
                       <span>Ondas de áudio</span>
                       <span>→</span>
@@ -2958,9 +3183,9 @@ const App: React.FC = () => {
                       <span className="text-cyan-400 font-black text-2xl">03</span>
                       <h3 className="text-2xl font-black text-white">Transcrição</h3>
                     </div>
-                    <p className="text-slate-300 text-lg mb-4">Tudo que é falado é transcrito automaticamente e fica disponível para você consultar, editar e exportar</p>
+                    <p className="text-slate-300 text-lg mb-4">Após o término, a reunião é transcrita automaticamente e você é notificado quando estiver pronta</p>
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full font-bold">Tempo Real</span>
+                      <span className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full font-bold">Processamento em 2º Plano</span>
                       <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full font-bold">Alta Precisão</span>
                     </div>
                   </div>
@@ -3051,9 +3276,9 @@ const App: React.FC = () => {
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-2xl font-black text-white mb-2">Transcrição Ao Vivo Sem Bots</h3>
+                      <h3 className="text-2xl font-black text-white mb-2">Gravação Segura Sem Bots (Plano PRO)</h3>
                       <p className="text-slate-300 text-base mb-4">
-                        Capture reuniões sem que nenhum bot entre na chamada. Privacidade total e transcrição em tempo real.
+                        Grave suas reuniões sem que nenhum bot entre na chamada. Privacidade total com processamento após o término.
                       </p>
                     </div>
                   </div>
@@ -3068,7 +3293,7 @@ const App: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-3 text-slate-300">
                       <svg className="w-5 h-5 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      <span>Transcrição em tempo real enquanto você fala</span>
+                      <span>Processamento automático em segundo plano</span>
                     </div>
                   </div>
                 </div>
@@ -3102,6 +3327,93 @@ const App: React.FC = () => {
                       <span>Transcrições precisas e contextualizadas</span>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Seção 2.6: Comparativo de Planos (Métodos de Captura) */}
+            <div className="mb-20">
+              <h2 className="text-4xl font-black text-white mb-12 text-center">
+                Qual Plano é Ideal para <span className="text-cyan-400">Você</span>?
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                {/* Manual Capture Plans (Free & Pro) */}
+                <div className="glass p-8 rounded-[2.5rem] border border-cyan-500/20 bg-cyan-900/5 flex flex-col relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-5">
+                    <svg className="w-48 h-48 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                  </div>
+
+                  <div className="mb-8 relative z-10">
+                    <span className="px-4 py-2 bg-cyan-500/20 text-cyan-400 rounded-full text-sm font-black uppercase tracking-widest border border-cyan-500/20">Planos Free & Pro</span>
+                    <h3 className="text-3xl font-black text-white mt-4 mb-2">Captura Manual</h3>
+                    <p className="text-slate-400">Você usa seu próprio dispositivo para gravar.</p>
+                  </div>
+
+                  <ul className="space-y-4 mb-8 flex-1 relative z-10">
+                    <li className="flex items-start gap-3">
+                      <div className="mt-1 p-1 bg-cyan-500/20 rounded text-cyan-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></div>
+                      <div>
+                        <span className="text-white font-bold block">Via Navegador (PC)</span>
+                        <span className="text-slate-400 text-sm">Necessário compartilhar a aba/tela.</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="mt-1 p-1 bg-cyan-500/20 rounded text-cyan-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></div>
+                      <div>
+                        <span className="text-white font-bold block">Via Mobile</span>
+                        <span className="text-slate-400 text-sm">Gravação de áudio do ambiente.</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="mt-1 p-1 bg-cyan-500/20 rounded text-cyan-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></div>
+                      <div>
+                        <span className="text-white font-bold block">Você Presente</span>
+                        <span className="text-slate-400 text-sm">Você precisa estar na reunião para gravar.</span>
+                      </div>
+                    </li>
+                  </ul>
+
+                  <button onClick={() => setView('PRICING')} className="w-full py-4 rounded-xl bg-cyan-900/50 hover:bg-cyan-800 border border-cyan-500/30 text-cyan-400 font-bold uppercase transition-all">Ver Planos Básicos</button>
+                </div>
+
+                {/* Bot Plans (Pro+ & Lomad+) */}
+                <div className="glass p-8 rounded-[2.5rem] border border-blue-500/30 bg-gradient-to-br from-blue-900/20 to-indigo-900/20 flex flex-col relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <svg className="w-48 h-48 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                  </div>
+
+                  <div className="mb-8 relative z-10">
+                    <span className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-sm font-black uppercase tracking-widest shadow-lg shadow-blue-500/20">Recomendado</span>
+                    <h3 className="text-3xl font-black text-white mt-4 mb-2">Bot Inteligente</h3>
+                    <p className="text-blue-200">Nosso assistente entra na reunião por você.</p>
+                  </div>
+
+                  <ul className="space-y-4 mb-8 flex-1 relative z-10">
+                    <li className="flex items-start gap-3">
+                      <div className="mt-1 p-1 bg-blue-500/20 rounded text-blue-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></div>
+                      <div>
+                        <span className="text-white font-bold block">Bot Automático</span>
+                        <span className="text-slate-300 text-sm">Conecte sua agenda e o bot entra sozinho.</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="mt-1 p-1 bg-blue-500/20 rounded text-blue-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></div>
+                      <div>
+                        <span className="text-white font-bold block">Totalmente Invisível</span>
+                        <span className="text-slate-300 text-sm">Não precisa deixar abas abertas ou PC ligado.</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="mt-1 p-1 bg-blue-500/20 rounded text-blue-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></div>
+                      <div>
+                        <span className="text-white font-bold block">Multi-Plataforma</span>
+                        <span className="text-slate-300 text-sm">Funciona no Google Meet, Zoom e Teams.</span>
+                      </div>
+                    </li>
+                  </ul>
+
+                  <button onClick={() => setView('PRICING')} className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase transition-all shadow-lg hover:shadow-blue-500/30">Ver Planos com Bot</button>
                 </div>
               </div>
             </div>
@@ -3274,12 +3586,13 @@ const App: React.FC = () => {
         onClose={() => setPaymentModalOpen(false)}
         selectedPlan={selectedPlan}
         setSelectedPlan={setSelectedPlan}
-        publicPricing={publicPricing}
+        pricing={publicPricing}
         cardForm={cardForm}
         setCardForm={setCardForm}
-        handleCheckout={handleCheckout}
-        paymentLoading={paymentLoading}
+        onCheckout={handleCheckout}
+        loading={paymentLoading}
         error={error}
+        userRole={user?.role || 'FREE'}
       />
 
       {/* View: Pricing */}
@@ -3296,113 +3609,230 @@ const App: React.FC = () => {
               <p className="text-slate-400 text-lg max-w-2xl mx-auto">Comece gratuitamente e evolua conforme sua necessidade. Sem contratos de fidelidade.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
               {/* FREE PLAN */}
-              <div className="glass p-8 rounded-[2rem] border border-white/5 hover:border-white/10 transition-all flex flex-col">
-                <div className="mb-8">
+              <div className="glass p-6 rounded-[2rem] border border-white/5 hover:border-white/10 transition-all flex flex-col">
+                <div className="mb-6">
                   <span className="px-3 py-1 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold uppercase tracking-wider">Gratuito</span>
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-white">R$ 0</span>
+                    <span className="text-3xl font-black text-white">R$ 0</span>
                     <span className="text-slate-500 font-bold">/mês</span>
                   </div>
-                  <p className="text-slate-400 mt-2 text-sm">Para testes e uso ocasional.</p>
+                  <p className="text-slate-400 mt-2 text-xs">Para testes e uso ocasional.</p>
                 </div>
 
-                <ul className="space-y-4 mb-8 flex-1">
-                  <li className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Até 5 reuniões transcritas</span>
+                <ul className="space-y-3 mb-6 flex-1">
+                  <li className="flex items-center gap-2 text-slate-300 text-sm">
+                    <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Até 5 reuniões (Total)</span>
                   </li>
-                  <li className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <li className="flex items-center gap-2 text-slate-300 text-sm">
+                    <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                     <span>Transcrição básica</span>
                   </li>
-                  <li className="flex items-center gap-3 text-slate-500">
-                    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  <li className="flex items-center gap-2 text-slate-500 text-sm">
+                    <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     <span>Sem Chat IA</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-slate-500">
-                    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    <span>Suporte padrão</span>
                   </li>
                 </ul>
 
                 <button
                   onClick={() => user ? setView('MAIN') : setView('REGISTER')}
-                  className="w-full py-4 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold border border-white/10 transition-all uppercase tracking-wide"
+                  className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold border border-white/10 transition-all uppercase tracking-wide text-sm"
                 >
-                  {user ? 'Continuar Grátis' : 'Criar Conta Grátis'}
+                  {user ? 'Plano Atual' : 'Criar Conta'}
                 </button>
               </div>
 
               {/* PRO PLAN */}
-              <div className="relative glass p-8 rounded-[2rem] border border-cyan-500/30 flex flex-col overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-emerald-500 to-cyan-500"></div>
-                <div className="absolute -right-12 -top-12 w-40 h-40 bg-cyan-500/20 rounded-full blur-3xl group-hover:bg-cyan-500/30 transition-colors"></div>
-
-                <div className="mb-8 relative">
-                  <div className="flex justify-between items-start">
-                    <span className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-lg shadow-cyan-500/20">Recomendado</span>
-                  </div>
+              <div className="glass p-6 rounded-[2rem] border border-white/5 hover:border-cyan-500/30 transition-all flex flex-col">
+                <div className="mb-6">
+                  <span className="px-3 py-1 bg-cyan-900/30 text-cyan-400 rounded-lg text-xs font-bold uppercase tracking-wider">Pro</span>
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-5xl font-black text-white">R$ {publicPricing.monthly.toFixed(2)}</span>
-                    <span className="text-slate-400 font-bold">/mês</span>
+                    {publicPricing.monthly?.active !== false ? (
+                      <>
+                        <span className="text-3xl font-black text-white">R$ {(publicPricing.monthly?.price || publicPricing.monthly || 0).toFixed(2)}</span>
+                        <span className="text-slate-500 font-bold">/mês</span>
+                      </>
+                    ) : (
+                      <span className="text-2xl font-bold text-slate-500 uppercase">Em Breve</span>
+                    )}
                   </div>
-                  <p className="text-cyan-400 mt-2 text-sm font-bold">ou R$ {publicPricing.yearly.toFixed(2)}/ano (economize ~15%)</p>
+                  <p className="text-slate-400 mt-2 text-xs">Captura via Navegador (PC) ou Gravação de Áudio (Mobile).</p>
                 </div>
 
-                <ul className="space-y-4 mb-8 flex-1 relative">
-                  <li className="flex items-center gap-3 text-white font-bold">
-                    <div className="p-1 bg-cyan-500/20 rounded-full text-cyan-400"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></div>
+                <ul className="space-y-3 mb-6 flex-1">
+                  <li className="flex items-center gap-2 text-white font-bold text-sm">
+                    <div className="p-0.5 bg-cyan-500/20 rounded-full text-cyan-400"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></div>
                     <span>Reuniões Ilimitadas</span>
                   </li>
-                  <li className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Chat IA com suas reuniões</span>
+                  <li className="flex items-center gap-2 text-slate-300 text-sm">
+                    <svg className="w-4 h-4 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Chat IA com Transcript</span>
                   </li>
-                  <li className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Resumos automáticos</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-slate-300">
-                    <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span>Acesso prioritário a atualizações</span>
+                  <li className="flex items-center gap-2 text-slate-300 text-sm">
+                    <svg className="w-4 h-4 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Uploads de Arquivos</span>
                   </li>
                 </ul>
 
                 <button
                   onClick={() => {
-                    if (!user) {
-                      setView('REGISTER');
-                    } else if (user.role === 'PRO' || user.role === 'MASTER') {
-                      // Do nothing or user feedback
-                    } else {
-                      setPaymentModalOpen(true);
-                    }
+                    setSelectedPlan('PRO');
+                    setPaymentModalOpen(true);
                   }}
-                  disabled={user?.role === 'PRO' || user?.role === 'MASTER'}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-bold uppercase tracking-wide shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={user?.role === 'PRO' || publicPricing.monthly?.active === false}
+                  className="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold transition-all uppercase tracking-wide text-sm disabled:opacity-50"
                 >
-                  {user?.role === 'PRO' || user?.role === 'MASTER' ? 'Você já é PRO' : 'Assinar Agora'}
+                  {publicPricing.monthly?.active === false ? 'Em Breve' : (user?.role === 'PRO' ? 'Plano Atual' : 'Assinar Pro')}
                 </button>
               </div>
+
+              {/* PRO+ PLAN */}
+              <div className="relative glass p-6 rounded-[2rem] border border-blue-500/30 flex flex-col group hover:scale-[1.02] transition-transform duration-300">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500"></div>
+                <div className="mb-6">
+                  <span className="px-3 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-lg shadow-blue-500/20">Recomendado</span>
+                  <div className="mt-4 flex items-baseline gap-1">
+                    {publicPricing.pro_plus?.active !== false ? (
+                      <>
+                        <span className="text-4xl font-black text-white">R$ {(publicPricing.pro_plus?.price || 98).toFixed(0)}</span>
+                        <span className="text-slate-500 font-bold">/mês</span>
+                      </>
+                    ) : (
+                      <span className="text-2xl font-bold text-slate-500 uppercase">Em Breve</span>
+                    )}
+                  </div>
+                  <p className="text-blue-400 mt-2 text-xs font-bold">Bot em sua Reunião (10h/mês)</p>
+                </div>
+
+                <ul className="space-y-3 mb-6 flex-1">
+                  <li className="flex items-center gap-2 text-white font-bold text-sm">
+                    <div className="p-0.5 bg-blue-500/20 rounded-full text-blue-400"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></div>
+                    <span>Bot entra no Google Meet/Teams/Zoom</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-slate-300 text-sm">
+                    <svg className="w-4 h-4 text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Gravação Automática (Áudio)</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-slate-300 text-sm">
+                    <svg className="w-4 h-4 text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Até 10 horas mensais</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-slate-300 text-sm">
+                    <svg className="w-4 h-4 text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Tudo do plano PRO</span>
+                  </li>
+                </ul>
+
+                <button
+                  onClick={() => {
+                    setSelectedPlan('PRO_PLUS');
+                    setPaymentModalOpen(true);
+                  }}
+                  disabled={user?.role === 'PRO_PLUS' || publicPricing.pro_plus?.active === false}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold uppercase tracking-wide shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all disabled:opacity-50 text-sm"
+                >
+                  {publicPricing.pro_plus?.active === false ? 'Em Breve' : (user?.role === 'PRO_PLUS' ? 'Plano Atual' : 'Assinar Pro+')}
+                </button>
+              </div>
+
+              {/* LOMAD+ PLAN */}
+              <div className="glass p-6 rounded-[2rem] border border-orange-500/30 flex flex-col hover:border-orange-500/50 transition-all">
+                <div className="mb-6">
+                  <span className="px-3 py-1 bg-orange-900/30 text-orange-400 rounded-lg text-xs font-bold uppercase tracking-wider">Ultimate</span>
+                  <div className="mt-4 flex items-baseline gap-1">
+                    {publicPricing.lomad_plus?.active !== false ? (
+                      <>
+                        <span className="text-3xl font-black text-white">R$ {(publicPricing.lomad_plus?.price || 199).toFixed(0)}</span>
+                        <span className="text-slate-500 font-bold">/mês</span>
+                      </>
+                    ) : (
+                      <span className="text-2xl font-bold text-slate-500 uppercase">Em Breve</span>
+                    )}
+                  </div>
+                  <p className="text-orange-400 mt-2 text-xs">Bot Ilimitado.</p>
+                </div>
+
+                <ul className="space-y-3 mb-6 flex-1">
+                  <li className="flex items-center gap-2 text-white font-bold text-sm">
+                    <div className="p-0.5 bg-orange-500/20 rounded-full text-orange-400"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></div>
+                    <span>BOT ILIMITADO (Horas)</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-slate-300 text-sm">
+                    <svg className="w-4 h-4 text-orange-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Gravações Ilimitadas</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-slate-300 text-sm">
+                    <svg className="w-4 h-4 text-orange-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Suporte Prioritário VIP</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-slate-300 text-sm">
+                    <svg className="w-4 h-4 text-orange-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Acesso Antecipado a Beta</span>
+                  </li>
+                </ul>
+
+                <button
+                  onClick={() => {
+                    setSelectedPlan('LOMAD_PLUS');
+                    setPaymentModalOpen(true);
+                  }}
+                  disabled={user?.role === 'LOMAD_PLUS' || publicPricing.lomad_plus?.active === false}
+                  className="w-full py-3 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold transition-all uppercase tracking-wide text-sm disabled:opacity-50"
+                >
+                  {publicPricing.lomad_plus?.active === false ? 'Em Breve' : (user?.role === 'LOMAD_PLUS' ? 'Plano Atual' : 'Assinar Ultimate')}
+                </button>
+              </div>
+
             </div>
           </div>
         )
       }
 
+      {
+        view === 'PRIVACY_PAGE' && <PrivacyPage />
+      }
+
+      {
+        view === 'TERMS_PAGE' && <TermsPage />
+      }
+
       <CookieBanner onPrivacyClick={() => setView('PRIVACY')} />
       <VLibrasWidget />
 
+
+
+
+
       {
-        view !== 'MEETING_DETAILS' && (
+        view === 'FULL_AGENDA' && user && (
+          <FullAgenda user={user} setView={setView} />
+        )
+      }
+
+      {
+        view === 'RECALL_CONFIG' && user && (
+          <RecallConfig
+            user={user}
+            setView={setView}
+            onUpdateUser={async () => {
+              const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+              if (data) setUser({ ...user, ...data } as any);
+            }}
+            onClose={() => setView('PROFILE')}
+          />
+        )
+      }
+
+      {
+        view !== 'MEETING_DETAILS' && view !== 'PRIVACY_PAGE' && view !== 'TERMS_PAGE' && (
           <FooterCompliance
             onTermsClick={() => setView('TERMS')}
             onPrivacyClick={() => setView('PRIVACY')}
           />
         )
       }
-
     </div >
   );
 };

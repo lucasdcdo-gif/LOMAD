@@ -17,7 +17,7 @@ export enum SessionStatus {
   ERROR = 'ERROR'
 }
 
-export type UserRole = 'FREE' | 'PRO' | 'MASTER';
+export type UserRole = 'FREE' | 'PRO' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'MASTER';
 
 export interface User {
   id: string;
@@ -29,12 +29,20 @@ export interface User {
   isActive?: boolean;
   cardBrand?: string;
   cardLast4?: string;
-  subscriptionStatus?: 'ACTIVE' | 'CANCELED';
+  subscriptionStatus?: 'ACTIVE' | 'CANCELED' | 'REFUNDED' | 'OVERDUE' | 'DELETION_REQUESTED';
   subscriptionEnd?: number;
   cpf?: string;
   phone?: string;
   postalCode?: string;
   addressNumber?: string;
+
+  // New Fields for Reviews
+  botName?: string;
+  recallId?: string;
+  calendarConnected?: boolean;
+  planLimitMinutes?: number; // e.g. 600
+  usageMinutes?: number;
+  extraMinutes?: number;
 }
 
 export interface Meeting {

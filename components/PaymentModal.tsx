@@ -1,24 +1,72 @@
+import React, { useState } from 'react';
+
 // Payment Modal Component
+interface PaymentModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onCheckout: (plan: 'monthly' | 'yearly' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'ADDON_10H', cardData: any) => Promise<void>;
+    loading: boolean;
+    userRole: string; // To detect if upgrading
+    translations?: any;
+    pricing?: { monthly: number; yearly: number }; // Pricing from DB
+    cardForm: any; // Assuming cardForm is still passed as a prop
+    setCardForm: (form: any) => void; // Assuming setCardForm is still passed as a prop
+    error: string | null; // Assuming error is still passed as a prop
+    selectedPlan: 'monthly' | 'yearly' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'ADDON_10H';
+    setSelectedPlan: (plan: 'monthly' | 'yearly' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'ADDON_10H') => void;
+}
+
 export const PaymentModal = ({
     isOpen,
     onClose,
-    selectedPlan,
-    setSelectedPlan,
-    publicPricing,
+    onCheckout,
+    loading,
+    userRole,
+    translations,
+    pricing,
     cardForm,
     setCardForm,
-    handleCheckout,
-    paymentLoading,
-    error
-}: any) => {
+    error,
+    selectedPlan,
+    setSelectedPlan
+}: PaymentModalProps) => {
     if (!isOpen) return null;
+
+    const publicPricing = pricing || {
+        monthly: { price: 27.90, active: true },
+        yearly: { price: 287.90, active: true },
+        pro_plus: { price: 98.00, active: true },
+        lomad_plus: { price: 199.00, active: true },
+        addon_10h: { price: 129.00, active: true }
+    };
+
+    const getPlanInfo = (planKey: string) => {
+        const p = (publicPricing as any)[planKey.toLowerCase()];
+        if (!p) return { price: 0, active: false };
+        // Handle legacy number format
+        if (typeof p === 'number') return { price: p, active: true };
+        return { price: p.price, active: p.active !== false };
+    };
+
+    const getPlanPrice = (plan: 'monthly' | 'yearly' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'ADDON_10H') => {
+        return getPlanInfo(plan).price;
+    };
+
+    const isPlanActive = (plan: 'monthly' | 'yearly' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'ADDON_10H') => {
+        return getPlanInfo(plan).active;
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await onCheckout(selectedPlan, cardForm);
+    };
 
     return (
         <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
             <div className="bg-slate-900 border border-white/10 text-white rounded-3xl shadow-2xl p-6 md:p-8 max-w-lg w-full mt-16 mb-8 animate-bounce-in">
                 <div className="text-center mb-6">
                     <h2 className="text-3xl font-black text-white mb-2">Dados do Pagamento</h2>
-                    <p className="text-slate-400 text-sm">Complete seus dados para finalizar a assinatura {selectedPlan === 'monthly' ? 'Mensal' : 'Anual'}</p>
+                    <p className="text-slate-400 text-sm">Complete seus dados para finalizar a assinatura</p>
                 </div>
 
                 {error && (
@@ -33,57 +81,137 @@ export const PaymentModal = ({
                 {/* Plan Selection Toggle */}
                 <div className="mb-6 space-y-3">
                     <label className="block text-sm font-bold text-slate-300 mb-2">ESCOLHA SEU PLANO</label>
-                    <div className="space-y-2">
-                        <button
-                            type="button"
-                            onClick={() => setSelectedPlan('monthly')}
-                            className={`w-full p-4 rounded-xl border-2 transition-all ${selectedPlan === 'monthly'
-                                ? 'border-cyan-500 bg-cyan-500/10'
-                                : 'border-white/10 bg-slate-950/50 hover:border-white/20'
-                                }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPlan === 'monthly' ? 'border-cyan-500' : 'border-white/30'
-                                        }`}>
-                                        {selectedPlan === 'monthly' && (
-                                            <div className="w-3 h-3 rounded-full bg-cyan-500"></div>
-                                        )}
-                                    </div>
-                                    <span className="font-bold text-white">Mensal</span>
+                    {/* PLAN SELECTION - DYNAMIC */}
+                    <div className="space-y-4 mb-6">
+                        {/* Standard PRO Plans */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button
+                                type="button"
+                                onClick={() => isPlanActive('monthly') && setSelectedPlan('monthly')}
+                                disabled={!isPlanActive('monthly')}
+                                className={`p-4 rounded-xl border-2 transition-all text-left relative ${!isPlanActive('monthly') ? 'opacity-50 cursor-not-allowed border-white/5 bg-slate-950/30' :
+                                        selectedPlan === 'monthly'
+                                            ? 'border-cyan-500 bg-cyan-500/10'
+                                            : 'border-white/10 bg-slate-950/50 hover:border-white/20'
+                                    }`}
+                            >
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="font-bold text-white">PRO Mensal</span>
+                                    {selectedPlan === 'monthly' && <div className="w-3 h-3 rounded-full bg-cyan-500"></div>}
                                 </div>
-                                <span className="text-cyan-400 font-black">R$ {publicPricing.monthly.toFixed(2).replace('.', ',')}/mês</span>
-                            </div>
-                        </button>
+                                {isPlanActive('monthly') ? (
+                                    <div className="text-cyan-400 font-black text-xl">R$ {getPlanPrice('monthly').toFixed(2).replace('.', ',')}<span className="text-xs text-slate-400 font-normal">/mês</span></div>
+                                ) : (
+                                    <div className="text-slate-500 font-bold text-lg uppercase">Em Breve</div>
+                                )}
+                            </button>
 
-                        <button
-                            type="button"
-                            onClick={() => setSelectedPlan('yearly')}
-                            className={`w-full p-4 rounded-xl border-2 transition-all ${selectedPlan === 'yearly'
-                                ? 'border-emerald-500 bg-emerald-500/10'
-                                : 'border-white/10 bg-slate-950/50 hover:border-white/20'
-                                }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPlan === 'yearly' ? 'border-emerald-500' : 'border-white/30'
-                                        }`}>
-                                        {selectedPlan === 'yearly' && (
-                                            <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                                        )}
-                                    </div>
-                                    <span className="font-bold text-white">Anual</span>
+                            <button
+                                type="button"
+                                onClick={() => isPlanActive('yearly') && setSelectedPlan('yearly')}
+                                disabled={!isPlanActive('yearly')}
+                                className={`p-4 rounded-xl border-2 transition-all text-left relative ${!isPlanActive('yearly') ? 'opacity-50 cursor-not-allowed border-white/5 bg-slate-950/30' :
+                                        selectedPlan === 'yearly'
+                                            ? 'border-emerald-500 bg-emerald-500/10'
+                                            : 'border-white/10 bg-slate-950/50 hover:border-white/20'
+                                    }`}
+                            >
+                                {isPlanActive('yearly') && <div className="absolute -top-3 right-4 bg-emerald-600 text-xs px-2 py-0.5 rounded-full font-bold text-white">ECONOMIZE 14%</div>}
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="font-bold text-white">PRO Anual</span>
+                                    {selectedPlan === 'yearly' && <div className="w-3 h-3 rounded-full bg-emerald-500"></div>}
+                                </div>
+                                {isPlanActive('yearly') ? (
+                                    <div className="text-emerald-400 font-black text-xl">R$ {getPlanPrice('yearly').toFixed(2).replace('.', ',')}<span className="text-xs text-slate-400 font-normal">/ano</span></div>
+                                ) : (
+                                    <div className="text-slate-500 font-bold text-lg uppercase">Em Breve</div>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* HIGH TIER PLANS */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button
+                                type="button"
+                                onClick={() => isPlanActive('PRO_PLUS') && setSelectedPlan('PRO_PLUS')}
+                                disabled={!isPlanActive('PRO_PLUS')}
+                                className={`p-4 rounded-xl border-2 transition-all text-left relative ${!isPlanActive('PRO_PLUS') ? 'opacity-50 cursor-not-allowed border-white/5 bg-slate-950/30' :
+                                        selectedPlan === 'PRO_PLUS'
+                                            ? 'border-purple-500 bg-purple-500/10'
+                                            : 'border-white/10 bg-slate-950/50 hover:border-white/20'
+                                    }`}
+                            >
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="font-bold text-purple-400">PRO+</span>
+                                    {selectedPlan === 'PRO_PLUS' && <div className="w-3 h-3 rounded-full bg-purple-500"></div>}
+                                </div>
+                                {isPlanActive('PRO_PLUS') ? (
+                                    <div className="text-white font-black text-xl">R$ {getPlanPrice('PRO_PLUS').toFixed(2).replace('.', ',')}<span className="text-xs text-slate-400 font-normal">/mês</span></div>
+                                ) : (
+                                    <div className="text-slate-500 font-bold text-lg uppercase">Em Breve</div>
+                                )}
+                                <ul className="mt-2 text-xs text-slate-300 space-y-1">
+                                    <li>• Bot em Reuniões</li>
+                                    <li>• 10 Horas mensais</li>
+                                </ul>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => isPlanActive('LOMAD_PLUS') && setSelectedPlan('LOMAD_PLUS')}
+                                disabled={!isPlanActive('LOMAD_PLUS')}
+                                className={`p-4 rounded-xl border-2 transition-all text-left relative ${!isPlanActive('LOMAD_PLUS') ? 'opacity-50 cursor-not-allowed border-white/5 bg-slate-950/30' :
+                                        selectedPlan === 'LOMAD_PLUS'
+                                            ? 'border-amber-500 bg-amber-500/10'
+                                            : 'border-white/10 bg-slate-950/50 hover:border-white/20'
+                                    }`}
+                            >
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="font-bold text-amber-400">LOMAD+</span>
+                                    {selectedPlan === 'LOMAD_PLUS' && <div className="w-3 h-3 rounded-full bg-amber-500"></div>}
+                                </div>
+                                {isPlanActive('LOMAD_PLUS') ? (
+                                    <div className="text-white font-black text-xl">R$ {getPlanPrice('LOMAD_PLUS').toFixed(2).replace('.', ',')}<span className="text-xs text-slate-400 font-normal">/mês</span></div>
+                                ) : (
+                                    <div className="text-slate-500 font-bold text-lg uppercase">Em Breve</div>
+                                )}
+                                <ul className="mt-2 text-xs text-slate-300 space-y-1">
+                                    <li>• Horas ILIMITADAS</li>
+                                    <li>• Suporte Prioritário</li>
+                                </ul>
+                            </button>
+                        </div>
+
+                        {/* Add-on Option - ONLY VISIBLE TO PRO+ USERS */}
+                        {userRole === 'PRO_PLUS' && (
+                            <button
+                                type="button"
+                                onClick={() => isPlanActive('ADDON_10H') && setSelectedPlan('ADDON_10H')}
+                                disabled={!isPlanActive('ADDON_10H')}
+                                className={`w-full p-3 rounded-xl border border-dashed transition-all flex items-center justify-between ${!isPlanActive('ADDON_10H') ? 'opacity-50 cursor-not-allowed border-slate-700 bg-slate-900' :
+                                        selectedPlan === 'ADDON_10H'
+                                            ? 'border-blue-400 bg-blue-400/10'
+                                            : 'border-slate-600 hover:border-slate-400 hover:bg-slate-800'
+                                    }`}
+                            >
+                                <div className="text-left">
+                                    <span className="block font-bold text-sm text-slate-200">+ 10 Horas Avulsas</span>
+                                    <span className="text-xs text-slate-500">Válido indefinidamente</span>
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-emerald-400 font-black block">R$ {publicPricing.yearly.toFixed(2).replace('.', ',')}/ano</span>
-                                    <span className="text-xs text-emerald-400">💰 Economize 2 meses!</span>
+                                    {isPlanActive('ADDON_10H') ? (
+                                        <span className="block font-bold text-white">R$ {getPlanPrice('ADDON_10H').toFixed(2).replace('.', ',')}</span>
+                                    ) : (
+                                        <span className="block font-bold text-slate-500 text-xs uppercase">Em Breve</span>
+                                    )}
+                                    {selectedPlan === 'ADDON_10H' && <span className="text-[10px] text-blue-400 font-bold uppercase">Selecionado</span>}
                                 </div>
-                            </div>
-                        </button>
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                <form onSubmit={handleCheckout} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-bold text-slate-300 mb-2">NOME NO CARTÃO</label>
                         <input
@@ -230,16 +358,16 @@ export const PaymentModal = ({
                                 setCardForm({ number: '', name: '', expiry: '', cvc: '', cpf: '', phone: '', postalCode: '', addressNumber: '', complement: '' });
                             }}
                             className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-colors"
-                            disabled={paymentLoading}
+                            disabled={loading}
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
-                            disabled={paymentLoading}
+                            disabled={loading}
                             className="flex-1 px-6 py-3 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-cyan-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
                         >
-                            {paymentLoading ? (
+                            {loading ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                     Processando...
@@ -249,7 +377,7 @@ export const PaymentModal = ({
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                     </svg>
-                                    Pagar R$ {selectedPlan === 'monthly' ? publicPricing.monthly.toFixed(2).replace('.', ',') : publicPricing.yearly.toFixed(2).replace('.', ',')}
+                                    Pagar R$ {getPlanPrice(selectedPlan).toFixed(2).replace('.', ',')}
                                 </>
                             )}
                         </button>
