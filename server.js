@@ -633,8 +633,8 @@ app.post('/api/recall/bot-join', async (req, res) => {
     try {
       const response = await axios.post(`${RECALL_BASE_URL}/bot`, {
         meeting_url: meetingUrl,
-        bot_name: botName || 'LOMAD Bot',
-        transcription_options: { provider: 'default' }
+        bot_name: botName || 'LOMAD Bot'
+        // transcription_options removed as it caused 400 error (not allowed in this region/plan)
       }, { headers: { Authorization: `Token ${apiKey}` } });
 
       logger.info(`[Instant Bot] Bot dispatched successfully: ${response.data.id}`);
