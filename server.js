@@ -682,6 +682,9 @@ app.post('/api/save-meeting-external', async (req, res) => {
       return res.status(400).json({ error: "Recall ID extraction failed" });
     }
 
+    // Extract variables for usage later (Fixes ReferenceError)
+    const { transcript, title, start_time, video_url } = data;
+
     // Find user by recall_id
     const { data: user, error: userError } = await supabase.from('profiles')
       .select('id, role, usage_minutes, plan_limit_minutes, extra_minutes')
