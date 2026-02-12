@@ -683,7 +683,28 @@ app.post('/api/save-meeting-external', async (req, res) => {
     }
 
     // Extract variables for usage later (Fixes ReferenceError)
-    const { transcript, title, start_time, video_url } = data;
+    let { transcript, title, start_time, video_url } = data;
+
+    // IF data is missing (common in 'bot.status_change' events), fetch from API
+    if (!transcript || !video_url) {
+      try {
+        logger.info(`[Webhook] Fetching full details for bot ${recall_id}...`);
+        const { data: botInfo } = await axios.get(`${RECALL_BASE_URL}/bot/${recall_id}`, {
+          headers: { Authorization: `Token ${process.env.RECALL_API_KEY}` }
+        });
+
+        // Update variables with fetched data
+        transcript = botInfo.transcript?.map(t => t.text).join('\n') || ''; // Transcript comes as array
+        title = title || botInfo.meeting_metadata?.title || 'Reunião Recall.ai';
+        start_time = start_time || botInfo.start_time;
+        video_url = video_url || botInfo.video_url;
+
+        logger.info(`[Webhook] Fetched details: Title='${title}', Video='${video_url?.substring(0, 20)}...'`);
+      } catch (fetchErr) {
+        logger.error(`[Webhook] Failed to fetch bot details: ${fetchErr.message}`);
+        // Continue anyway to at least save the entry
+      }
+    }
 
     // Find user by recall_id
     const { data: user, error: userError } = await supabase.from('profiles')
