@@ -616,6 +616,19 @@ app.post('/api/recall/bot-join', async (req, res) => {
       return res.status(500).json({ error: "Integração indisponível (Chave de API ausente). Reinicie o servidor." });
     }
 
+    // Verify Limits (PRO+ = 600 min/10h)
+    const { data: userProfile, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (profileError || !userProfile) throw new Error("Usuário não encontrado.");
+
+    const usage = userProfile.usage_minutes || 0;
+    const limit = userProfile.plan_limit_minutes || 600; // Default PRO limit
+    const extras = userProfile.extra_minutes || 0;
+    const totalLimit = limit + extras;
+
+    if (userProfile.role !== 'LOMAD_PLUS' && usage >= totalLimit) { // LOMAD+ is Unlimited
+      return res.status(403).json({ error: "Limite de horas atingido. Faça upgrade ou compre horas adicionais." });
+    }
+
     // Call Real Recall API
     try {
       const response = await axios.post(`${RECALL_BASE_URL}/bot`, {
@@ -645,7 +658,12 @@ app.post('/api/recall/bot-join', async (req, res) => {
 app.post('/api/save-meeting-external', async (req, res) => {
   // This endpoint receives data from our Bot (Recall) when a meeting ends
   try {
-    const { recall_id, transcript, title, start_time, video_url } = req.body;
+    // Extract data handling both raw and nested structures (Recall standard: { event: '...', data: { ... } })
+    const data = (req.body.event && req.body.data) ? req.body.data : req.body;
+
+    // Recall ID might be 'id' inside data object
+    const recall_id = data.recall_id || data.id;
+    const { transcript, title, start_time, video_url } = data;
 
     // Security Check: Verify if the request comes from trusted source
     // In production, Recall.ai sends a specific signature, but for simplicity/MVP we can use a shared secret
@@ -740,10 +758,22 @@ app.post('/api/webhooks/asaas', async (req, res) => {
           const newEndDate = new Date();
           newEndDate.setDate(newEndDate.getDate() + durationDays);
 
+          // Lógica de Renovação e Consumo de Horas Extras
+          // 1. Calcular se houve consumo de horas extras no ciclo anterior
+          const currentUsage = user.usage_minutes || 0;
+          const planLimit = user.plan_limit_minutes || 600; // Default PRO/PRO+ limit base
+          let currentExtra = user.extra_minutes || 0;
+
+          if (currentUsage > planLimit) {
+            const overage = currentUsage - planLimit;
+            currentExtra = Math.max(0, currentExtra - overage); // Descontar o que excedeu
+          }
+
           await supabase.from('profiles').update({
-            role: 'PRO',
             subscription_status: 'ACTIVE',
-            subscription_end: newEndDate.getTime()
+            subscription_end: newEndDate.getTime(),
+            usage_minutes: 0, // Reset mensal
+            extra_minutes: currentExtra // Atualizar saldo de extras
           }).eq('id', user.id);
 
           logger.info(`[Webhook] User ${user.email} renewed until ${newEndDate.toISOString()}`);
