@@ -638,6 +638,10 @@ app.post('/api/recall/bot-join', async (req, res) => {
       }, { headers: { Authorization: `Token ${apiKey}` } });
 
       logger.info(`[Instant Bot] Bot dispatched successfully: ${response.data.id}`);
+
+      // Save Bot ID to User Profile so Webhook can identify the owner
+      await supabase.from('profiles').update({ recall_id: response.data.id }).eq('id', userId);
+
       res.json({ success: true, message: "Bot enviado com sucesso! Ele entrará na reunião em instantes." });
 
     } catch (apiError) {
