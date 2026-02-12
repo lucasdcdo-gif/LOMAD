@@ -641,10 +641,11 @@ app.post('/api/recall/bot-join', async (req, res) => {
       res.json({ success: true, message: "Bot enviado com sucesso! Ele entrará na reunião em instantes." });
 
     } catch (apiError) {
-      const msg = apiError.response?.data?.message || apiError.response?.data?.error || apiError.message;
-      logger.error(`Recall API Error (Bot Join): ${JSON.stringify(apiError.response?.data || apiError.message)}`);
-      // Return specific message to help user debug (e.g. "Invalid URL")
-      return res.status(400).json({ error: `Recall Recusou: ${msg}` });
+      const errorData = apiError.response?.data;
+      const detailedMsg = errorData ? JSON.stringify(errorData) : apiError.message;
+      logger.error(`Recall API Error (Bot Join): ${detailedMsg}`);
+      // Return FULL details so user can see what's wrong (e.g. invalid_url)
+      return res.status(400).json({ error: `Recall Info: ${detailedMsg}` });
     }
 
   } catch (err) {
