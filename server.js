@@ -638,14 +638,13 @@ app.post('/api/recall/bot-join', async (req, res) => {
       }, { headers: { Authorization: `Token ${apiKey}` } });
 
       logger.info(`[Instant Bot] Bot dispatched successfully: ${response.data.id}`);
-
-      // Optional: Save pending meeting state to DB if needed
-
       res.json({ success: true, message: "Bot enviado com sucesso! Ele entrará na reunião em instantes." });
 
     } catch (apiError) {
-      logger.error("Recall API Error (Bot Join): " + (apiError.response?.data ? JSON.stringify(apiError.response.data) : apiError.message));
-      throw new Error("Erro ao enviar bot: Verifique se a URL é válida e suportada.");
+      const msg = apiError.response?.data?.message || apiError.response?.data?.error || apiError.message;
+      logger.error(`Recall API Error (Bot Join): ${JSON.stringify(apiError.response?.data || apiError.message)}`);
+      // Return specific message to help user debug (e.g. "Invalid URL")
+      return res.status(400).json({ error: `Recall Recusou: ${msg}` });
     }
 
   } catch (err) {
