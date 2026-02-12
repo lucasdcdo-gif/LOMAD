@@ -658,19 +658,24 @@ app.post('/api/recall/bot-join', async (req, res) => {
 app.post('/api/save-meeting-external', async (req, res) => {
   // This endpoint receives data from our Bot (Recall) when a meeting ends
   try {
-    // Extract data handling both raw and nested structures (Recall standard: { event: '...', data: { ... } })
+    // Extract data handling both raw and nested structures
     const data = (req.body.event && req.body.data) ? req.body.data : req.body;
 
-    // Recall ID might be 'id' inside data object
-    const recall_id = data.recall_id || data.id;
-    const { transcript, title, start_time, video_url } = data;
+    // Recall ID extraction (Handles various event formats: bot.done, analysis.done)
+    const recall_id = data.recall_id || data.id || data.bot?.id || data.bot_id;
 
-    // Security Check: Verify if the request comes from trusted source
-    // In production, Recall.ai sends a specific signature, but for simplicity/MVP we can use a shared secret
+    // Security Check
     const webhookSecret = req.headers['x-recall-secret'] || req.query.secret;
-    if (process.env.RECALL_WEBHOOK_SECRET && webhookSecret !== process.env.RECALL_WEBHOOK_SECRET) {
-      logger.warn(`[Recall Webhook] Tentativa não autorizada. IP: ${req.ip}`);
-      return res.status(401).json({ error: "Unauthorized" });
+    const envSecret = process.env.RECALL_WEBHOOK_SECRET;
+
+    if (envSecret && webhookSecret !== envSecret) {
+      logger.warn(`[Recall Webhook] 401 Unauthorized. Rec: '${webhookSecret?.substring(0, 3)}***' vs Env: '${envSecret?.substring(0, 3)}***'`);
+      return res.status(401).json({ error: "Unauthorized: Secret mismatch" });
+    }
+
+    if (!recall_id) {
+      logger.error(`[Recall Webhook] ID not found in payload: ${JSON.stringify(req.body).substring(0, 200)}`);
+      return res.status(400).json({ error: "Recall ID extraction failed" });
     }
 
     // Find user by recall_id
