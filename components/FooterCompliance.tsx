@@ -49,13 +49,13 @@ export const FooterCompliance: React.FC<FooterProps> = ({
                     <h4 className="text-white font-bold uppercase tracking-wider text-sm">Legal</h4>
                     <ul className="space-y-2 text-sm text-slate-400">
                         <li>
-                            <button onClick={onTermsClick} className="hover:text-cyan-400 transition-colors">Termos de Uso</button>
+                            <a href="/termouso" className="hover:text-cyan-400 transition-colors">Termos de Uso</a>
                         </li>
                         <li>
-                            <button onClick={onPrivacyClick} className="hover:text-cyan-400 transition-colors">Política de Privacidade</button>
+                            <a href="/privacidade" className="hover:text-cyan-400 transition-colors">Política de Privacidade</a>
                         </li>
                         <li>
-                            <button className="hover:text-cyan-400 transition-colors" onClick={() => window.open('https://www.gov.br/defesa/pt-br', '_blank')}>Código de Defesa do Consumidor</button>
+                            <a href="https://www.gov.br/defesa/pt-br" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">Código de Defesa do Consumidor</a>
                         </li>
                     </ul>
                 </div>
