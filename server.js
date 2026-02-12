@@ -702,15 +702,26 @@ app.post('/api/save-meeting-external', async (req, res) => {
         });
 
         // Update variables with fetched data
-        transcript = botInfo.transcript?.map(t => t.text).join('\n') || ''; // Transcript comes as array
+        const tArr = botInfo.transcript || [];
+        transcript = Array.isArray(tArr) ? tArr.map(t => t.text).join('\n') : '';
         title = title || botInfo.meeting_metadata?.title || 'Reunião Recall.ai';
         start_time = start_time || botInfo.start_time;
         video_url = video_url || botInfo.video_url;
 
-        logger.info(`[Webhook] Fetched details: Title='${title}', Video='${video_url?.substring(0, 20)}...'`);
+        const keyList = Object.keys(botInfo).join(',');
+        logger.info(`[Webhook] Fetched details: Title='${title}', Video='${video_url}', Keys=${keyList}`);
+
+        // RETRY STRATEGY: If transcript/video still missing, force retry (503)
+        // This handles cases where bot is 'done' but 'processing' isn't finished
+        if (!transcript && !video_url) {
+          const errorMsg = `Data incomplete (Processing). TranscriptLen=${transcript.length}, Video=${video_url}. Triggering Webhook Retry.`;
+          logger.warn(errorMsg);
+          return res.status(503).json({ error: errorMsg });
+        }
       } catch (fetchErr) {
         logger.error(`[Webhook] Failed to fetch bot details: ${fetchErr.message}`);
-        // Continue anyway to at least save the entry
+        // Return 503 to force Recall to retry sending the webhook later
+        return res.status(503).json({ error: "Processing not finished, retrying later" });
       }
     }
 
