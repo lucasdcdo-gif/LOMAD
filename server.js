@@ -663,7 +663,15 @@ app.post('/api/save-meeting-external', async (req, res) => {
   // This endpoint receives data from our Bot (Recall) when a meeting ends
   try {
     // Extract data handling both raw and nested structures
+    const eventType = req.body.event;
     const data = (req.body.event && req.body.data) ? req.body.data : req.body;
+
+    // Filter events: Only process when it's done or analysis is ready
+    // Ignore intermediate states which trigger webhooks but have no data yet
+    if (['meeting_metadata.processing', 'bot.joining', 'bot.joined'].includes(eventType)) {
+      logger.info(`[Webhook] Ignoring intermediate event: ${eventType}`);
+      return res.json({ success: true, message: "Ignored intermediate event" });
+    }
 
     // Recall ID extraction (Handles various event formats: bot.done, analysis.done)
     const recall_id = data.recall_id || data.id || data.bot?.id || data.bot_id;
