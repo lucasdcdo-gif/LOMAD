@@ -741,7 +741,11 @@ app.post('/api/save-meeting-external', async (req, res) => {
 
             try {
               const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-              const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+              // Use the model configured in Render (e.g. gemini-2.0-flash)
+              const modelName = process.env.GEMINI_CHAT_MODEL || "gemini-2.0-flash";
+              const model = genAI.getGenerativeModel({ model: modelName });
+
+              logger.info(`[Gemini] Using model: ${modelName}`);
 
               // 1. Download Video
               videoPath = path.join(os.tmpdir(), `${recall_id}.mp4`);
