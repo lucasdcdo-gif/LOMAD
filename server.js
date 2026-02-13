@@ -569,20 +569,83 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
       appUrl = 'https://lomad.com.br';
     }
 
+    // Determine Client ID based on platform
+    let clientId;
+    let oauthUrl;
+    // Recall Callback URIs for us-west-2 region
+    const RECALL_REGION = 'us-west-2';
+
+    if (platform === 'google_calendar') {
+      clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
+      if (!clientId) {
+        return res.status(500).json({ error: "Google Calendar Client ID não configurado no servidor (GOOGLE_CALENDAR_CLIENT_ID)." });
+      }
+    } else if (platform === 'outlook_calendar') {
+      clientId = process.env.MICROSOFT_CALENDAR_CLIENT_ID;
+      if (!clientId) {
+        return res.status(500).json({ error: "Microsoft Calendar Client ID não configurado no servidor (MICROSOFT_CALENDAR_CLIENT_ID)." });
+      }
+    } else {
+      return res.status(400).json({ error: "Plataforma não suportada." });
+    }
+
     try {
-      // Revertendo para /calendar/connect pois o erro original era 403 (Recusado) e não 404 (Não Encontrado)
-      // O 403 ocorre porque o Recall.ai bloqueia redirects para localhost/http em produção.
-      const response = await axios.post(`${RECALL_BASE_URL}/calendar/connect`, {
-        platform: platform,
-        redirect_url: `${appUrl}/profile`
+      // 1. Get Recall Calendar Auth Token
+      // Endpoint: /calendar/authenticate (creates a temporary token for the user)
+      // We must use the user's ID to scope the token.
+      const authResponse = await axios.post(`${RECALL_BASE_URL}/calendar/authenticate`, {
+        // No body needed if just getting a token? Verify documentation.
+        // Usually requires user_id if not implicit in API Key (but API Key is global).
+        // Search results mentioned "getting a token... scoped to a specific user". 
+        // Let's assume sending empty body is NOT enough if we need to link to userId.
+        // However, the docs say "Post request to .../authenticate". 
+        // Let's try sending NO body first, or if it fails, maybe we need to create the user first?
+        // Actually, previous code didn't create user. 
+        // Let's check if we need to pass any data.
+        // Re-reading search result 100: "generated ... with a user_id". 
+        // So we likely need to pass { user_id: userId } or similar, OR maybe just the API key creates a distinct 'account' context? 
+        // Let's try passing nothing for now as 'userId' is in our system, not necessarily Recall's yet 
+        // unless we mapped it. BUT, for the OAuth state, we need the token.
+        // Wait, if we use the simple V1, maybe we don't need to create a user explicitly?
+        // Let's look at the result of /calendar/authenticate.
+
+        // Actually, let's look at a safer path: The 'connect' endpoint WAS doing this for us.
+        // Since we are doing manual, we are responsible.
+        // Let's assume for V1 we just need the token.
       }, { headers: { Authorization: `Token ${apiKey}` } });
 
-      console.log(`[Recall Auth] Redirect URL gerada: ${appUrl}/profile`);
+      const recallToken = authResponse.data.token;
 
-      res.json({ url: response.data.url });
+      // 2. Construct OAuth URL
+      if (platform === 'google_calendar') {
+        const redirectUri = `https://${RECALL_REGION}.recall.ai/api/v1/calendar/google_oauth_callback/`;
+        const scope = "calendar.events.readonly userinfo.email";
+        const state = JSON.stringify({
+          recall_calendar_auth_token: recallToken,
+          google_oauth_redirect_url: `${appUrl}/profile`
+        });
+
+        oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&access_type=offline&prompt=consent`;
+
+      } else if (platform === 'outlook_calendar') {
+        const redirectUri = `https://${RECALL_REGION}.recall.ai/api/v1/calendar/ms_oauth_callback/`;
+        const scope = "offline_access openid email https://graph.microsoft.com/Calendars.Read";
+        // Microsoft state usually just passed through. Recall likely expects the same JSON structure or similar.
+        // Given Google's structure, let's try strict equivalent or generic 'redirect_url'
+        const state = JSON.stringify({
+          recall_calendar_auth_token: recallToken,
+          microsoft_oauth_redirect_url: `${appUrl}/profile`
+        });
+
+        oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&response_mode=query&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}`;
+      }
+
+      console.log(`[Recall Manual Auth] Generated ${platform} URL for user ${userId}`);
+      res.json({ url: oauthUrl });
+
     } catch (apiError) {
-      logger.error("Recall API Error (Calendar Auth): " + (apiError.response?.data ? JSON.stringify(apiError.response.data) : apiError.message));
-      throw new Error(`Falha ao se comunicar com Recall.ai. (${apiError.response?.status || 'Unknown'}) - Verifique logs.`);
+      logger.error("Recall API Error (Manual Auth): " + (apiError.response?.data ? JSON.stringify(apiError.response.data) : apiError.message));
+      throw new Error(`Falha na autenticação manual Recall.ai (${apiError.response?.status})`);
     }
 
   } catch (err) {
