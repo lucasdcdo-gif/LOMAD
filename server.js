@@ -731,14 +731,17 @@ app.post('/api/save-meeting-external', async (req, res) => {
 
           // Async processing (Fire and Forget to avoid timeout)
           // We catch errors inside to log them
+          // Async processing (Fire and Forget to avoid timeout)
+          // We catch errors inside to log them
           (async () => {
-            try {
-              const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);
-              const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-              const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            // specific declarations outside try/catch for visibility in finally
+            const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);
+            var videoPath = null;
+            var uploadResult = null;
 
-              var videoPath = null;
-              var uploadResult = null;
+            try {
+              const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+              const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
               // 1. Download Video
               videoPath = path.join(os.tmpdir(), `${recall_id}.mp4`);
