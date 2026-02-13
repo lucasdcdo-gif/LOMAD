@@ -633,7 +633,11 @@ app.post('/api/recall/bot-join', async (req, res) => {
     try {
       const response = await axios.post(`${RECALL_BASE_URL}/bot`, {
         meeting_url: meetingUrl,
-        bot_name: botName || 'LOMAD Bot'
+        bot_name: botName || 'LOMAD Bot',
+        // Send User ID in metadata to identify owner later in Webhook anywhere
+        metadata: {
+          user_id: userId
+        }
         // transcription_options removed as it caused 400 error (not allowed in this region/plan)
       }, { headers: { Authorization: `Token ${apiKey}` } });
 
@@ -725,13 +729,28 @@ app.post('/api/save-meeting-external', async (req, res) => {
       }
     }
 
-    // Find user by recall_id
-    const { data: user, error: userError } = await supabase.from('profiles')
-      .select('id, role, usage_minutes, plan_limit_minutes, extra_minutes')
-      .eq('recall_id', recall_id)
-      .single();
+    // 1. Try to get User ID from Bot Metadata (Robust method)
+    // We didn't save metadata in v1, but we added it now.
+    let userId = data.metadata?.user_id;
+    let user = null;
 
-    if (userError || !user) throw new Error("Usuário não identificado para esta gravação.");
+    if (userId) {
+      // Fetch user by ID directly
+      const { data: u, error: uErr } = await supabase.from('profiles')
+        .select('id, role, usage_minutes, plan_limit_minutes, extra_minutes').eq('id', userId).single();
+      if (!uErr) user = u;
+    }
+
+    // 2. Fallback: Find user by recall_id (Legacy method)
+    if (!user) {
+      const { data: u, error: uErr } = await supabase.from('profiles')
+        .select('id, role, usage_minutes, plan_limit_minutes, extra_minutes')
+        .eq('recall_id', recall_id)
+        .single();
+      if (!uErr) user = u;
+    }
+
+    if (!user) throw new Error("Usuário não identificado para esta gravação.");
 
     // CHECK LIMITS (Post-recording check? Or Pre? Recall usually joins first).
     // If we want to block entrance, we need a webhook on "bot_join_attempt".
@@ -741,26 +760,34 @@ app.post('/api/save-meeting-external', async (req, res) => {
     // Let's assume we get 'duration_seconds' in body
     const durationMinutes = Math.ceil((req.body.duration_seconds || 60) / 60);
 
-    const newUsage = (user.usage_minutes || 0) + durationMinutes;
+    // Only deduct minutes if this is a NEW meeting (inserted). 
+    // But since we do upsert, we need to be careful not to deduct twice.
+    // For now, let's assume one webhook per meeting = one deduction.
+    // Ideally, we check if meeting exists first.
 
-    // Insert Meeting
-    const { error: insertError } = await supabase.from('meetings').insert([{
+    // Check if meeting exists
+    const { data: existingMeeting } = await supabase.from('meetings').select('id, recall_id').eq('recall_id', recall_id).single();
+
+    if (!existingMeeting) {
+      // Only update usage if it's a new meeting
+      const newUsage = (user.usage_minutes || 0) + durationMinutes;
+      await supabase.from('profiles').update({ usage_minutes: newUsage }).eq('id', user.id);
+    }
+
+    // Upsert Meeting (Update if recall_id exists, Insert if not)
+    const { error: upsertError } = await supabase.from('meetings').upsert({
+      recall_id: recall_id, // Unique Key
       user_id: user.id,
       title: title || 'Reunião Recall.ai',
       transcriptions: [{ role: 'model', text: transcript || '', timestamp: Date.now() }],
       summary: 'Processando...',
       timestamp: new Date(start_time).getTime(),
       notes: `Gravação Automática via Bot. Video: ${video_url}`
-    }]);
+    }, { onConflict: 'recall_id' });
 
-    if (insertError) throw insertError;
+    if (upsertError) throw upsertError;
 
-    // Update Usage
-    await supabase.from('profiles').update({
-      usage_minutes: newUsage
-    }).eq('id', user.id);
-
-    // If limits exceeded? We might notify via specific logic later.
+    // Limits check/notify if needed
 
     res.json({ success: true });
   } catch (err) {
