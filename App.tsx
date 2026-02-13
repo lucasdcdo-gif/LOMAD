@@ -393,7 +393,7 @@ const App: React.FC = () => {
       if (!silent) setAuthLoading(true);
 
       // Timeout helper
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Database Timeout")), 30000));
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Database Timeout")), 60000));
       const queryPromise = supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
 
       const { data, error: profileError } = await Promise.race([queryPromise, timeoutPromise]) as any;

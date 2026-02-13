@@ -566,7 +566,8 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
     const appUrl = process.env.VITE_APP_URL || 'http://lvh.me:3000';
 
     try {
-      const response = await axios.post(`${RECALL_BASE_URL}/calendar/connect`, {
+      // Endpoint correto para obter URL de OAuth: /calendar/auth
+      const response = await axios.post(`${RECALL_BASE_URL}/calendar/auth`, {
         platform: platform,
         redirect_url: `${appUrl}/profile`
       }, { headers: { Authorization: `Token ${apiKey}` } });
@@ -574,7 +575,8 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
       res.json({ url: response.data.url });
     } catch (apiError) {
       logger.error("Recall API Error (Calendar Auth): " + (apiError.response?.data ? JSON.stringify(apiError.response.data) : apiError.message));
-      throw new Error("Falha ao se comunicar com Recall.ai. Verifique as credenciais no painel.");
+      // Se falhar, tentamos o endpoint antigo como fallback ou apenas logamos
+      throw new Error(`Falha ao se comunicar com Recall.ai. (${apiError.response?.status})`);
     }
 
   } catch (err) {
