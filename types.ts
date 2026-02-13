@@ -52,6 +52,7 @@ export interface Meeting {
   transcriptions: { text: string } | TranscriptionEntry[]; // Suporta o novo formato consolidado
   summary: string;
   notes?: string;
+  video_url?: string;
   timestamp: number;
   expires_at: number;
   pinned_response?: string;

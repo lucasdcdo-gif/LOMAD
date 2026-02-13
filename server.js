@@ -700,6 +700,8 @@ app.post('/api/save-meeting-external', async (req, res) => {
     let { transcript, title, start_time, video_url } = data;
 
     // IF data is missing (common in 'bot.status_change' events), fetch from API
+    let participantsText = '';
+
     if (!transcript || !video_url) {
       try {
         logger.info(`[Webhook] Fetching full details for bot ${recall_id}...`);
@@ -711,7 +713,8 @@ app.post('/api/save-meeting-external', async (req, res) => {
         const tArr = botInfo.transcript || [];
         transcript = Array.isArray(tArr) ? tArr.map(t => t.text).join('\n') : '';
         title = title || botInfo.meeting_metadata?.title || 'Reunião Recall.ai';
-        start_time = start_time || botInfo.start_time;
+        // Date Fix: Prioritize botInfo.start_time, fallback to metadata or current time
+        start_time = botInfo.start_time || botInfo.meeting_metadata?.start_time || new Date().toISOString();
 
         // Try extracting video from multiple possible locations
         // 1. Root level
@@ -721,16 +724,38 @@ app.post('/api/save-meeting-external', async (req, res) => {
           video_url = botInfo.recordings[0].media_shortcuts?.video_mixed?.data?.download_url;
         }
 
+        // PARTICIPANTS EXTRACTION
+        // Fetch participant events if available
+        const participantsUrl = botInfo.participant_events_download_url;
+        if (participantsUrl) {
+          try {
+            logger.info(`[Webhook] Fetching participants from ${participantsUrl}...`);
+            const { data: participantsData } = await axios.get(participantsUrl);
+            // Extract unique names
+            const uniqueNames = new Set();
+            if (Array.isArray(participantsData)) {
+              participantsData.forEach(p => {
+                if (p.participant?.name) uniqueNames.add(p.participant.name);
+              });
+            }
+
+            if (uniqueNames.size > 0) {
+              participantsText = `\n\n**Participantes Identificados:**\n${Array.from(uniqueNames).map(n => `- ${n}`).join('\n')}`;
+              logger.info(`[Webhook] Extracted ${uniqueNames.size} participants.`);
+            }
+          } catch (pErr) {
+            logger.warn(`[Webhook] Failed to fetch participants: ${pErr.message}`);
+          }
+        }
+
         const keyList = Object.keys(botInfo).join(',');
-        logger.info(`[Webhook] Fetched details: Title='${title}', Video='${video_url}', Keys=${keyList}`);
+        logger.info(`[Webhook] Fetched details: Title='${title}', Video='${video_url}', Time='${start_time}', Keys=${keyList}`);
 
         // RETRY STRATEGY / GEMINI FALLBACK
         // If transcript missing but VIDEO exists, use Gemini to transcribe!
         if (!transcript && video_url) {
           logger.info(`[Webhook] Transcript missing. Attempting Gemini Video Transcription for ${video_url}...`);
 
-          // Async processing (Fire and Forget to avoid timeout)
-          // We catch errors inside to log them
           // Async processing (Fire and Forget to avoid timeout)
           // We catch errors inside to log them
           (async () => {
@@ -799,10 +824,14 @@ app.post('/api/save-meeting-external', async (req, res) => {
               logger.info(`[Gemini] Transcription generated (${aiText.length} chars). Updating DB...`);
 
               // 4. Update Database
+              const baseNotes = `Gravação Automática via Bot (Fallback Gemini). Video: ${video_url}`;
+              const finalNotes = baseNotes + participantsText; // Append participants
+
               const { data: updateData, error: updateError } = await supabase.from('meetings').update({
                 transcriptions: [{ role: 'model', text: aiText, timestamp: Date.now() }],
                 summary: 'Transcrito via Gemini AI (Backup)',
-                notes: `Gravação Automática via Bot (Fallback Gemini). Video: ${video_url}`
+                notes: finalNotes,
+                video_url: video_url // Persist video URL
               }).eq('recall_id', recall_id).select();
 
               if (updateError) {
@@ -885,6 +914,15 @@ app.post('/api/save-meeting-external', async (req, res) => {
       await supabase.from('profiles').update({ usage_minutes: newUsage }).eq('id', user.id);
     }
 
+    // Prepare Notes
+    const baseNotes = `Gravação Automática via Bot. Video: ${video_url}`;
+    const finalNotes = baseNotes + participantsText; // Append participants if any
+
+    // Validate Start Time (1969 Fix)
+    const validTimestamp = (start_time && new Date(start_time).getFullYear() > 1970)
+      ? new Date(start_time).getTime()
+      : Date.now();
+
     // Upsert Meeting (Update if recall_id exists, Insert if not)
     const { error: upsertError } = await supabase.from('meetings').upsert({
       recall_id: recall_id, // Unique Key
@@ -892,8 +930,9 @@ app.post('/api/save-meeting-external', async (req, res) => {
       title: title || 'Reunião Recall.ai',
       transcriptions: [{ role: 'model', text: transcript || '', timestamp: Date.now() }],
       summary: 'Processando...',
-      timestamp: new Date(start_time).getTime(),
-      notes: `Gravação Automática via Bot. Video: ${video_url}`
+      timestamp: validTimestamp,
+      notes: finalNotes,
+      video_url: video_url // Save video URL
     }, { onConflict: 'recall_id' });
 
     if (upsertError) throw upsertError;
