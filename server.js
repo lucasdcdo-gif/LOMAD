@@ -768,7 +768,21 @@ app.post('/api/save-meeting-external', async (req, res) => {
                 displayName: `Meeting ${recall_id}`,
               });
 
-              logger.info(`[Gemini] Video uploaded: ${uploadResult.file.uri}`);
+              logger.info(`[Gemini] Video uploaded: ${uploadResult.file.uri} (State: ${uploadResult.file.state})`);
+
+              // 2.5 Wait for processing to be ACTIVE
+              let fileState = await fileManager.getFile(uploadResult.file.name);
+              while (fileState.state === "PROCESSING") {
+                logger.info(`[Gemini] Processing video...`);
+                await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10s
+                fileState = await fileManager.getFile(uploadResult.file.name);
+              }
+
+              if (fileState.state === "FAILED") {
+                throw new Error("[Gemini] Video processing failed on Google servers.");
+              }
+
+              logger.info(`[Gemini] Video Active. Generating content...`);
 
               // 3. Generate Content
               const result = await model.generateContent([
