@@ -749,7 +749,7 @@ app.post('/api/save-meeting-external', async (req, res) => {
               });
 
               // 2. Upload to Gemini
-              const uploadResult = await fileManager.uploadFile(videoPath, {
+              uploadResult = await fileManager.uploadFile(videoPath, {
                 mimeType: "video/mp4",
                 displayName: `Meeting ${recall_id}`,
               });
