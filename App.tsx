@@ -313,6 +313,39 @@ const App: React.FC = () => {
     window.location.href = `/api/auth/google/calendar?userId=${user.id}`;
   };
 
+  const handleCalendarDisconnect = async () => {
+    if (!user || !user.calendarConnected) return;
+
+    if (!window.confirm("Tem certeza que deseja desconectar sua agenda? O bot não entrará mais automaticamente nas reuniões.")) {
+      return;
+    }
+
+    try {
+      setAuthLoading(true);
+
+      const response = await fetch('/api/recall/calendar-disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id })
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha ao desconectar agenda');
+      }
+
+      setSuccessMessage('Agenda desconectada com sucesso.');
+      // Update local state optimistic + refresh
+      setUser(prev => prev ? ({ ...prev, calendarConnected: false }) : null);
+      fetchProfile(user.id, user.email, true);
+
+    } catch (err: any) {
+      console.error("Disconnect error:", err);
+      setError("Erro ao desconectar agenda: " + (err.message || 'Erro desconhecido'));
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
 
 
   const displayStreamRef = useRef<MediaStream | null>(null);
@@ -572,13 +605,20 @@ const App: React.FC = () => {
 
   // Check for Calendar Connection Success
   // Check for Calendar Connection Success
+  // Check for Calendar Connection Success
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('calendar_connected') === 'true') {
+    // Wait for Auth to finish before processing URL params to avoid race conditions
+    if (authLoading) return;
 
-      // Call Sync Endpoint
+    const params = new URLSearchParams(window.location.search);
+    const connectedParam = params.get('calendar_connected');
+    const errorParam = params.get('error');
+
+    if (connectedParam === 'true') {
+      // Only proceed if we have a user
       if (user?.id) {
         setAuthLoading(true); // Show loading UI
+
         fetch('/api/recall/sync-calendar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -589,6 +629,8 @@ const App: React.FC = () => {
               setSuccessMessage('🎉 Agenda conectada e sincronizada com sucesso!');
               // Pass user ID and Email to refresh profile silently
               fetchProfile(user.id, user.email, true);
+              // Clean URL only on success
+              window.history.replaceState(null, '', '/profile');
             } else {
               setError('Conexão realizada, mas não detectamos a agenda ativa. Tente recarregar.');
             }
@@ -599,22 +641,13 @@ const App: React.FC = () => {
           })
           .finally(() => {
             setAuthLoading(false);
-            window.history.replaceState(null, '', '/profile');
           });
-      } else {
-        // Fallback if user is null (should normally have session)
-        // Just show message and let user reload
-        setSuccessMessage('🎉 Agenda conectada! Recarregue a página para atualizar o status.');
-        window.history.replaceState(null, '', '/profile');
       }
-
-    }
-    if (params.get('error') === 'calendar_auth_failed') {
+    } else if (errorParam === 'calendar_auth_failed') {
       setError('Falha ao conectar agenda. Tente novamente.');
-      // Clean URL
       window.history.replaceState(null, '', '/profile');
     }
-  }, [user]); // Add user dependency to retry if user loads late
+  }, [authLoading, user]); // Depend on authLoading to ensure we wait for init
 
   // Reactive Redirect: If user is authenticated, force MAIN view
   // This bypasses any hanging promises in login/register forms
@@ -2339,9 +2372,17 @@ const App: React.FC = () => {
                   <p className="text-slate-400 text-sm mb-6 relative z-10">Conecte sua agenda para o bot entrar automaticamente nas reuniões.</p>
 
                   {user.calendarConnected ? (
-                    <div className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-green-500/20 border border-green-500/30 text-green-400 font-bold text-sm">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      Conectado
+                    <div className="flex flex-col gap-3">
+                      <div className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-green-500/20 border border-green-500/30 text-green-400 font-bold text-sm w-fit">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        Conectado
+                      </div>
+                      <button
+                        onClick={handleCalendarDisconnect}
+                        className="px-4 py-2 rounded-xl border border-red-500/30 text-red-400 font-bold text-xs uppercase tracking-wide hover:bg-red-500/10 transition-colors flex items-center gap-2 w-fit"
+                      >
+                        Desconectar
+                      </button>
                     </div>
                   ) : (
                     <button
