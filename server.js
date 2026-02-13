@@ -674,7 +674,7 @@ app.post('/api/save-meeting-external', async (req, res) => {
 
     // Filter events: Only process when it's done or analysis is ready
     // Ignore intermediate states which trigger webhooks but have no data yet
-    if (['meeting_metadata.processing', 'bot.joining', 'bot.joined'].includes(eventType)) {
+    if (['meeting_metadata.processing', 'bot.joining'].includes(eventType)) {
       logger.info(`[Webhook] Ignoring intermediate event: ${eventType}`);
       return res.json({ success: true, message: "Ignored intermediate event" });
     }
@@ -695,6 +695,45 @@ app.post('/api/save-meeting-external', async (req, res) => {
       logger.error(`[Recall Webhook] ID not found in payload: ${JSON.stringify(req.body).substring(0, 200)}`);
       return res.status(400).json({ error: "Recall ID extraction failed" });
     }
+
+    // --- NEW: Welcome Message on Bot Join ---
+    if (eventType === 'bot.joined') {
+      logger.info(`[Webhook] Bot joined! Sending welcome message | ID: ${recall_id}`);
+      try {
+        // 1. Identify User
+        let userName = "Usuário LOMAD";
+        // Metadata might be at top level data or inside data.bot depending on event structure
+        let userId = data.metadata?.user_id || data.bot?.metadata?.user_id;
+
+        if (userId) {
+          const { data: u } = await supabase.from('profiles').select('name').eq('id', userId).single();
+          if (u?.name) userName = u.name;
+        } else {
+          // Fallback: look up by recall_id in profiles
+          const { data: u } = await supabase.from('profiles').select('name').eq('recall_id', recall_id).single();
+          if (u?.name) userName = u.name;
+        }
+
+        // 2. Compose Message
+        const botName = data.bot_name || data.name || "LOMAD.IA";
+        const message = `Olá! Sou o assistente virtual de transcrição ${botName} e estou gravando esta reunião para gerar sua ata automática. 🤖📝\n\nA responsabilidade pelo uso desta gravação é de ${userName}.`;
+
+        // 3. Send to Chat
+        await axios.post(`${RECALL_BASE_URL}/bot/${recall_id}/send_chat_message`, {
+          message: message
+        }, {
+          headers: { Authorization: `Token ${process.env.RECALL_API_KEY}` }
+        });
+
+        logger.info(`[Webhook] Welcome message sent for ${recall_id}`);
+        return res.json({ success: true, message: "Welcome message sent" });
+
+      } catch (chatErr) {
+        logger.error(`[Webhook] Failed to send welcome message: ${chatErr.message}`);
+        return res.json({ success: true, message: "Welcome message failed but acknowledged" });
+      }
+    }
+    // ----------------------------------------
 
     // Extract variables for usage later (Fixes ReferenceError)
     let { transcript, title, start_time, video_url } = data;
