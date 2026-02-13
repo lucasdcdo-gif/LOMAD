@@ -1675,7 +1675,17 @@ const App: React.FC = () => {
                 <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight mb-3">Histórico de Reuniões</h1>
                 <p className="text-slate-400 text-lg">Acesse suas transcrições e conversas anteriores</p>
               </div>
-              <button onClick={() => setView('MAIN')} className="px-6 py-3 glass rounded-xl text-white font-bold text-sm hover:bg-white/10 transition-all hover:scale-105">Voltar</button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => user?.id && loadMeetings(user.id)}
+                  className="px-6 py-3 glass rounded-xl text-cyan-400 font-bold text-sm hover:bg-cyan-500/10 transition-all hover:scale-105 flex items-center gap-2"
+                  title="Recarregar lista de reuniões"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                  Atualizar
+                </button>
+                <button onClick={() => setView('MAIN')} className="px-6 py-3 glass rounded-xl text-white font-bold text-sm hover:bg-white/10 transition-all hover:scale-105">Voltar</button>
+              </div>
             </div>
 
             {/* Search Bar */}
