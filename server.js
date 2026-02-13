@@ -730,8 +730,11 @@ app.post('/api/save-meeting-external', async (req, res) => {
               const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
               const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+              var videoPath = null;
+              var uploadResult = null;
+
               // 1. Download Video
-              const videoPath = path.join(os.tmpdir(), `${recall_id}.mp4`);
+              videoPath = path.join(os.tmpdir(), `${recall_id}.mp4`);
               const writer = fs.createWriteStream(videoPath);
               const response = await axios({
                 url: video_url,
@@ -774,12 +777,16 @@ app.post('/api/save-meeting-external', async (req, res) => {
                 notes: `Gravação Automática via Bot (Fallback Gemini). Video: ${video_url}`
               }).eq('recall_id', recall_id);
 
-              // Cleanup
-              fs.unlinkSync(videoPath);
-              await fileManager.deleteFile(uploadResult.file.name);
-
             } catch (geminiErr) {
               logger.error(`[Gemini Fallback Error] ${geminiErr.message}`);
+            } finally {
+              // Cleanup (Always run)
+              try {
+                if (videoPath && fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
+                if (uploadResult && uploadResult.file) await fileManager.deleteFile(uploadResult.file.name).catch(() => { });
+              } catch (cleanupErr) {
+                logger.warn(`[Gemini Cleanup Warning] ${cleanupErr.message}`);
+              }
             }
           })();
 
