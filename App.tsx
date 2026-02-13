@@ -346,6 +346,31 @@ const App: React.FC = () => {
     }
   };
 
+  const handleManualSync = async () => {
+    if (!user) return;
+    setAuthLoading(true);
+    try {
+      const res = await fetch('/api/recall/sync-calendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id })
+      });
+      const data = await res.json();
+      if (data.connected) {
+        setSuccessMessage('Status sincronizado: Conectado!');
+        fetchProfile(user.id, user.email, true);
+      } else {
+        setError('Nenhuma agenda conectada encontrada no Recall.');
+      }
+    } catch (e: any) {
+      setError('Erro ao verificar status: ' + e.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+
+
 
 
   const displayStreamRef = useRef<MediaStream | null>(null);
@@ -619,29 +644,30 @@ const App: React.FC = () => {
       if (user?.id) {
         setAuthLoading(true); // Show loading UI
 
-        fetch('/api/recall/sync-calendar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id })
-        }).then(res => res.json())
-          .then(data => {
-            if (data.connected) {
-              setSuccessMessage('🎉 Agenda conectada e sincronizada com sucesso!');
-              // Pass user ID and Email to refresh profile silently
-              fetchProfile(user.id, user.email, true);
-              // Clean URL only on success
-              window.history.replaceState(null, '', '/profile');
-            } else {
-              setError('Conexão realizada, mas não detectamos a agenda ativa. Tente recarregar.');
-            }
-          })
-          .catch(err => {
-            console.error("Sync error:", err);
-            setError('Erro ao sincronizar status da agenda.');
-          })
-          .finally(() => {
-            setAuthLoading(false);
-          });
+        // Wait 2 seconds to allow Recall to process connection
+        setTimeout(() => {
+          fetch('/api/recall/sync-calendar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id })
+          }).then(res => res.json())
+            .then(data => {
+              if (data.connected) {
+                setSuccessMessage('🎉 Agenda conectada e sincronizada com sucesso!');
+                fetchProfile(user.id, user.email, true);
+                window.history.replaceState(null, '', '/profile');
+              } else {
+                setError('Ainda detectando conexão... Se não atualizar em breve, use o botão "Verificar Conexão".');
+              }
+            })
+            .catch(err => {
+              console.error("Sync error:", err);
+              setError('Erro ao sincronizar. Tente novamente.');
+            })
+            .finally(() => {
+              setAuthLoading(false);
+            });
+        }, 2000);
       }
     } else if (errorParam === 'calendar_auth_failed') {
       setError('Falha ao conectar agenda. Tente novamente.');
@@ -2392,6 +2418,10 @@ const App: React.FC = () => {
                       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" /></svg>
                       Conectar Agora
                     </button>
+                  )}
+
+                  {!user.calendarConnected && (
+                    <button onClick={handleManualSync} className="absolute bottom-4 right-4 text-[10px] text-slate-500 hover:text-white underline z-20">Verificar status</button>
                   )}
                 </div>
 

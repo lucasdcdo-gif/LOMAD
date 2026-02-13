@@ -480,6 +480,9 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
       }
     } catch (recallErr) {
       console.error("[Sync Calendar] Recall API Error:", recallErr.message);
+      if (recallErr.response) {
+        console.error("[Sync Calendar] Recall Response:", JSON.stringify(recallErr.response.data));
+      }
     }
 
     // 3. Update Database
@@ -833,20 +836,57 @@ app.post('/api/save-meeting-external', async (req, res) => {
         const message = `Olá! Sou o assistente virtual de transcrição ${botName} e estou gravando esta reunião para gerar sua ata automática. 🤖📝\n\nA responsabilidade pelo uso desta gravação é de ${userName}.\nConheça a LOMAD: https://lomad.com.br/IA`;
 
         // 3. Send to Chat
-        await axios.post(`${RECALL_BASE_URL}/bot/${recall_id}/send_chat_message`, {
-          message: message
-        }, {
-          headers: { Authorization: `Token ${process.env.RECALL_API_KEY}` }
-        });
+        try {
+          await axios.post(`${RECALL_BASE_URL}/bot/${recall_id}/send_chat_message`, {
+            message: message
+          }, {
+            headers: { Authorization: `Token ${process.env.RECALL_API_KEY}` }
+          });
+        } catch (chatErr) {
+          logger.error(`[Webhook] Failed to send welcome message: ${chatErr.message}`);
+          // Continue flow
+        }
 
         logger.info(`[Webhook] Welcome message sent for ${recall_id}`);
         return res.json({ success: true, message: "Welcome message sent" });
 
-      } catch (chatErr) {
-        logger.error(`[Webhook] Failed to send welcome message: ${chatErr.message}`);
-        return res.json({ success: true, message: "Welcome message failed but acknowledged" });
+      } catch (err) {
+        logger.error(`[Webhook] Bot Join Error: ${err.message}`);
+        return res.status(500).json({ error: "Internal Error" });
       }
     }
+
+    // --- NEW: Calendar Sync Webhook ---
+    if (eventType === 'calendar.update' || eventType === 'calendar.connect') {
+      const calendarId = data.id;
+      const status = data.status;
+      const platform = data.platform;
+      // data.metadata might contain user_id if we passed it during auth? 
+      // Recall auth endpoint accepts 'user_id', so it associates the calendar with that user_id in Recall.
+      // The payload should contain 'user_id' in the calendar object?
+      // According to docs: calendar object has `user_id` field if set.
+
+      const userId = data.user_id; // "2a7a47c6-..."
+
+      logger.info(`[Webhook] Calendar Update: ${status} for user ${userId}`);
+
+      if (userId && status === 'connected') {
+        const { error } = await supabase.from('profiles').update({
+          calendar_connected: true
+        }).eq('id', userId);
+
+        if (error) logger.error(`[Webhook] Failed to update profile for user ${userId}: ${error.message}`);
+        else logger.info(`[Webhook] Profile updated: Calendar Connected for ${userId}`);
+      } else if (userId && (status === 'disconnected' || status === 'error')) {
+        const { error } = await supabase.from('profiles').update({
+          calendar_connected: false
+        }).eq('id', userId);
+        if (error) logger.error(`[Webhook] Failed to update profile (disconnect) for user ${userId}: ${error.message}`);
+      }
+
+      return res.json({ success: true, message: "Calendar status updated" });
+    }
+    // ----------------------------------------
     // ----------------------------------------
 
     // Extract variables for usage later (Fixes ReferenceError)
