@@ -6,9 +6,11 @@ import axios from 'axios';
 import * as dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleAIFileManager } from '@google/generative-ai/server';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import os from 'os';
 import logger, { logRequest } from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -715,8 +717,76 @@ app.post('/api/save-meeting-external', async (req, res) => {
         const keyList = Object.keys(botInfo).join(',');
         logger.info(`[Webhook] Fetched details: Title='${title}', Video='${video_url}', Keys=${keyList}`);
 
-        // RETRY STRATEGY: If transcript/video still missing, force retry (503)
-        // This handles cases where bot is 'done' but 'processing' isn't finished
+        // RETRY STRATEGY / GEMINI FALLBACK
+        // If transcript missing but VIDEO exists, use Gemini to transcribe!
+        if (!transcript && video_url) {
+          logger.info(`[Webhook] Transcript missing. Attempting Gemini Video Transcription for ${video_url}...`);
+
+          // Async processing (Fire and Forget to avoid timeout)
+          // We catch errors inside to log them
+          (async () => {
+            try {
+              const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);
+              const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+              const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+              // 1. Download Video
+              const videoPath = path.join(os.tmpdir(), `${recall_id}.mp4`);
+              const writer = fs.createWriteStream(videoPath);
+              const response = await axios({
+                url: video_url,
+                method: 'GET',
+                responseType: 'stream'
+              });
+              response.data.pipe(writer);
+
+              await new Promise((resolve, reject) => {
+                writer.on('finish', resolve);
+                writer.on('error', reject);
+              });
+
+              // 2. Upload to Gemini
+              const uploadResult = await fileManager.uploadFile(videoPath, {
+                mimeType: "video/mp4",
+                displayName: `Meeting ${recall_id}`,
+              });
+
+              logger.info(`[Gemini] Video uploaded: ${uploadResult.file.uri}`);
+
+              // 3. Generate Content
+              const result = await model.generateContent([
+                "Transcreva esta reunião detalhadamente, identificando os falantes se possível. Em seguida, crie um resumo executivo.",
+                {
+                  fileData: {
+                    fileUri: uploadResult.file.uri,
+                    mimeType: uploadResult.file.mimeType,
+                  },
+                },
+              ]);
+
+              const aiText = result.response.text();
+              logger.info(`[Gemini] Transcription generated (${aiText.length} chars). Updating DB...`);
+
+              // 4. Update Database
+              await supabase.from('meetings').update({
+                transcriptions: [{ role: 'model', text: aiText, timestamp: Date.now() }],
+                summary: 'Transcrito via Gemini AI (Backup)',
+                notes: `Gravação Automática via Bot (Fallback Gemini). Video: ${video_url}`
+              }).eq('recall_id', recall_id);
+
+              // Cleanup
+              fs.unlinkSync(videoPath);
+              await fileManager.deleteFile(uploadResult.file.name);
+
+            } catch (geminiErr) {
+              logger.error(`[Gemini Fallback Error] ${geminiErr.message}`);
+            }
+          })();
+
+          // Return success immediately to Recall (we are handling it async)
+          return res.json({ success: true, message: "Processing with Gemini Fallback" });
+        }
+
         if (!transcript && !video_url) {
           const errorMsg = `Data incomplete (Processing). TranscriptLen=${transcript.length}, Video=${video_url}. Triggering Webhook Retry.`;
           logger.warn(errorMsg);
