@@ -40,6 +40,8 @@ export interface User {
   botName?: string;
   recallId?: string;
   calendarConnected?: boolean;
+  googleCalendarConnected?: boolean;
+  outlookCalendarConnected?: boolean;
   planLimitMinutes?: number; // e.g. 600
   usageMinutes?: number;
   extraMinutes?: number;

@@ -309,14 +309,14 @@ const App: React.FC = () => {
 
   const handleCalendarConnect = (provider: string) => {
     if (!user) return;
-    // Redirect to backend auth endpoint
-    window.location.href = `/api/auth/google/calendar?userId=${user.id}`;
+    // Redirect to backend auth endpoint with platform param
+    window.location.href = `/api/recall/calendar-auth?userId=${user.id}&platform=${provider}`;
   };
 
-  const handleCalendarDisconnect = async () => {
-    if (!user || !user.calendarConnected) return;
+  const handleCalendarDisconnect = async (platform: string) => {
+    if (!user) return;
 
-    if (!window.confirm("Tem certeza que deseja desconectar sua agenda? O bot não entrará mais automaticamente nas reuniões.")) {
+    if (!window.confirm(`Tem certeza que deseja desconectar o ${platform === 'google_calendar' ? 'Google Calendar' : 'Outlook'}? O bot não entrará mais nas reuniões desta agenda.`)) {
       return;
     }
 
@@ -326,7 +326,7 @@ const App: React.FC = () => {
       const response = await fetch('/api/recall/calendar-disconnect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
+        body: JSON.stringify({ userId: user.id, platform })
       });
 
       if (!response.ok) {
@@ -334,8 +334,7 @@ const App: React.FC = () => {
       }
 
       setSuccessMessage('Agenda desconectada com sucesso.');
-      // Update local state optimistic + refresh
-      setUser(prev => prev ? ({ ...prev, calendarConnected: false }) : null);
+      // Refresh to update dual status
       fetchProfile(user.id, user.email, true);
 
     } catch (err: any) {
@@ -554,6 +553,8 @@ const App: React.FC = () => {
           botName: data.bot_name,
           recallId: data.recall_id,
           calendarConnected: data.calendar_connected,
+          googleCalendarConnected: data.google_calendar_connected,
+          outlookCalendarConnected: data.outlook_calendar_connected,
           planLimitMinutes: data.plan_limit_minutes,
           usageMinutes: data.usage_minutes,
           extraMinutes: data.extra_minutes
@@ -2363,36 +2364,66 @@ const App: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-                {/* --- CONNECT CALENDAR CARD --- */}
                 <div className="p-8 rounded-[2.5rem] bg-slate-800/50 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all">
                   <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
                     <svg className="w-24 h-24 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2 relative z-10">Agenda Inteligente</h3>
-                  <p className="text-slate-400 text-sm mb-6 relative z-10">Conecte sua agenda para o bot entrar automaticamente nas reuniões.</p>
+                  <p className="text-slate-400 text-sm mb-6 relative z-10">Conecte suas agendas para o bot entrar automaticamente.</p>
 
-                  {user.calendarConnected ? (
-                    <div className="flex flex-col gap-3">
-                      <div className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-green-500/20 border border-green-500/30 text-green-400 font-bold text-sm w-fit">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        Conectado
+                  <div className="space-y-4 relative z-10">
+                    {/* Google Calendar */}
+                    <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-white/5">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" className="w-6 h-6" alt="Google" /></div>
+                        <div>
+                          <p className="text-white font-bold text-sm">Google Calendar</p>
+                          <p className="text-xs text-slate-500">{user.googleCalendarConnected ? 'Sincronizado' : 'Não conectado'}</p>
+                        </div>
                       </div>
-                      <button
-                        onClick={handleCalendarDisconnect}
-                        className="px-4 py-2 rounded-xl border border-red-500/30 text-red-400 font-bold text-xs uppercase tracking-wide hover:bg-red-500/10 transition-colors flex items-center gap-2 w-fit"
-                      >
-                        Desconectar
-                      </button>
+                      {user.googleCalendarConnected ? (
+                        <button
+                          onClick={() => handleCalendarDisconnect('google_calendar')}
+                          className="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition-colors"
+                        >
+                          Desconectar
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleCalendarConnect('google_calendar')}
+                          className="px-3 py-1.5 bg-white text-slate-900 text-xs font-bold rounded-lg uppercase hover:bg-slate-200 transition-colors"
+                        >
+                          Conectar
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => handleCalendarConnect('google_calendar')}
-                      className="relative z-10 px-6 py-3 rounded-xl bg-white text-slate-900 font-bold text-sm uppercase tracking-wide hover:bg-slate-200 transition-colors flex items-center gap-2"
-                    >
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" /></svg>
-                      Conectar Agora
-                    </button>
-                  )}
+
+                    {/* Outlook Calendar */}
+                    <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-white/5">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-[#0078D4] rounded-lg"><svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M1 3h9v8H1V3zm0 10h9v8H1v-8zm10-10h12v8H11V3zm0 10h12v8H11v-8z" /></svg></div>
+                        <div>
+                          <p className="text-white font-bold text-sm">Outlook Calendar</p>
+                          <p className="text-xs text-slate-500">{user.outlookCalendarConnected ? 'Sincronizado' : 'Não conectado'}</p>
+                        </div>
+                      </div>
+                      {user.outlookCalendarConnected ? (
+                        <button
+                          onClick={() => handleCalendarDisconnect('outlook_calendar')}
+                          className="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition-colors"
+                        >
+                          Desconectar
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleCalendarConnect('outlook_calendar')}
+                          className="px-3 py-1.5 bg-white text-slate-900 text-xs font-bold rounded-lg uppercase hover:bg-slate-200 transition-colors"
+                        >
+                          Conectar
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* --- USAGE STATS CARD --- */}

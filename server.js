@@ -446,7 +446,7 @@ app.post('/api/profiles/create', async (req, res) => {
   }
 });
 
-// Sync Calendar Status
+// Sync Calendar Status (Dual Provider Support)
 app.post('/api/recall/sync-calendar', async (req, res) => {
   try {
     const { userId } = req.body;
@@ -462,7 +462,9 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
 
     console.log(`[Sync Calendar] Checking status for user ${userId}...`);
 
-    let calendarConnected = false;
+    let googleConnected = false;
+    let outlookConnected = false;
+
     try {
       const response = await axios.get(`${RECALL_BASE_URL}/calendars/`, {
         params: { user_id: userId },
@@ -472,27 +474,33 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
       const calendars = response.data.results || response.data; // Handle pagination if present
       console.log(`[Sync Calendar] Found ${calendars.length} calendars for user.`);
 
-      // Check if any is connected
-      const connectedCal = calendars.find(c => c.status === 'connected');
-      if (connectedCal) {
-        calendarConnected = true;
-        console.log(`[Sync Calendar] Connected calendar found: ${connectedCal.id} (${connectedCal.platform_email})`);
-      }
+      // Check connections by platform
+      googleConnected = calendars.some(c => c.platform === 'google_calendar' && c.status === 'connected');
+      outlookConnected = calendars.some(c => c.platform === 'microsoft_outlook' && c.status === 'connected');
+
+      console.log(`[Sync Calendar] Status - Google: ${googleConnected}, Outlook: ${outlookConnected}`);
+
     } catch (recallErr) {
       console.error("[Sync Calendar] Recall API Error:", recallErr.message);
     }
 
-    // 3. Update Database
-    if (calendarConnected) {
-      const { error } = await supabase.from('profiles').update({
-        calendar_connected: true
-      }).eq('id', userId);
+    // 3. Update Database (Dual Columns)
+    // Note: User must run migration to add these columns!
+    const { error } = await supabase.from('profiles').update({
+      google_calendar_connected: googleConnected,
+      outlook_calendar_connected: outlookConnected,
+      calendar_connected: googleConnected || outlookConnected // Keep for legacy compatibility
+    }).eq('id', userId);
 
-      if (error) throw error;
-      console.log(`[Sync Calendar] Database updated for user ${userId}`);
-    }
+    if (error) throw error;
+    console.log(`[Sync Calendar] Database updated for user ${userId}`);
 
-    res.json({ success: true, connected: calendarConnected });
+    res.json({
+      success: true,
+      googleConnected,
+      outlookConnected,
+      anyConnected: googleConnected || outlookConnected
+    });
 
   } catch (err) {
     console.error("[Sync Calendar] Error:", err.message);
@@ -696,15 +704,77 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
   }
 });
 
-// 2.1 Disconnect Calendar
+// 2.1 Disconnect Calendar (Specific Platform)
 app.post('/api/recall/calendar-disconnect', async (req, res) => {
   try {
-    const { userId } = req.body;
-    // For now, we simply reset the local state to allow re-connection
-    const { error } = await supabase.from('profiles').update({
-      calendar_connected: false,
-      recall_id: null // Also clear recall_id to force fresh start
-    }).eq('id', userId);
+    const { userId, platform } = req.body; // platform is optional, if missing disconnect all? preferably specific.
+
+    if (!userId) return res.status(400).json({ error: "UserId required" });
+
+    // 1. Get API Key
+    if (!process.env.RECALL_API_KEY) dotenv.config();
+    const apiKey = process.env.RECALL_API_KEY;
+    const RECALL_BASE_URL = 'https://us-west-2.recall.ai/api/v1';
+
+    // 2. Identify Calendar ID to delete from Recall
+    // We need to list calendars first to find the ID of the one matching the platform
+    let calendarIdToDelete = null;
+
+    try {
+      const response = await axios.get(`${RECALL_BASE_URL}/calendars/`, {
+        params: { user_id: userId },
+        headers: { Authorization: `Token ${apiKey}` }
+      });
+      const calendars = response.data.results || response.data;
+
+      // Filter by platform if provided
+      const targetPlatform = platform === 'google_calendar' ? 'google_calendar' : (platform === 'outlook_calendar' ? 'microsoft_outlook' : null);
+
+      if (targetPlatform) {
+        const cal = calendars.find(c => c.platform === targetPlatform && c.status === 'connected');
+        if (cal) calendarIdToDelete = cal.id;
+      } else {
+        // Fallback: Disconnect ANY connected (legacy behavior)
+        const cal = calendars.find(c => c.status === 'connected');
+        if (cal) calendarIdToDelete = cal.id;
+      }
+
+    } catch (e) {
+      console.error("Error listing calendars for disconnect:", e.message);
+    }
+
+    // 3. Delete from Recall
+    if (calendarIdToDelete) {
+      try {
+        await axios.delete(`${RECALL_BASE_URL}/calendars/${calendarIdToDelete}/`, {
+          headers: { Authorization: `Token ${apiKey}` }
+        });
+        console.log(`[Disconnect] Deleted calendar ${calendarIdToDelete} from Recall.`);
+      } catch (e) {
+        console.error("Error deleting calendar from Recall:", e.message);
+        // Continue to update DB anyway to keep inconsistent state away
+      }
+    }
+
+    // 4. Update Database
+    const updatePayload = {};
+    if (platform === 'google_calendar') {
+      updatePayload.google_calendar_connected = false;
+    } else if (platform === 'outlook_calendar') {
+      updatePayload.outlook_calendar_connected = false;
+    } else {
+      // Disconnect all
+      updatePayload.google_calendar_connected = false;
+      updatePayload.outlook_calendar_connected = false;
+      updatePayload.calendar_connected = false; // Legacy
+      updatePayload.recall_id = null;
+    }
+
+    // If specific disconnect, check if ANY remains connected to update legacy flag?
+    // Simplified: If disconnecting one, we assume legacy flag relies on the remaining one.
+    // Ideally we should re-sync. For now, let's trust the granular columns.
+
+    const { error } = await supabase.from('profiles').update(updatePayload).eq('id', userId);
 
     if (error) throw error;
 
