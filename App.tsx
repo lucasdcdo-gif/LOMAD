@@ -500,6 +500,21 @@ const App: React.FC = () => {
     }
   };
 
+  // Check for Calendar Connection Success
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('calendar_connected') === 'true') {
+      setSuccessMessage('🎉 Agenda conectada com sucesso! Seu bot agora pode entrar em reuniões automaticamente.');
+      // Clean URL
+      window.history.replaceState(null, '', '/profile');
+    }
+    if (params.get('error') === 'calendar_auth_failed') {
+      setError('Falha ao conectar agenda. Tente novamente.');
+      // Clean URL
+      window.history.replaceState(null, '', '/profile');
+    }
+  }, []);
+
   // Reactive Redirect: If user is authenticated, force MAIN view
   // This bypasses any hanging promises in login/register forms
   useEffect(() => {
@@ -2077,300 +2092,306 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-        {view === 'PROFILE' && user && (
-          <div className="w-full max-w-4xl py-16 animate-fade-in">
-            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-8">Meu Perfil</h1>
+        {view === 'PROFILE' && (
+          authLoading ? (
+            <div className="w-full h-[60vh] flex flex-col items-center justify-center animate-fade-in">
+              <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-slate-400 font-bold">Carregando perfil...</p>
+            </div>
+          ) : user && (
+            <div className="w-full max-w-4xl py-16 animate-fade-in">
+              <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-8">Meu Perfil</h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-              <div className="glass p-8 rounded-[2rem] border border-white/10">
-                <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider">Dados Pessoais</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase">Nome</label>
-                    <p className="text-lg text-white font-medium">{user.name}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase">Email</label>
-                    <p className="text-lg text-white font-medium">{user.email}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase">Plano Atual</label>
-                    <div className={`mt-2 inline-flex px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider ${['PRO', 'PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black' : 'bg-slate-700 text-white'}`}>
-                      {user.role.replace('_', ' ')}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {['PRO', 'PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) ? (
-                <div className="space-y-6">
-                  {/* Active Subscription Card */}
-                  <div className="glass p-8 rounded-[2rem] border border-yellow-500/20 bg-yellow-500/5">
-                    <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider text-yellow-500">Assinatura Ativa</h3>
-                    <div className="flex flex-col gap-4">
-                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                          <p className="text-white font-bold text-lg">{user.role.replace('_', ' ')}</p>
-                          <p className="text-slate-400 text-sm">Renova em {new Date(user.subscriptionEnd || Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
-                        </div>
-                        {/* Usage Bar for Minutes based plans */}
-                        {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
-                          <div className="text-left md:text-right bg-black/20 p-3 rounded-xl border border-white/5 w-full md:w-auto">
-                            <p className="text-xs font-bold text-slate-500 uppercase">Uso de Gravação</p>
-                            <p className="text-xl font-black text-white">
-                              {Math.floor((user.usage_minutes || 0) / 60)}h {(user.usage_minutes || 0) % 60}m
-                              <span className="text-sm text-slate-500 font-medium"> / {user.role === 'LOMAD_PLUS' ? 'ILIMITADO' : `${Math.floor((user.plan_limit_minutes || 600) / 60)}h`}</span>
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {user.cardLast4 && (
-                        <div className="flex items-center gap-3 p-4 bg-black/20 rounded-xl border border-white/5 mt-2">
-                          <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                          <div>
-                            <p className="text-sm text-white font-bold">{user.cardBrand} •••• {user.cardLast4}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex gap-4 mt-2">
-                        <button onClick={() => setPaymentModalOpen(true)} className="text-xs font-bold text-cyan-400 hover:text-white transition-colors uppercase">Alterar Plano</button>
-                        {user.subscriptionStatus !== 'CANCELED' && (
-                          <button onClick={() => setCancelSubscriptionModalOpen(true)} className="text-xs font-bold text-red-400 hover:text-white transition-colors uppercase">Cancelar</button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* AI & Automation Card for PLUS users */}
-                  {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
-                    <div className="glass p-8 rounded-[2rem] border border-blue-500/20 bg-blue-500/5 relative overflow-hidden transition-all hover:border-blue-500/40">
-                      <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                        <svg className="w-40 h-40 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                      </div>
-                      <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                        Integração & Inteligência
-                      </h3>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-                        <div className="bg-slate-950/50 p-4 rounded-xl border border-white/10">
-                          <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Nome do Bot</label>
-                          <div className="text-white font-bold text-lg truncate">{user.botName || 'Não configurado'}</div>
-                        </div>
-                        <div className="bg-slate-950/50 p-4 rounded-xl border border-white/10">
-                          <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Status da Agenda</label>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${user.calendarConnected ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-slate-600'}`}></div>
-                            <span className="text-white font-bold">{user.calendarConnected ? 'Conectado' : 'Desconectado'}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-8 bg-gradient-to-br from-blue-900/40 to-slate-900/40 p-5 rounded-2xl border border-blue-500/20 relative z-10 shadow-lg">
-                        <label className="text-xs font-black text-blue-400 uppercase mb-3 block flex items-center gap-2 tracking-wider">
-                          <div className="p-1 bg-blue-500/20 rounded text-blue-400"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
-                          Bot Instantâneo
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="Cole o link da reunião aqui..."
-                            value={quickMeetingUrl}
-                            onChange={(e) => setQuickMeetingUrl(e.target.value)}
-                            className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 shadow-inner placeholder:text-slate-600 transition-all font-medium"
-                          />
-                          <button
-                            onClick={handleQuickBotJoin}
-                            disabled={!quickMeetingUrl || joiningBot}
-                            className="bg-blue-600 hover:bg-blue-500 text-white px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20 active:scale-95"
-                          >
-                            {joiningBot ? (
-                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            ) : (
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => setView('FULL_AGENDA')}
-                        className="mt-4 w-full py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold uppercase tracking-wide transition-all hover:border-white/20 relative z-10 text-sm flex items-center justify-center gap-3 group"
-                      >
-                        <svg className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                        Ver Agenda Completa
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="glass p-8 rounded-[2rem] border border-white/10 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <svg className="w-32 h-32 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-wider">Limite de Uso</h3>
-                  <div className="text-4xl font-black text-white mb-1">{user.meetings_recorded || 0} <span className="text-lg text-slate-500 font-medium">/ 5 reuniões</span></div>
-                  <div className="w-full h-2 bg-slate-800 rounded-full mt-4 overflow-hidden">
-                    <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${Math.min(((user.meetings_recorded || 0) / 5) * 100, 100)}%` }}></div>
-                  </div>
-                  {(user.meetings_recorded || 0) >= 5 && <p className="mt-4 text-red-400 text-sm font-bold">Limite atingido! Faça upgrade para continuar.</p>}
-                </div>
-              )
-              }
-            </div >
-
-            {/* Dados Cadastrais (Transparência) */}
-            {(user.cpf || user.phone || isEditingProfile) && (
-              <div className="glass p-8 rounded-[2rem] border border-white/10 mb-12">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    Dados Cadastrais
-                  </h3>
-                  {!isEditingProfile ? (
-                    <button onClick={() => setIsEditingProfile(true)} className="text-cyan-400 text-sm font-bold hover:text-blue-300">EDITAR</button>
-                  ) : (
-                    <div className="flex gap-4">
-                      <button onClick={() => setIsEditingProfile(false)} className="text-slate-400 text-sm font-bold hover:text-slate-300">CANCELAR</button>
-                      <button onClick={handleUpdateProfile} className="text-green-400 text-sm font-bold hover:text-green-300" disabled={paymentLoading}>{paymentLoading ? 'SALVANDO...' : 'SALVAR'}</button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {user.cpf && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                <div className="glass p-8 rounded-[2rem] border border-white/10">
+                  <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider">Dados Pessoais</h3>
+                  <div className="space-y-4">
                     <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase">CPF/CNPJ (Fixo)</label>
-                      <p className="text-base text-slate-300 font-medium opacity-50 cursor-not-allowed">{user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.***.***-$4')}</p>
+                      <label className="text-xs font-bold text-slate-500 uppercase">Nome</label>
+                      <p className="text-lg text-white font-medium">{user.name}</p>
                     </div>
-                  )}
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase">Telefone</label>
-                    {isEditingProfile ? (
-                      <input
-                        value={editForm.phone}
-                        onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                        className="w-full bg-slate-950 border border-white/10 rounded px-2 py-1 text-white"
-                      />
-                    ) : (
-                      <p className="text-base text-slate-300 font-medium">{user.phone}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase">CEP</label>
-                    {isEditingProfile ? (
-                      <input
-                        value={editForm.postalCode}
-                        onChange={e => setEditForm({ ...editForm, postalCode: e.target.value })}
-                        className="w-full bg-slate-950 border border-white/10 rounded px-2 py-1 text-white"
-                      />
-                    ) : (
-                      <p className="text-base text-slate-300 font-medium">{user.postalCode}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase">Número</label>
-                    {isEditingProfile ? (
-                      <input
-                        value={editForm.addressNumber}
-                        onChange={e => setEditForm({ ...editForm, addressNumber: e.target.value })}
-                        className="w-full bg-slate-950 border border-white/10 rounded px-2 py-1 text-white"
-                      />
-                    ) : (
-                      <p className="text-base text-slate-300 font-medium">{user.addressNumber}</p>
-                    )}
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase">Email</label>
+                      <p className="text-lg text-white font-medium">{user.email}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase">Plano Atual</label>
+                      <div className={`mt-2 inline-flex px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider ${['PRO', 'PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black' : 'bg-slate-700 text-white'}`}>
+                        {user.role.replace('_', ' ')}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* MFA Section */}
-            <div className="glass rounded-[2rem] border border-white/10 p-8 mb-12">
-              <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider flex items-center gap-3">
-                <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                Segurança da Conta (MFA)
-              </h3>
+                {['PRO', 'PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) ? (
+                  <div className="space-y-6">
+                    {/* Active Subscription Card */}
+                    <div className="glass p-8 rounded-[2rem] border border-yellow-500/20 bg-yellow-500/5">
+                      <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider text-yellow-500">Assinatura Ativa</h3>
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                          <div>
+                            <p className="text-white font-bold text-lg">{user.role.replace('_', ' ')}</p>
+                            <p className="text-slate-400 text-sm">Renova em {new Date(user.subscriptionEnd || Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                          </div>
+                          {/* Usage Bar for Minutes based plans */}
+                          {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
+                            <div className="text-left md:text-right bg-black/20 p-3 rounded-xl border border-white/5 w-full md:w-auto">
+                              <p className="text-xs font-bold text-slate-500 uppercase">Uso de Gravação</p>
+                              <p className="text-xl font-black text-white">
+                                {Math.floor((user.usage_minutes || 0) / 60)}h {(user.usage_minutes || 0) % 60}m
+                                <span className="text-sm text-slate-500 font-medium"> / {user.role === 'LOMAD_PLUS' ? 'ILIMITADO' : `${Math.floor((user.plan_limit_minutes || 600) / 60)}h`}</span>
+                              </p>
+                            </div>
+                          )}
+                        </div>
 
-              {showMfaEnrollment ? (
-                <MFAEnrollment
-                  onEnrolled={() => {
-                    setShowMfaEnrollment(false);
-                    setSuccessMessage("Autenticação de dois fatores ativada com sucesso!");
-                  }}
-                  onCancel={() => setShowMfaEnrollment(false)}
-                />
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-white mb-1">Autenticação de dois fatores</p>
-                    <p className="text-sm text-slate-400">Proteja sua conta adicionando uma camada extra de segurança.</p>
+                        {user.cardLast4 && (
+                          <div className="flex items-center gap-3 p-4 bg-black/20 rounded-xl border border-white/5 mt-2">
+                            <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                            <div>
+                              <p className="text-sm text-white font-bold">{user.cardBrand} •••• {user.cardLast4}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex gap-4 mt-2">
+                          <button onClick={() => setPaymentModalOpen(true)} className="text-xs font-bold text-cyan-400 hover:text-white transition-colors uppercase">Alterar Plano</button>
+                          {user.subscriptionStatus !== 'CANCELED' && (
+                            <button onClick={() => setCancelSubscriptionModalOpen(true)} className="text-xs font-bold text-red-400 hover:text-white transition-colors uppercase">Cancelar</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* AI & Automation Card for PLUS users */}
+                    {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
+                      <div className="glass p-8 rounded-[2rem] border border-blue-500/20 bg-blue-500/5 relative overflow-hidden transition-all hover:border-blue-500/40">
+                        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                          <svg className="w-40 h-40 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                          Integração & Inteligência
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                          <div className="bg-slate-950/50 p-4 rounded-xl border border-white/10">
+                            <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Nome do Bot</label>
+                            <div className="text-white font-bold text-lg truncate">{user.botName || 'Não configurado'}</div>
+                          </div>
+                          <div className="bg-slate-950/50 p-4 rounded-xl border border-white/10">
+                            <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Status da Agenda</label>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${user.calendarConnected ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-slate-600'}`}></div>
+                              <span className="text-white font-bold">{user.calendarConnected ? 'Conectado' : 'Desconectado'}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-8 bg-gradient-to-br from-blue-900/40 to-slate-900/40 p-5 rounded-2xl border border-blue-500/20 relative z-10 shadow-lg">
+                          <label className="text-xs font-black text-blue-400 uppercase mb-3 block flex items-center gap-2 tracking-wider">
+                            <div className="p-1 bg-blue-500/20 rounded text-blue-400"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
+                            Bot Instantâneo
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="Cole o link da reunião aqui..."
+                              value={quickMeetingUrl}
+                              onChange={(e) => setQuickMeetingUrl(e.target.value)}
+                              className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 shadow-inner placeholder:text-slate-600 transition-all font-medium"
+                            />
+                            <button
+                              onClick={handleQuickBotJoin}
+                              disabled={!quickMeetingUrl || joiningBot}
+                              className="bg-blue-600 hover:bg-blue-500 text-white px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20 active:scale-95"
+                            >
+                              {joiningBot ? (
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                              ) : (
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => setView('FULL_AGENDA')}
+                          className="mt-4 w-full py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold uppercase tracking-wide transition-all hover:border-white/20 relative z-10 text-sm flex items-center justify-center gap-3 group"
+                        >
+                          <svg className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          Ver Agenda Completa
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <button
-                    onClick={() => setShowMfaEnrollment(true)}
-                    className="px-5 py-2 glass rounded-xl text-white font-bold text-xs hover:bg-white/10 flex items-center gap-2"
-                  >
-                    Configurar 2FA
-                  </button>
+                ) : (
+                  <div className="glass p-8 rounded-[2rem] border border-white/10 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <svg className="w-32 h-32 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-wider">Limite de Uso</h3>
+                    <div className="text-4xl font-black text-white mb-1">{user.meetings_recorded || 0} <span className="text-lg text-slate-500 font-medium">/ 5 reuniões</span></div>
+                    <div className="w-full h-2 bg-slate-800 rounded-full mt-4 overflow-hidden">
+                      <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${Math.min(((user.meetings_recorded || 0) / 5) * 100, 100)}%` }}></div>
+                    </div>
+                    {(user.meetings_recorded || 0) >= 5 && <p className="mt-4 text-red-400 text-sm font-bold">Limite atingido! Faça upgrade para continuar.</p>}
+                  </div>
+                )
+                }
+              </div >
+
+              {/* Dados Cadastrais (Transparência) */}
+              {(user.cpf || user.phone || isEditingProfile) && (
+                <div className="glass p-8 rounded-[2rem] border border-white/10 mb-12">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                      <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                      Dados Cadastrais
+                    </h3>
+                    {!isEditingProfile ? (
+                      <button onClick={() => setIsEditingProfile(true)} className="text-cyan-400 text-sm font-bold hover:text-blue-300">EDITAR</button>
+                    ) : (
+                      <div className="flex gap-4">
+                        <button onClick={() => setIsEditingProfile(false)} className="text-slate-400 text-sm font-bold hover:text-slate-300">CANCELAR</button>
+                        <button onClick={handleUpdateProfile} className="text-green-400 text-sm font-bold hover:text-green-300" disabled={paymentLoading}>{paymentLoading ? 'SALVANDO...' : 'SALVAR'}</button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {user.cpf && (
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase">CPF/CNPJ (Fixo)</label>
+                        <p className="text-base text-slate-300 font-medium opacity-50 cursor-not-allowed">{user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.***.***-$4')}</p>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase">Telefone</label>
+                      {isEditingProfile ? (
+                        <input
+                          value={editForm.phone}
+                          onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                          className="w-full bg-slate-950 border border-white/10 rounded px-2 py-1 text-white"
+                        />
+                      ) : (
+                        <p className="text-base text-slate-300 font-medium">{user.phone}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase">CEP</label>
+                      {isEditingProfile ? (
+                        <input
+                          value={editForm.postalCode}
+                          onChange={e => setEditForm({ ...editForm, postalCode: e.target.value })}
+                          className="w-full bg-slate-950 border border-white/10 rounded px-2 py-1 text-white"
+                        />
+                      ) : (
+                        <p className="text-base text-slate-300 font-medium">{user.postalCode}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase">Número</label>
+                      {isEditingProfile ? (
+                        <input
+                          value={editForm.addressNumber}
+                          onChange={e => setEditForm({ ...editForm, addressNumber: e.target.value })}
+                          className="w-full bg-slate-950 border border-white/10 rounded px-2 py-1 text-white"
+                        />
+                      ) : (
+                        <p className="text-base text-slate-300 font-medium">{user.addressNumber}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
-            </div>
 
+              {/* MFA Section */}
+              <div className="glass rounded-[2rem] border border-white/10 p-8 mb-12">
+                <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider flex items-center gap-3">
+                  <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                  Segurança da Conta (MFA)
+                </h3>
 
-            {
-              user.role === 'FREE' && (
-                <div className="space-y-8">
-                  <h2 className="text-3xl font-black text-center text-white">Escolha seu Plano</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlan === 'monthly' ? 'bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border-cyan-500 shadow-2xl shadow-blue-500/10 scale-[1.02]' : 'glass border-white/10 hover:border-white/20'}`} onClick={() => setSelectedPlan('monthly')}>
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xl font-bold text-white">Mensal</h3>
-                        {selectedPlan === 'monthly' && <div className="w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>}
-                      </div>
-                      <div className="flex items-baseline gap-1 mb-6">
-                        <span className="text-sm text-slate-400">R$</span>
-                        <span className="text-5xl font-black text-white">{publicPricing.monthly.toFixed(2).replace('.', ',')}</span>
-                        <span className="text-slate-400">/mês</span>
-                      </div>
-                      <ul className="space-y-3 mb-8">
-                        <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Transcrições Ilimitadas</li>
-                        <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Chat com IA Avançado</li>
-                      </ul>
+                {showMfaEnrollment ? (
+                  <MFAEnrollment
+                    onEnrolled={() => {
+                      setShowMfaEnrollment(false);
+                      setSuccessMessage("Autenticação de dois fatores ativada com sucesso!");
+                    }}
+                    onCancel={() => setShowMfaEnrollment(false)}
+                  />
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-white mb-1">Autenticação de dois fatores</p>
+                      <p className="text-sm text-slate-400">Proteja sua conta adicionando uma camada extra de segurança.</p>
                     </div>
-
-                    <div className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlan === 'yearly' ? 'bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border-indigo-500 shadow-2xl shadow-indigo-500/10 scale-[1.02]' : 'glass border-white/10 hover:border-white/20'}`} onClick={() => setSelectedPlan('yearly')}>
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xl font-bold text-white">Anual</h3>
-                        <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-bold uppercase">Economize 15%</span>
-                        {selectedPlan === 'yearly' && <div className="w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]"></div>}
-                      </div>
-                      <div className="flex items-baseline gap-1 mb-6">
-                        <span className="text-sm text-slate-400">R$</span>
-                        <span className="text-5xl font-black text-white">{publicPricing.yearly.toFixed(2).replace('.', ',')}</span>
-                        <span className="text-slate-400">/ano</span>
-                      </div>
-                      <ul className="space-y-3 mb-8">
-                        <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Tudo do plano mensal</li>
-                        <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Prioridade no suporte</li>
-                      </ul>
-                    </div>
+                    <button
+                      onClick={() => setShowMfaEnrollment(true)}
+                      className="px-5 py-2 glass rounded-xl text-white font-bold text-xs hover:bg-white/10 flex items-center gap-2"
+                    >
+                      Configurar 2FA
+                    </button>
                   </div>
+                )}
+              </div>
 
-                  <button
-                    onClick={() => setPaymentModalOpen(true)}
-                    className="w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xl uppercase tracking-widest shadow-xl transition-all hover:scale-[1.01]"
-                  >
-                    Assinar Agora
-                  </button>
-                </div>
-              )
-            }
-          </div >
-        )
+
+              {
+                user.role === 'FREE' && (
+                  <div className="space-y-8">
+                    <h2 className="text-3xl font-black text-center text-white">Escolha seu Plano</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlan === 'monthly' ? 'bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border-cyan-500 shadow-2xl shadow-blue-500/10 scale-[1.02]' : 'glass border-white/10 hover:border-white/20'}`} onClick={() => setSelectedPlan('monthly')}>
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-xl font-bold text-white">Mensal</h3>
+                          {selectedPlan === 'monthly' && <div className="w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>}
+                        </div>
+                        <div className="flex items-baseline gap-1 mb-6">
+                          <span className="text-sm text-slate-400">R$</span>
+                          <span className="text-5xl font-black text-white">{publicPricing.monthly.toFixed(2).replace('.', ',')}</span>
+                          <span className="text-slate-400">/mês</span>
+                        </div>
+                        <ul className="space-y-3 mb-8">
+                          <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Transcrições Ilimitadas</li>
+                          <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Chat com IA Avançado</li>
+                        </ul>
+                      </div>
+
+                      <div className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlan === 'yearly' ? 'bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border-indigo-500 shadow-2xl shadow-indigo-500/10 scale-[1.02]' : 'glass border-white/10 hover:border-white/20'}`} onClick={() => setSelectedPlan('yearly')}>
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-xl font-bold text-white">Anual</h3>
+                          <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-bold uppercase">Economize 15%</span>
+                          {selectedPlan === 'yearly' && <div className="w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]"></div>}
+                        </div>
+                        <div className="flex items-baseline gap-1 mb-6">
+                          <span className="text-sm text-slate-400">R$</span>
+                          <span className="text-5xl font-black text-white">{publicPricing.yearly.toFixed(2).replace('.', ',')}</span>
+                          <span className="text-slate-400">/ano</span>
+                        </div>
+                        <ul className="space-y-3 mb-8">
+                          <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Tudo do plano mensal</li>
+                          <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Prioridade no suporte</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setPaymentModalOpen(true)}
+                      className="w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xl uppercase tracking-widest shadow-xl transition-all hover:scale-[1.01]"
+                    >
+                      Assinar Agora
+                    </button>
+                  </div>
+                )
+              }
+            </div >
+          ))
         }
 
         {/* Dead code removed: Unused inline payment modal */}
