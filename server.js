@@ -593,26 +593,9 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
       // 1. Get Recall Calendar Auth Token
       // Endpoint: /calendar/authenticate (creates a temporary token for the user)
       // We must use the user's ID to scope the token.
-      const authResponse = await axios.post(`${RECALL_BASE_URL}/calendar/authenticate`, {
-        // No body needed if just getting a token? Verify documentation.
-        // Usually requires user_id if not implicit in API Key (but API Key is global).
-        // Search results mentioned "getting a token... scoped to a specific user". 
-        // Let's assume sending empty body is NOT enough if we need to link to userId.
-        // However, the docs say "Post request to .../authenticate". 
-        // Let's try sending NO body first, or if it fails, maybe we need to create the user first?
-        // Actually, previous code didn't create user. 
-        // Let's check if we need to pass any data.
-        // Re-reading search result 100: "generated ... with a user_id". 
-        // So we likely need to pass { user_id: userId } or similar, OR maybe just the API key creates a distinct 'account' context? 
-        // Let's try passing nothing for now as 'userId' is in our system, not necessarily Recall's yet 
-        // unless we mapped it. BUT, for the OAuth state, we need the token.
-        // Wait, if we use the simple V1, maybe we don't need to create a user explicitly?
-        // Let's look at the result of /calendar/authenticate.
-
-        // Actually, let's look at a safer path: The 'connect' endpoint WAS doing this for us.
-        // Since we are doing manual, we are responsible.
-        // Let's assume for V1 we just need the token.
-      }, { headers: { Authorization: `Token ${apiKey}` } });
+      const authResponse = await axios.post(`${RECALL_BASE_URL}/calendar/authenticate/`, {}, {
+        headers: { Authorization: `Token ${apiKey}` }
+      });
 
       const recallToken = authResponse.data.token;
 
