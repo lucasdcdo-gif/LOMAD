@@ -612,7 +612,7 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
         });
 
         // Removed approval_prompt=force as it conflicts with prompt=consent
-        oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&access_type=offline&prompt=consent`;
+        oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&access_type=offline&prompt=consent&include_granted_scopes=true`;
         console.log(`[Calendar Auth] Generated Google OAuth URL (verify params): ${oauthUrl}`);
 
       } else if (platform === 'outlook_calendar') {
