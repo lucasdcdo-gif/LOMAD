@@ -591,9 +591,11 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
 
     try {
       // 1. Get Recall Calendar Auth Token
-      // Endpoint: /calendar/authenticate (creates a temporary token for the user)
-      // We must use the user's ID to scope the token.
-      const authResponse = await axios.post(`${RECALL_BASE_URL}/calendar/authenticate/`, {}, {
+      // Endpoint: /calendar/authenticate/ (Requires trailing slash)
+      // Must provide user_id to scope the token.
+      const authResponse = await axios.post(`${RECALL_BASE_URL}/calendar/authenticate/`, {
+        user_id: userId
+      }, {
         headers: { Authorization: `Token ${apiKey}` }
       });
 
