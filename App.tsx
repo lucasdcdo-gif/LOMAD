@@ -106,7 +106,7 @@ const App: React.FC = () => {
 
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView] = useState<'MAIN' | 'HISTORY' | 'MEETING_DETAILS' | 'LOGIN' | 'REGISTER' | 'PROFILE' | 'ADMIN_DASHBOARD' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD' | 'HOW_IT_WORKS' | 'TERMS' | 'PRIVACY' | 'PRICING' | 'RECALL_CONFIG' | 'FULL_AGENDA' | 'CONTACT' | 'ABOUT' | 'PRIVACY_PAGE' | 'TERMS_PAGE'>('MAIN');
+  const [view, setView] = useState<'MAIN' | 'HISTORY' | 'MEETING_DETAILS' | 'LOGIN' | 'REGISTER' | 'PROFILE' | 'ADMIN_DASHBOARD' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD' | 'HOW_IT_WORKS' | 'TERMS' | 'PRIVACY' | 'PRICING' | 'RECALL_CONFIG' | 'FULL_AGENDA' | 'CONTACT' | 'ABOUT' | 'PRIVACY_PAGE' | 'TERMS_PAGE'>(window.location.pathname === '/profile' ? 'PROFILE' : 'MAIN');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   // States for Meeting Management
   const [meetings, setMeetings] = useState<Meeting[]>([]);
