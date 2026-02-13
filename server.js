@@ -716,7 +716,7 @@ app.post('/api/save-meeting-external', async (req, res) => {
 
         // 2. Compose Message
         const botName = data.bot_name || data.name || "LOMAD.IA";
-        const message = `Olá! Sou o assistente virtual de transcrição ${botName} e estou gravando esta reunião para gerar sua ata automática. 🤖📝\n\nA responsabilidade pelo uso desta gravação é de ${userName}.`;
+        const message = `Olá! Sou o assistente virtual de transcrição ${botName} e estou gravando esta reunião para gerar sua ata automática. 🤖📝\n\nA responsabilidade pelo uso desta gravação é de ${userName}.\nConheça a LOMAD: https://lomad.com.br/IA`;
 
         // 3. Send to Chat
         await axios.post(`${RECALL_BASE_URL}/bot/${recall_id}/send_chat_message`, {
