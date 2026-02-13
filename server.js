@@ -563,20 +563,26 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
 
 
     // Real Connection using lvh.me for local dev or configured APP_URL
-    const appUrl = process.env.VITE_APP_URL || 'http://lvh.me:3000';
+    // Force https in production to avoid Recall.ai security block on http/port
+    let appUrl = process.env.VITE_APP_URL || 'http://lvh.me:3000';
+    if (process.env.NODE_ENV === 'production') {
+      appUrl = 'https://lomad.com.br';
+    }
 
     try {
-      // Endpoint correto para obter URL de OAuth: /calendar/auth
-      const response = await axios.post(`${RECALL_BASE_URL}/calendar/auth`, {
+      // Revertendo para /calendar/connect pois o erro original era 403 (Recusado) e não 404 (Não Encontrado)
+      // O 403 ocorre porque o Recall.ai bloqueia redirects para localhost/http em produção.
+      const response = await axios.post(`${RECALL_BASE_URL}/calendar/connect`, {
         platform: platform,
         redirect_url: `${appUrl}/profile`
       }, { headers: { Authorization: `Token ${apiKey}` } });
 
+      console.log(`[Recall Auth] Redirect URL gerada: ${appUrl}/profile`);
+
       res.json({ url: response.data.url });
     } catch (apiError) {
       logger.error("Recall API Error (Calendar Auth): " + (apiError.response?.data ? JSON.stringify(apiError.response.data) : apiError.message));
-      // Se falhar, tentamos o endpoint antigo como fallback ou apenas logamos
-      throw new Error(`Falha ao se comunicar com Recall.ai. (${apiError.response?.status})`);
+      throw new Error(`Falha ao se comunicar com Recall.ai. (${apiError.response?.status || 'Unknown'}) - Verifique logs.`);
     }
 
   } catch (err) {
