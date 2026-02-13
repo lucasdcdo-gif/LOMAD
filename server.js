@@ -604,7 +604,8 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
       // 2. Construct OAuth URL
       if (platform === 'google_calendar') {
         const redirectUri = `https://${RECALL_REGION}.recall.ai/api/v1/calendar/google_oauth_callback/`;
-        const scope = "calendar.events.readonly userinfo.email";
+        // Google requires full scope URLs
+        const scope = "https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/userinfo.email";
         const state = JSON.stringify({
           recall_calendar_auth_token: recallToken,
           google_oauth_redirect_url: `${appUrl}/profile`
