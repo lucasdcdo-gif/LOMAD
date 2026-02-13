@@ -712,7 +712,14 @@ app.post('/api/save-meeting-external', async (req, res) => {
         transcript = Array.isArray(tArr) ? tArr.map(t => t.text).join('\n') : '';
         title = title || botInfo.meeting_metadata?.title || 'Reunião Recall.ai';
         start_time = start_time || botInfo.start_time;
+
+        // Try extracting video from multiple possible locations
+        // 1. Root level
+        // 2. Inside recordings array (media_shortcuts)
         video_url = video_url || botInfo.video_url;
+        if (!video_url && botInfo.recordings && botInfo.recordings.length > 0) {
+          video_url = botInfo.recordings[0].media_shortcuts?.video_mixed?.data?.download_url;
+        }
 
         const keyList = Object.keys(botInfo).join(',');
         logger.info(`[Webhook] Fetched details: Title='${title}', Video='${video_url}', Keys=${keyList}`);
