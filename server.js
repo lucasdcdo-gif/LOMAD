@@ -608,7 +608,9 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
         const scope = "https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/userinfo.email";
         const state = JSON.stringify({
           recall_calendar_auth_token: recallToken,
-          google_oauth_redirect_url: `${appUrl}/profile`
+          google_oauth_redirect_url: redirectUri, // MUST match the initial redirect_uri
+          success_url: `${appUrl}/profile?calendar_connected=true`,
+          error_url: `${appUrl}/profile?error=calendar_auth_failed`
         });
 
         // Removed approval_prompt=force as it conflicts with prompt=consent
