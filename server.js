@@ -799,11 +799,17 @@ app.post('/api/save-meeting-external', async (req, res) => {
               logger.info(`[Gemini] Transcription generated (${aiText.length} chars). Updating DB...`);
 
               // 4. Update Database
-              await supabase.from('meetings').update({
+              const { data: updateData, error: updateError } = await supabase.from('meetings').update({
                 transcriptions: [{ role: 'model', text: aiText, timestamp: Date.now() }],
                 summary: 'Transcrito via Gemini AI (Backup)',
                 notes: `Gravação Automática via Bot (Fallback Gemini). Video: ${video_url}`
-              }).eq('recall_id', recall_id);
+              }).eq('recall_id', recall_id).select();
+
+              if (updateError) {
+                logger.error(`[Gemini DB Update Error] ${updateError.message} - Details: ${JSON.stringify(updateError)}`);
+              } else {
+                logger.info(`[Gemini DB Update Success] Rows affected: ${updateData?.length}. RecallID: ${recall_id}`);
+              }
 
             } catch (geminiErr) {
               logger.error(`[Gemini Fallback Error] ${geminiErr.message}`);
