@@ -243,6 +243,76 @@ const App: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [userSearch, setUserSearch] = useState('');
 
+  // Profile Edit State
+  const [saveLoading, setSaveLoading] = useState(false);
+
+  const formatPhone = (v: string) => {
+    v = v.replace(/\D/g, "");
+    if (v.length > 11) v = v.substring(0, 11);
+    if (v.length > 10) return v.replace(/^(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+    if (v.length > 5) return v.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+    if (v.length > 2) return v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+    return v;
+  };
+
+  const formatCEP = (v: string) => {
+    v = v.replace(/\D/g, "");
+    if (v.length > 8) v = v.substring(0, 8);
+    return v.replace(/^(\d{5})(\d{3})/, "$1-$2");
+  };
+
+  const fetchAddressFromCEP = async (cep: string) => {
+    try {
+      const cleanCep = cep.replace(/\D/g, '');
+      if (cleanCep.length !== 8) return;
+
+      const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await res.json();
+
+      if (!data.erro) {
+        setEditForm(prev => ({
+          ...prev,
+          addressNumber: prev.addressNumber, // keep existing
+          // addressComplement: data.complemento, // optional
+          // We could store street/city too if we had fields for it
+          // For now just valid CEP is enough for billing
+        }));
+      }
+    } catch (e) {
+      console.error("ViaCEP error:", e);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setSaveLoading(true);
+    try {
+      const { error } = await supabase.from('profiles').update({
+        phone: editForm.phone,
+        postal_code: editForm.postalCode,
+        address_number: editForm.addressNumber
+      }).eq('id', user.id);
+
+      if (error) throw error;
+
+      setSuccessMessage("Perfil atualizado com sucesso!");
+      // Refresh
+      fetchProfile(user.id, user.email, true);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (e: any) {
+      console.error("Save profile error:", e);
+      setError("Erro ao salvar perfil: " + e.message);
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleCalendarConnect = (provider: string) => {
+    if (!user) return;
+    // Redirect to backend auth endpoint
+    window.location.href = `/api/auth/google/calendar?userId=${user.id}`;
+  };
+
 
 
   const displayStreamRef = useRef<MediaStream | null>(null);
@@ -501,19 +571,50 @@ const App: React.FC = () => {
   };
 
   // Check for Calendar Connection Success
+  // Check for Calendar Connection Success
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('calendar_connected') === 'true') {
-      setSuccessMessage('🎉 Agenda conectada com sucesso! Seu bot agora pode entrar em reuniões automaticamente.');
-      // Clean URL
-      window.history.replaceState(null, '', '/profile');
+
+      // Call Sync Endpoint
+      if (user?.id) {
+        setAuthLoading(true); // Show loading UI
+        fetch('/api/recall/sync-calendar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id })
+        }).then(res => res.json())
+          .then(data => {
+            if (data.connected) {
+              setSuccessMessage('🎉 Agenda conectada e sincronizada com sucesso!');
+              // Pass user ID and Email to refresh profile silently
+              fetchProfile(user.id, user.email, true);
+            } else {
+              setError('Conexão realizada, mas não detectamos a agenda ativa. Tente recarregar.');
+            }
+          })
+          .catch(err => {
+            console.error("Sync error:", err);
+            setError('Erro ao sincronizar status da agenda.');
+          })
+          .finally(() => {
+            setAuthLoading(false);
+            window.history.replaceState(null, '', '/profile');
+          });
+      } else {
+        // Fallback if user is null (should normally have session)
+        // Just show message and let user reload
+        setSuccessMessage('🎉 Agenda conectada! Recarregue a página para atualizar o status.');
+        window.history.replaceState(null, '', '/profile');
+      }
+
     }
     if (params.get('error') === 'calendar_auth_failed') {
       setError('Falha ao conectar agenda. Tente novamente.');
       // Clean URL
       window.history.replaceState(null, '', '/profile');
     }
-  }, []);
+  }, [user]); // Add user dependency to retry if user loads late
 
   // Reactive Redirect: If user is authenticated, force MAIN view
   // This bypasses any hanging promises in login/register forms
@@ -2056,7 +2157,6 @@ const App: React.FC = () => {
                     </div>
                   )}
                 </div>
-
               </div>
 
               {/* Persistent Suggestions Footer */}
@@ -2098,7 +2198,7 @@ const App: React.FC = () => {
               <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4"></div>
               <p className="text-slate-400 font-bold">Carregando perfil...</p>
             </div>
-          ) : user && (
+          ) : user ? (
             <div className="w-full max-w-4xl py-16 animate-fade-in">
               <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-8">Meu Perfil</h1>
 
@@ -2204,195 +2304,206 @@ const App: React.FC = () => {
                             />
                             <button
                               onClick={handleQuickBotJoin}
-                              disabled={!quickMeetingUrl || joiningBot}
-                              className="bg-blue-600 hover:bg-blue-500 text-white px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20 active:scale-95"
+                              disabled={joiningBot || !quickMeetingUrl}
+                              className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                             >
-                              {joiningBot ? (
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                              ) : (
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                              )}
+                              {joiningBot ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>}
                             </button>
                           </div>
                         </div>
-
-                        <button
-                          onClick={() => setView('FULL_AGENDA')}
-                          className="mt-4 w-full py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold uppercase tracking-wide transition-all hover:border-white/20 relative z-10 text-sm flex items-center justify-center gap-3 group"
-                        >
-                          <svg className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                          Ver Agenda Completa
-                        </button>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="glass p-8 rounded-[2rem] border border-white/10 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                      <svg className="w-32 h-32 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-wider">Limite de Uso</h3>
-                    <div className="text-4xl font-black text-white mb-1">{user.meetings_recorded || 0} <span className="text-lg text-slate-500 font-medium">/ 5 reuniões</span></div>
-                    <div className="w-full h-2 bg-slate-800 rounded-full mt-4 overflow-hidden">
-                      <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${Math.min(((user.meetings_recorded || 0) / 5) * 100, 100)}%` }}></div>
-                    </div>
-                    {(user.meetings_recorded || 0) >= 5 && <p className="mt-4 text-red-400 text-sm font-bold">Limite atingido! Faça upgrade para continuar.</p>}
-                  </div>
-                )
-                }
-              </div >
-
-              {/* Dados Cadastrais (Transparência) */}
-              {(user.cpf || user.phone || isEditingProfile) && (
-                <div className="glass p-8 rounded-[2rem] border border-white/10 mb-12">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                      <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                      Dados Cadastrais
-                    </h3>
-                    {!isEditingProfile ? (
-                      <button onClick={() => setIsEditingProfile(true)} className="text-cyan-400 text-sm font-bold hover:text-blue-300">EDITAR</button>
-                    ) : (
-                      <div className="flex gap-4">
-                        <button onClick={() => setIsEditingProfile(false)} className="text-slate-400 text-sm font-bold hover:text-slate-300">CANCELAR</button>
-                        <button onClick={handleUpdateProfile} className="text-green-400 text-sm font-bold hover:text-green-300" disabled={paymentLoading}>{paymentLoading ? 'SALVANDO...' : 'SALVAR'}</button>
+                  <div className="space-y-6">
+                    {/* --- UPGRADE BANNER FOR FREE USERS --- */}
+                    <div className="glass p-8 rounded-[2rem] border border-cyan-500/20 bg-cyan-500/5 relative overflow-hidden group hover:border-cyan-500/40 transition-all cursor-pointer" onClick={() => setPaymentModalOpen(true)}>
+                      <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg className="w-32 h-32 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                       </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {user.cpf && (
-                      <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase">CPF/CNPJ (Fixo)</label>
-                        <p className="text-base text-slate-300 font-medium opacity-50 cursor-not-allowed">{user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.***.***-$4')}</p>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase">Telefone</label>
-                      {isEditingProfile ? (
-                        <input
-                          value={editForm.phone}
-                          onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                          className="w-full bg-slate-950 border border-white/10 rounded px-2 py-1 text-white"
-                        />
-                      ) : (
-                        <p className="text-base text-slate-300 font-medium">{user.phone}</p>
-                      )}
+                      <h3 className="text-xl font-bold text-white mb-4 relative z-10 text-cyan-400">Upgrade para PRO</h3>
+                      <p className="text-slate-300 text-sm mb-6 relative z-10 max-w-sm">Desbloqueie transcrições ilimitadas e recursos de IA avançados.</p>
+                      <button className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-white rounded-xl font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all relative z-10">Ver Planos</button>
                     </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase">CEP</label>
-                      {isEditingProfile ? (
-                        <input
-                          value={editForm.postalCode}
-                          onChange={e => setEditForm({ ...editForm, postalCode: e.target.value })}
-                          className="w-full bg-slate-950 border border-white/10 rounded px-2 py-1 text-white"
-                        />
-                      ) : (
-                        <p className="text-base text-slate-300 font-medium">{user.postalCode}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase">Número</label>
-                      {isEditingProfile ? (
-                        <input
-                          value={editForm.addressNumber}
-                          onChange={e => setEditForm({ ...editForm, addressNumber: e.target.value })}
-                          className="w-full bg-slate-950 border border-white/10 rounded px-2 py-1 text-white"
-                        />
-                      ) : (
-                        <p className="text-base text-slate-300 font-medium">{user.addressNumber}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* MFA Section */}
-              <div className="glass rounded-[2rem] border border-white/10 p-8 mb-12">
-                <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider flex items-center gap-3">
-                  <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                  Segurança da Conta (MFA)
-                </h3>
-
-                {showMfaEnrollment ? (
-                  <MFAEnrollment
-                    onEnrolled={() => {
-                      setShowMfaEnrollment(false);
-                      setSuccessMessage("Autenticação de dois fatores ativada com sucesso!");
-                    }}
-                    onCancel={() => setShowMfaEnrollment(false)}
-                  />
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-white mb-1">Autenticação de dois fatores</p>
-                      <p className="text-sm text-slate-400">Proteja sua conta adicionando uma camada extra de segurança.</p>
-                    </div>
-                    <button
-                      onClick={() => setShowMfaEnrollment(true)}
-                      className="px-5 py-2 glass rounded-xl text-white font-bold text-xs hover:bg-white/10 flex items-center gap-2"
-                    >
-                      Configurar 2FA
-                    </button>
                   </div>
                 )}
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                {/* --- CONNECT CALENDAR CARD --- */}
+                <div className="p-8 rounded-[2.5rem] bg-slate-800/50 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all">
+                  <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg className="w-24 h-24 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2 relative z-10">Agenda Inteligente</h3>
+                  <p className="text-slate-400 text-sm mb-6 relative z-10">Conecte sua agenda para o bot entrar automaticamente nas reuniões.</p>
 
-              {
-                user.role === 'FREE' && (
-                  <div className="space-y-8">
-                    <h2 className="text-3xl font-black text-center text-white">Escolha seu Plano</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlan === 'monthly' ? 'bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border-cyan-500 shadow-2xl shadow-blue-500/10 scale-[1.02]' : 'glass border-white/10 hover:border-white/20'}`} onClick={() => setSelectedPlan('monthly')}>
-                        <div className="flex justify-between items-center mb-4">
-                          <h3 className="text-xl font-bold text-white">Mensal</h3>
-                          {selectedPlan === 'monthly' && <div className="w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>}
-                        </div>
-                        <div className="flex items-baseline gap-1 mb-6">
-                          <span className="text-sm text-slate-400">R$</span>
-                          <span className="text-5xl font-black text-white">{publicPricing.monthly.toFixed(2).replace('.', ',')}</span>
-                          <span className="text-slate-400">/mês</span>
-                        </div>
-                        <ul className="space-y-3 mb-8">
-                          <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Transcrições Ilimitadas</li>
-                          <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Chat com IA Avançado</li>
-                        </ul>
-                      </div>
+                  {user.calendarConnected ? (
+                    <div className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-green-500/20 border border-green-500/30 text-green-400 font-bold text-sm">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      Conectado
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleCalendarConnect('google_calendar')}
+                      className="relative z-10 px-6 py-3 rounded-xl bg-white text-slate-900 font-bold text-sm uppercase tracking-wide hover:bg-slate-200 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" /></svg>
+                      Conectar Agora
+                    </button>
+                  )}
+                </div>
 
-                      <div className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlan === 'yearly' ? 'bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border-indigo-500 shadow-2xl shadow-indigo-500/10 scale-[1.02]' : 'glass border-white/10 hover:border-white/20'}`} onClick={() => setSelectedPlan('yearly')}>
-                        <div className="flex justify-between items-center mb-4">
-                          <h3 className="text-xl font-bold text-white">Anual</h3>
-                          <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-bold uppercase">Economize 15%</span>
-                          {selectedPlan === 'yearly' && <div className="w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]"></div>}
-                        </div>
-                        <div className="flex items-baseline gap-1 mb-6">
-                          <span className="text-sm text-slate-400">R$</span>
-                          <span className="text-5xl font-black text-white">{publicPricing.yearly.toFixed(2).replace('.', ',')}</span>
-                          <span className="text-slate-400">/ano</span>
-                        </div>
-                        <ul className="space-y-3 mb-8">
-                          <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Tudo do plano mensal</li>
-                          <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Prioridade no suporte</li>
-                        </ul>
+                {/* --- USAGE STATS CARD --- */}
+                <div className="p-8 rounded-[2.5rem] bg-slate-800/50 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all">
+                  <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg className="w-24 h-24 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2 relative z-10">Uso Mensal</h3>
+                  <p className="text-slate-400 text-sm mb-6 relative z-10">Gravações realizadas este mês.</p>
+
+                  <div className="flex items-end gap-2 mb-2 relative z-10">
+                    <span className="text-4xl font-black text-white">{user.meetings_recorded || 0}</span>
+                    <span className="text-slate-500 font-bold mb-1">/ {user.first_name === 'Admin' || user.role === 'PRO' || user.role === 'MASTER' ? 'Ilimitado' : '5'}</span>
+                  </div>
+                  <div className="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden relative z-10">
+                    <div
+                      className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.min(((user.meetings_recorded || 0) / (user.role === 'PRO' || user.role === 'MASTER' ? 100 : 5)) * 100, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* --- PERSONAL INFO FORM --- */}
+              <div className="space-y-6 mb-12">
+                <h3 className="text-2xl font-bold text-white mb-6">Dados Pessoais</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Telefone / WhatsApp</label>
+                    <input
+                      type="text"
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })}
+                      className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">CEP</label>
+                    <input
+                      type="text"
+                      value={editForm.postalCode}
+                      onChange={(e) => {
+                        const val = formatCEP(e.target.value);
+                        setEditForm({ ...editForm, postalCode: val });
+                        if (val.length === 9) fetchAddressFromCEP(val);
+                      }}
+                      className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
+                      placeholder="00000-000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Número</label>
+                    <input
+                      type="text"
+                      value={editForm.addressNumber}
+                      onChange={(e) => setEditForm({ ...editForm, addressNumber: e.target.value })}
+                      className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
+                      placeholder="123"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Complemento</label>
+                    <input
+                      type="text"
+                      value={editForm.addressComplement || ''}
+                      onChange={(e) => setEditForm({ ...editForm, addressComplement: e.target.value })}
+                      className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
+                      placeholder="Apto 101, Bloco B"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={saveLoading}
+                    className="px-8 py-3 bg-white text-slate-900 font-bold rounded-xl uppercase tracking-wide hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {saveLoading && <svg className="animate-spin h-5 w-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                    Salvar Alterações
+                  </button>
+                </div>
+              </div>
+
+              {/* --- PLAN UPGRADE SECTION (Only for FREE users) --- */}
+              {user.role === 'FREE' && (
+                <div className="border-t border-white/10 pt-12">
+                  <div className="text-center mb-12">
+                    <h3 className="text-3xl font-black text-white mb-4">Faça Upgrade para PRO</h3>
+                    <p className="text-slate-400 max-w-xl mx-auto">Desbloqueie transcrições ilimitadas e recursos avançados para levar suas reuniões para o próximo nível.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                    {/* Monthly Plan */}
+                    <div className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlan === 'monthly' ? 'bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border-cyan-500 shadow-2xl shadow-cyan-500/10 scale-[1.02]' : 'glass border-white/10 hover:border-white/20'}`} onClick={() => setSelectedPlan('monthly')}>
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-bold text-white">Mensal</h3>
+                        {selectedPlan === 'monthly' && <div className="w-4 h-4 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]"></div>}
                       </div>
+                      <div className="flex items-baseline gap-1 mb-6">
+                        <span className="text-sm text-slate-400">R$</span>
+                        <span className="text-5xl font-black text-white">{publicPricing.monthly.toFixed(2).replace('.', ',')}</span>
+                        <span className="text-slate-400">/mês</span>
+                      </div>
+                      <ul className="space-y-3 mb-8">
+                        <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Transcrições Ilimitadas</li>
+                        <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Chat com IA Avançado</li>
+                      </ul>
                     </div>
 
-                    <button
-                      onClick={() => setPaymentModalOpen(true)}
-                      className="w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xl uppercase tracking-widest shadow-xl transition-all hover:scale-[1.01]"
-                    >
-                      Assinar Agora
-                    </button>
+                    {/* Yearly Plan */}
+                    <div className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlan === 'yearly' ? 'bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border-indigo-500 shadow-2xl shadow-indigo-500/10 scale-[1.02]' : 'glass border-white/10 hover:border-white/20'}`} onClick={() => setSelectedPlan('yearly')}>
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-bold text-white">Anual</h3>
+                        <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-bold uppercase">Economize 15%</span>
+                        {selectedPlan === 'yearly' && <div className="w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]"></div>}
+                      </div>
+                      <div className="flex items-baseline gap-1 mb-6">
+                        <span className="text-sm text-slate-400">R$</span>
+                        <span className="text-5xl font-black text-white">{publicPricing.yearly.toFixed(2).replace('.', ',')}</span>
+                        <span className="text-slate-400">/ano</span>
+                      </div>
+                      <ul className="space-y-3 mb-8">
+                        <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Tudo do plano mensal</li>
+                        <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Prioridade no suporte</li>
+                      </ul>
+                    </div>
                   </div>
-                )
-              }
-            </div >
-          ))
-        }
+
+                  <button
+                    onClick={() => setPaymentModalOpen(true)}
+                    className="w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xl uppercase tracking-widest shadow-xl transition-all hover:scale-[1.01]"
+                  >
+                    Assinar Agora
+                  </button>
+                </div>
+              )}
+
+            </div>
+          ) : (
+            <div className="w-full h-[60vh] flex flex-col items-center justify-center animate-fade-in gap-4">
+              <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
+                <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              </div>
+              <h3 className="text-xl font-bold text-white">Perfil não encontrado</h3>
+              <p className="text-slate-400">Não foi possível carregar seus dados.</p>
+              <button onClick={() => window.location.reload()} className="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold transition-all">
+                Recarregar Página
+              </button>
+            </div>
+          )
+        )}
 
         {/* Dead code removed: Unused inline payment modal */}
 

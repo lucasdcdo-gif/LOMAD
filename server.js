@@ -427,10 +427,6 @@ app.post('/api/profiles/create', async (req, res) => {
   try {
     const { userId, email, role = 'FREE' } = req.body;
 
-    if (!userId || !email) {
-      return res.status(400).json({ error: 'userId and email are required' });
-    }
-
     // Using SERVICE_KEY to bypass RLS policies
     const { data, error } = await supabase
       .from('profiles')
@@ -446,6 +442,60 @@ app.post('/api/profiles/create', async (req, res) => {
     res.json(data);
   } catch (err) {
     logger.error("Create profile exception: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Sync Calendar Status
+app.post('/api/recall/sync-calendar', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: "UserId required" });
+
+    // 1. Get API Key
+    if (!process.env.RECALL_API_KEY) dotenv.config();
+    const apiKey = process.env.RECALL_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: "Recall API Key missing." });
+
+    // 2. Query Recall for Calendars
+    const RECALL_BASE_URL = 'https://us-west-2.recall.ai/api/v1'; // Explicitly defined
+
+    console.log(`[Sync Calendar] Checking status for user ${userId}...`);
+
+    let calendarConnected = false;
+    try {
+      const response = await axios.get(`${RECALL_BASE_URL}/calendars/`, {
+        params: { user_id: userId },
+        headers: { Authorization: `Token ${apiKey}` }
+      });
+
+      const calendars = response.data.results || response.data; // Handle pagination if present
+      console.log(`[Sync Calendar] Found ${calendars.length} calendars for user.`);
+
+      // Check if any is connected
+      const connectedCal = calendars.find(c => c.status === 'connected');
+      if (connectedCal) {
+        calendarConnected = true;
+        console.log(`[Sync Calendar] Connected calendar found: ${connectedCal.id} (${connectedCal.platform_email})`);
+      }
+    } catch (recallErr) {
+      console.error("[Sync Calendar] Recall API Error:", recallErr.message);
+    }
+
+    // 3. Update Database
+    if (calendarConnected) {
+      const { error } = await supabase.from('profiles').update({
+        calendar_connected: true
+      }).eq('id', userId);
+
+      if (error) throw error;
+      console.log(`[Sync Calendar] Database updated for user ${userId}`);
+    }
+
+    res.json({ success: true, connected: calendarConnected });
+
+  } catch (err) {
+    console.error("[Sync Calendar] Error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
