@@ -301,7 +301,17 @@ const App: React.FC = () => {
       }
 
       setSuccessMessage('Agenda desconectada com sucesso.');
-      // Refresh to update dual status
+
+      // Optimistic Update: Immediately reflect disconnection in UI
+      setUser(prev => prev ? ({
+        ...prev,
+        googleCalendarConnected: platform === 'google_calendar' ? false : prev.googleCalendarConnected,
+        outlookCalendarConnected: platform === 'outlook_calendar' ? false : prev.outlookCalendarConnected,
+        calendarConnected: false, // Fallback if using generic flag
+        recallId: null // Clear recall ID as we deleted the user
+      }) : null);
+
+      // Background Refresh to sync with DB
       fetchProfile(user.id, user.email, true);
 
     } catch (err: any) {
