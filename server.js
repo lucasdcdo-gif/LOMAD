@@ -467,7 +467,7 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
 
     try {
       const response = await axios.get(`${RECALL_BASE_URL}/calendars/`, {
-        params: { user_id: userId },
+        params: { external_id: userId },
         headers: { Authorization: `Token ${apiKey}` }
       });
 
@@ -611,9 +611,9 @@ app.get('/api/recall/events', async (req, res) => {
     const RECALL_BASE_URL = 'https://us-west-2.recall.ai/api/v1';
 
     // 1. Find Connected Calendar
-    // We reuse the logic from sync-calendar: list calendars by user_id
+    // We reuse the logic from sync-calendar: list calendars by external_id
     const calResponse = await axios.get(`${RECALL_BASE_URL}/calendars/`, {
-      params: { user_id: userId },
+      params: { external_id: userId },
       headers: { Authorization: `Token ${apiKey}` }
     });
 
