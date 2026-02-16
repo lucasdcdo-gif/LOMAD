@@ -507,9 +507,9 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
         console.warn("[Sync Calendar] Could not resolving Recall User ID. Assuming no connections.");
       } else {
         // Check connections from the user object directly
-        // The /calendars/ endpoint provided 404, so we rely on the user object.
-        googleConnected = connections.some(c => c.platform === 'google_calendar' && c.connected);
-        outlookConnected = connections.some(c => c.platform === 'microsoft_outlook' && c.connected);
+        // API returns "google" and "microsoft", checking both just in case of API version diffs
+        googleConnected = connections.some(c => (c.platform === 'google' || c.platform === 'google_calendar') && c.connected);
+        outlookConnected = connections.some(c => (c.platform === 'microsoft' || c.platform === 'microsoft_outlook') && c.connected);
         console.log(`[Sync Calendar] Status - Google: ${googleConnected}, Outlook: ${outlookConnected}`);
       }
 
@@ -681,7 +681,10 @@ app.get('/api/recall/events', async (req, res) => {
     }
 
     // Identify connected calendar from 'connections' array
-    const connectedCal = connections.find(c => c.connected && (c.platform === 'google_calendar' || c.platform === 'microsoft_outlook'));
+    const connectedCal = connections.find(c => c.connected && (
+      c.platform === 'google' || c.platform === 'google_calendar' ||
+      c.platform === 'microsoft' || c.platform === 'microsoft_outlook'
+    ));
 
     if (!connectedCal) {
       return res.json([]); // No connected calendar
