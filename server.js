@@ -478,7 +478,22 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
         if (foundUser) recallUserId = foundUser.id;
         console.log(`[Sync Calendar] Resolved External ID ${userId} to Recall ID: ${recallUserId}`);
       } catch (userErr) {
-        console.error("[Sync Calendar] Error looking up user:", userErr.message);
+        // If 404 or empty, try to create user
+        console.log(`[Sync Calendar] User not found (${userErr.message}). Creating Recall User for ${userId}...`);
+        try {
+          const createResponse = await axios.post(`${RECALL_BASE_URL}/users/`, {
+            external_id: userId
+          }, {
+            headers: { Authorization: `Token ${apiKey}` }
+          });
+          recallUserId = createResponse.data.id;
+          console.log(`[Sync Calendar] Created Recall User: ${recallUserId}`);
+        } catch (createErr) {
+          console.error("[Sync Calendar] Failed to create user:", createErr.message);
+          // If creation fails, we can't proceed with sync using recall_id, 
+          // but maybe the user exists and we just missed it? 
+          // Fallback to userId is basically a hail mary.
+        }
       }
 
       if (!recallUserId) {
@@ -645,7 +660,18 @@ app.get('/api/recall/events', async (req, res) => {
       const foundUser = users.find(u => u.external_id === userId);
       if (foundUser) recallUserId = foundUser.id;
     } catch (e) {
-      console.error("Error resolving recall user:", e.message);
+      // If 404 or empty, try to create user
+      console.log(`[Events] User not found (${e.message}). Creating Recall User for ${userId}...`);
+      try {
+        const createResponse = await axios.post(`${RECALL_BASE_URL}/users/`, {
+          external_id: userId
+        }, {
+          headers: { Authorization: `Token ${apiKey}` }
+        });
+        recallUserId = createResponse.data.id;
+      } catch (createErr) {
+        console.error("[Events] Failed to create user:", createErr.message);
+      }
     }
 
     if (!recallUserId) {
