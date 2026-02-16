@@ -97,7 +97,10 @@ const App: React.FC = () => {
   const [privacyAccepted, setPrivacyAccepted] = useState<boolean>(false);
   const [resetEmail, setResetEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [loginStatus, setLoginStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS'>('IDLE');
+  const [botStatus, setBotStatus] = useState<'IDLE' | 'JOINING' | 'RECORDING' | 'LEAVING'>('IDLE');
+
+  // Dashboard State
+  const [nextMeeting, setNextMeeting] = useState<any>(null);
 
   // Meeting Details State
   const [transcriptionExpanded, setTranscriptionExpanded] = useState(false);
@@ -1655,11 +1658,20 @@ const App: React.FC = () => {
 
                             {user.calendarConnected ? (
                               <div className="flex flex-col items-end gap-1">
-                                <div className="px-4 py-2 bg-slate-900/50 rounded-lg border border-white/10 text-sm text-slate-300">
-                                  <span className="text-xs text-slate-500 block uppercase">Próxima Reunião (Exemplo)</span>
-                                  <strong>Daily Scrum</strong> • Hoje, 10:00
-                                </div>
-                                <button onClick={() => setView('RECALL_CONFIG')} className="text-xs text-blue-400 hover:text-white transition-colors">Gerenciar Bot & Agenda</button>
+                                {nextMeeting ? (
+                                  <div className="px-4 py-2 bg-slate-900/50 rounded-lg border border-white/10 text-sm text-slate-300">
+                                    <span className="text-xs text-blue-400 block uppercase font-bold mb-0.5">Próxima Reunião</span>
+                                    <strong className="text-white block truncate max-w-[180px]">{nextMeeting.title}</strong>
+                                    <span className="opacity-80">
+                                      {new Date(nextMeeting.start_time).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} • {new Date(nextMeeting.start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="px-4 py-2 bg-slate-900/50 rounded-lg border border-white/10 text-sm text-slate-500 italic">
+                                    Nenhuma reunião agendada
+                                  </div>
+                                )}
+                                <button onClick={() => setView('RECALL_CONFIG')} className="text-xs text-blue-400 hover:text-white transition-colors mt-1">Gerenciar Bot & Agenda</button>
                               </div>
                             ) : (
                               <button
