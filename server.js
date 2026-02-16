@@ -634,7 +634,7 @@ app.post('/api/recall/config', async (req, res) => {
   }
 });
 
-// 2. Fetch Upcoming Events
+// 2. Fetch Upcoming Events (Auth Token Flow)
 app.get('/api/recall/events', async (req, res) => {
   try {
     const { userId } = req.query;
@@ -644,97 +644,42 @@ app.get('/api/recall/events', async (req, res) => {
     const apiKey = process.env.RECALL_API_KEY;
     const RECALL_BASE_URL = 'https://us-west-2.recall.ai/api/v1';
 
-    // 1. Find Connected Calendar
-    // We reuse the logic from sync-calendar: list calendars by external_id
-    // 1. Find Connected Calendar
-    // Lookup Recall User ID first
-    let recallUserId = null;
-    let connections = []; // Store connections
+    // 1. Authenticate to get Token
+    // Endpoint: POST /calendar/authenticate/
+    let authToken = null;
     try {
-      // Correct Endpoint: /calendar/users/
-      const userResponse = await axios.get(`${RECALL_BASE_URL}/calendar/users/`, {
-        params: { external_id: userId },
+      const authResponse = await axios.post(`${RECALL_BASE_URL}/calendar/authenticate/`, {
+        user_id: userId
+      }, {
         headers: { Authorization: `Token ${apiKey}` }
       });
-      const users = userResponse.data.results || userResponse.data;
-      const foundUser = users.find(u => u.external_id === userId);
-      if (foundUser) {
-        recallUserId = foundUser.id;
-        connections = foundUser.connections || [];
-      }
-    } catch (e) {
-      // If 404 or empty, try to create user
-      console.log(`[Events] User not found (${e.message}). Creating Recall User for ${userId}...`);
-      try {
-        const createResponse = await axios.post(`${RECALL_BASE_URL}/calendar/users/`, {
-          external_id: userId
-        }, {
-          headers: { Authorization: `Token ${apiKey}` }
-        });
-        recallUserId = createResponse.data.id;
-      } catch (createErr) {
-        console.error("[Events] Failed to create user:", createErr.message);
-      }
-    }
-
-    if (!recallUserId) {
-      return res.json([]); // Cannot find user
-    }
-
-    // Identify connected calendar from 'connections' array
-    const connectedCal = connections.find(c => c.connected && (
-      c.platform === 'google' || c.platform === 'google_calendar' ||
-      c.platform === 'microsoft' || c.platform === 'microsoft_outlook'
-    ));
-
-    if (!connectedCal) {
-      return res.json([]); // No connected calendar
-    }
-
-    // 2. Fetch Events
-    // Recall API v1: List Calendars -> Get Events
-    // We need to specify a time range, e.g., now to now + 7 days
-    const startTime = new Date().toISOString();
-    const endTime = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
-
-    // A. List Calendars for this User
-    let calendarIds = [];
-    try {
-      const calendarsResponse = await axios.get(`${RECALL_BASE_URL}/calendar/calendars/`, {
-        params: { user_id: recallUserId },
-        headers: { Authorization: `Token ${apiKey}` }
-      });
-      const calendars = calendarsResponse.data.results || calendarsResponse.data;
-      // Filter optionally if needed, but usually we want all
-      calendarIds = calendars.map(c => c.id);
-    } catch (calErr) {
-      console.error("[Events] Failed to list calendars:", calErr.message);
-      // If fails, we might try the fallback of using connection ID if that was the issue, but unlikely.
-    }
-
-    if (calendarIds.length === 0) {
-      console.log("[Events] No calendars found for user.");
+      authToken = authResponse.data.token;
+    } catch (authErr) {
+      console.error("[Events] Auth Failed:", authErr.message);
+      // If auth fails, user likely doesn't exist or has no calendar connected
       return res.json([]);
     }
 
-    // B. Get Events
-    // Endpoint: /calendar/events/ (accepts calendar_ids[])
-    const eventsResponse = await axios.get(`${RECALL_BASE_URL}/calendar/events/`, {
+    if (!authToken) return res.json([]);
+
+    // 2. Get Meetings (Unified Calendar View)
+    // Endpoint: GET /calendar/meetings/
+    // This returns the exact view of the connected calendar
+    const startTime = new Date().toISOString();
+    const endTime = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // Fetch 30 days
+
+    const meetingsResponse = await axios.get(`${RECALL_BASE_URL}/calendar/meetings/`, {
       params: {
         start_time: startTime,
-        end_time: endTime,
-        calendar_ids: calendarIds
+        end_time: endTime
       },
-      paramsSerializer: {
-        indexes: null // Ensure array is likely sent as calendar_ids=1&calendar_ids=2 or similar depending on axios version, 
-        // but Recall often handles repeated params. 
-        // If axios sends calendar_ids[]=..., Recall might not like it.
-        // Safer: manually construct if needed, but let's try standard first.
-      },
-      headers: { Authorization: `Token ${apiKey}` }
+      headers: {
+        'accept': 'application/json',
+        'x-recallcalendarauthtoken': authToken
+      }
     });
 
-    const events = eventsResponse.data.results || eventsResponse.data;
+    const events = meetingsResponse.data.results || meetingsResponse.data || [];
 
     // 3. Format/Sort
     const formattedEvents = events.map(e => ({
@@ -743,7 +688,7 @@ app.get('/api/recall/events', async (req, res) => {
       start_time: e.start_time,
       end_time: e.end_time,
       meeting_url: e.meeting_url,
-      platform: e.platform // Platform is usually on the event or calendar
+      platform: e.platform // Platform is usually on the event
     })).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
     res.json(formattedEvents);
@@ -751,10 +696,7 @@ app.get('/api/recall/events', async (req, res) => {
   } catch (err) {
     logger.error("Recall Events Error: " + err.message);
     // Return empty array on error to prevent frontend "Error detected" if just no events or 404
-    if (err.response && err.response.status === 404) {
-      return res.json([]);
-    }
-    res.status(500).json({ error: err.message });
+    res.json([]);
   }
 });
 

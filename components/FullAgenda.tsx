@@ -43,6 +43,31 @@ export const FullAgenda: React.FC<FullAgendaProps> = ({ user, setView }) => {
         }
     };
 
+    // State for events
+    const [events, setEvents] = useState<any[]>([]);
+    const [eventsLoading, setEventsLoading] = useState(true);
+
+    const fetchEvents = async () => {
+        try {
+            const res = await fetch(`/api/recall/events?userId=${user.id}`);
+            if (!res.ok) throw new Error('Falha ao sincronizar');
+            const data = await res.json();
+            setEvents(data);
+        } catch (err) {
+            console.error("Erro ao carregar agenda:", err);
+            // Optionally set error state, but for polling we might just ignore transient errors
+        } finally {
+            setEventsLoading(false);
+        }
+    };
+
+    // Initial fetch and Polling (every 60s)
+    useEffect(() => {
+        fetchEvents();
+        const interval = setInterval(fetchEvents, 60000);
+        return () => clearInterval(interval);
+    }, [user.id]);
+
     // Calendar Helper Functions
     const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
     const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
@@ -54,19 +79,6 @@ export const FullAgenda: React.FC<FullAgendaProps> = ({ user, setView }) => {
 
     const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
-    // Mocked Events generator based on current month to populate grid
-    const generateMockEvents = (year: number, month: number) => {
-        return [
-            { id: 1, title: 'Daily Scrum', day: 5, time: '10:00', type: 'meet' },
-            { id: 2, title: 'Alinhamento', day: 12, time: '14:30', type: 'zoom' },
-            { id: 3, title: 'Revisão Mensal', day: 25, time: '09:00', type: 'teams' },
-            { id: 4, title: 'Brainstorming', day: 12, time: '16:00', type: 'meet' }, // Two on same day
-            { id: 5, title: 'Apresentação', day: 28, time: '11:00', type: 'zoom' },
-        ];
-    };
-
-    const events = generateMockEvents(currentDate.getFullYear(), currentDate.getMonth());
 
     const renderCalendarGrid = () => {
         const year = currentDate.getFullYear();
@@ -82,7 +94,14 @@ export const FullAgenda: React.FC<FullAgendaProps> = ({ user, setView }) => {
 
         // Days of month
         for (let day = 1; day <= daysInMonth; day++) {
-            const dayEvents = events.filter(e => e.day === day);
+            // Filter real events for this day
+            const dayEvents = events.filter(e => {
+                const eDate = new Date(e.start_time);
+                return eDate.getDate() === day &&
+                    eDate.getMonth() === month &&
+                    eDate.getFullYear() === year;
+            });
+
             const isToday = day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
 
             days.push(
@@ -92,17 +111,11 @@ export const FullAgenda: React.FC<FullAgendaProps> = ({ user, setView }) => {
                     </span>
                     <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">
                         {dayEvents.map(event => (
-                            <div key={event.id} className="text-xs p-1.5 rounded bg-blue-600/20 border border-blue-500/20 text-blue-200 truncate cursor-pointer hover:bg-blue-600/30 transition-colors" title={`${event.time} - ${event.title}`}>
-                                <span className="font-bold mr-1">{event.time}</span>
+                            <div key={event.id} className="text-xs p-1.5 rounded bg-blue-600/20 border border-blue-500/20 text-blue-200 truncate cursor-pointer hover:bg-blue-600/30 transition-colors" title={`${new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${event.title}`}>
+                                <span className="font-bold mr-1">{new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                 {event.title}
                             </div>
                         ))}
-                        {user.calendarConnected && day % 7 === 0 && ( // Simulated random events for connected calendar
-                            <div className="text-xs p-1.5 rounded bg-purple-600/20 border border-purple-500/20 text-purple-200 truncate">
-                                <span className="font-bold mr-1">10:00</span>
-                                Sync Semanal
-                            </div>
-                        )}
                     </div>
                 </div>
             );
