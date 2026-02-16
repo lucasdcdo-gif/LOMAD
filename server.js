@@ -469,7 +469,7 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
       // 2a. Lookup Recall User ID using External ID
       let recallUserId = null;
       try {
-        const userResponse = await axios.get(`${RECALL_BASE_URL}/users/`, {
+        const userResponse = await axios.get(`${RECALL_BASE_URL}/calendar/users/`, {
           params: { external_id: userId },
           headers: { Authorization: `Token ${apiKey}` }
         });
@@ -481,7 +481,7 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
         // If 404 or empty, try to create user
         console.log(`[Sync Calendar] User not found (${userErr.message}). Creating Recall User for ${userId}...`);
         try {
-          const createResponse = await axios.post(`${RECALL_BASE_URL}/users/`, {
+          const createResponse = await axios.post(`${RECALL_BASE_URL}/calendar/users/`, {
             external_id: userId
           }, {
             headers: { Authorization: `Token ${apiKey}` }
@@ -652,7 +652,8 @@ app.get('/api/recall/events', async (req, res) => {
     // Lookup Recall User ID first
     let recallUserId = null;
     try {
-      const userResponse = await axios.get(`${RECALL_BASE_URL}/users/`, {
+      // Correct Endpoint: /calendar/users/
+      const userResponse = await axios.get(`${RECALL_BASE_URL}/calendar/users/`, {
         params: { external_id: userId },
         headers: { Authorization: `Token ${apiKey}` }
       });
@@ -663,7 +664,7 @@ app.get('/api/recall/events', async (req, res) => {
       // If 404 or empty, try to create user
       console.log(`[Events] User not found (${e.message}). Creating Recall User for ${userId}...`);
       try {
-        const createResponse = await axios.post(`${RECALL_BASE_URL}/users/`, {
+        const createResponse = await axios.post(`${RECALL_BASE_URL}/calendar/users/`, {
           external_id: userId
         }, {
           headers: { Authorization: `Token ${apiKey}` }
