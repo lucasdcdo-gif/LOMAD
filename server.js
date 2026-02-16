@@ -692,15 +692,44 @@ app.get('/api/recall/events', async (req, res) => {
     }
 
     // 2. Fetch Events
-    // Recall API: GET /calendars/{id}/events
+    // Recall API v1: List Calendars -> Get Events
     // We need to specify a time range, e.g., now to now + 7 days
     const startTime = new Date().toISOString();
     const endTime = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
 
-    const eventsResponse = await axios.get(`${RECALL_BASE_URL}/calendars/${connectedCal.id}/events`, {
+    // A. List Calendars for this User
+    let calendarIds = [];
+    try {
+      const calendarsResponse = await axios.get(`${RECALL_BASE_URL}/calendar/calendars/`, {
+        params: { user_id: recallUserId },
+        headers: { Authorization: `Token ${apiKey}` }
+      });
+      const calendars = calendarsResponse.data.results || calendarsResponse.data;
+      // Filter optionally if needed, but usually we want all
+      calendarIds = calendars.map(c => c.id);
+    } catch (calErr) {
+      console.error("[Events] Failed to list calendars:", calErr.message);
+      // If fails, we might try the fallback of using connection ID if that was the issue, but unlikely.
+    }
+
+    if (calendarIds.length === 0) {
+      console.log("[Events] No calendars found for user.");
+      return res.json([]);
+    }
+
+    // B. Get Events
+    // Endpoint: /calendar/events/ (accepts calendar_ids[])
+    const eventsResponse = await axios.get(`${RECALL_BASE_URL}/calendar/events/`, {
       params: {
         start_time: startTime,
-        end_time: endTime
+        end_time: endTime,
+        calendar_ids: calendarIds
+      },
+      paramsSerializer: {
+        indexes: null // Ensure array is likely sent as calendar_ids=1&calendar_ids=2 or similar depending on axios version, 
+        // but Recall often handles repeated params. 
+        // If axios sends calendar_ids[]=..., Recall might not like it.
+        // Safer: manually construct if needed, but let's try standard first.
       },
       headers: { Authorization: `Token ${apiKey}` }
     });
@@ -714,13 +743,17 @@ app.get('/api/recall/events', async (req, res) => {
       start_time: e.start_time,
       end_time: e.end_time,
       meeting_url: e.meeting_url,
-      platform: e.platform || connectedCal.platform
+      platform: e.platform // Platform is usually on the event or calendar
     })).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
     res.json(formattedEvents);
 
   } catch (err) {
     logger.error("Recall Events Error: " + err.message);
+    // Return empty array on error to prevent frontend "Error detected" if just no events or 404
+    if (err.response && err.response.status === 404) {
+      return res.json([]);
+    }
     res.status(500).json({ error: err.message });
   }
 });

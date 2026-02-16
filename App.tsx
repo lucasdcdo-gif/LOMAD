@@ -111,6 +111,8 @@ const App: React.FC = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'ADDON_10H'>('monthly');
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [disconnectModalOpen, setDisconnectModalOpen] = useState(false); // New State
+  const [calendarToDisconnect, setCalendarToDisconnect] = useState<string | null>(null); // New State
   const [cancelSubscriptionModalOpen, setCancelSubscriptionModalOpen] = useState(false);
   const [mfaChallengeOpen, setMfaChallengeOpen] = useState(false);
   const [showMfaEnrollment, setShowMfaEnrollment] = useState(false);
@@ -274,10 +276,16 @@ const App: React.FC = () => {
 
   const handleCalendarDisconnect = async (platform: string) => {
     if (!user) return;
+    setCalendarToDisconnect(platform);
+    setDisconnectModalOpen(true);
+  };
 
-    if (!window.confirm(`Tem certeza que deseja desconectar o ${platform === 'google_calendar' ? 'Google Calendar' : 'Outlook'}? O bot não entrará mais nas reuniões desta agenda.`)) {
-      return;
-    }
+  const confirmDisconnect = async () => {
+    if (!user || !calendarToDisconnect) return;
+
+    // Close modal immediately to show loading state if needed, or keep it open with loader?
+    // Let's close it and use global authLoading
+    setDisconnectModalOpen(false);
 
     try {
       setAuthLoading(true);
@@ -285,7 +293,7 @@ const App: React.FC = () => {
       const response = await fetch('/api/recall/calendar-disconnect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, platform })
+        body: JSON.stringify({ userId: user.id, platform: calendarToDisconnect })
       });
 
       if (!response.ok) {
@@ -301,6 +309,7 @@ const App: React.FC = () => {
       setError("Erro ao desconectar agenda: " + (err.message || 'Erro desconhecido'));
     } finally {
       setAuthLoading(false);
+      setCalendarToDisconnect(null);
     }
   };
 
@@ -3804,6 +3813,41 @@ const App: React.FC = () => {
         error={error}
         userRole={user?.role || 'FREE'}
       />
+
+      {/* Disconnect Confirmation Modal */}
+      {disconnectModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 animate-fade-in">
+          <div className="bg-slate-900 border border-slate-700 text-white rounded-3xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center gap-6 animate-bounce-in">
+            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-black text-white">Desconectar Agenda?</h3>
+              <p className="font-medium text-slate-400">
+                Tem certeza que deseja desconectar o <span className="text-white font-bold">{calendarToDisconnect === 'google_calendar' ? 'Google Calendar' : 'Outlook'}</span>?
+                <br /><br />
+                O bot <b className="text-red-400">não entrará mais</b> nas reuniões desta agenda automaticamente.
+              </p>
+            </div>
+            <div className="flex gap-4 w-full">
+              <button
+                onClick={() => setDisconnectModalOpen(false)}
+                className="flex-1 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors uppercase"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDisconnect}
+                className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors uppercase shadow-lg shadow-red-500/20"
+              >
+                Desconectar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* View: Pricing */}
       {
