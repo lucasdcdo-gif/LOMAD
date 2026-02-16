@@ -530,6 +530,7 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
 
     res.json({
       success: true,
+      connected: googleConnected || outlookConnected, // Required by App.tsx
       googleConnected,
       outlookConnected,
       anyConnected: googleConnected || outlookConnected
@@ -840,46 +841,52 @@ app.post('/api/recall/calendar-disconnect', async (req, res) => {
     const apiKey = process.env.RECALL_API_KEY;
     const RECALL_BASE_URL = 'https://us-west-2.recall.ai/api/v1';
 
-    // 2. Identify Calendar ID to delete from Recall
-    // We need to list calendars first to find the ID of the one matching the platform
-    let calendarIdToDelete = null;
+    // 2. Identify Calendar Connection ID to delete from Recall
+    // We reuse the logic: get user -> find connection -> get ID
+    let connectionIdToDelete = null;
 
     try {
-      const response = await axios.get(`${RECALL_BASE_URL}/calendars/`, {
-        params: { user_id: userId },
+      // Correct Endpoint: /calendar/users/
+      const userResponse = await axios.get(`${RECALL_BASE_URL}/calendar/users/`, {
+        params: { external_id: userId },
         headers: { Authorization: `Token ${apiKey}` }
       });
-      const calendars = response.data.results || response.data;
+      const users = userResponse.data.results || userResponse.data;
+      const foundUser = users.find(u => u.external_id === userId);
 
-      // Filter by platform if provided
-      const targetPlatform = platform === 'google_calendar' ? 'google_calendar' : (platform === 'outlook_calendar' ? 'microsoft_outlook' : null);
-
-      if (targetPlatform) {
-        const cal = calendars.find(c => c.platform === targetPlatform && c.status === 'connected');
-        if (cal) calendarIdToDelete = cal.id;
-      } else {
-        // Fallback: Disconnect ANY connected (legacy behavior)
-        const cal = calendars.find(c => c.status === 'connected');
-        if (cal) calendarIdToDelete = cal.id;
+      if (foundUser && foundUser.connections) {
+        const connection = foundUser.connections.find(c =>
+        (c.platform === platform ||
+          (platform === 'google_calendar' && c.platform === 'google') ||
+          (platform === 'outlook_calendar' && c.platform === 'microsoft'))
+        );
+        if (connection) {
+          connectionIdToDelete = connection.id;
+        }
       }
 
     } catch (e) {
-      console.error("Error listing calendars for disconnect:", e.message);
+      console.error("[Disconnect] Error finding user:", e.message);
+      // If user not found, maybe they are already disconnected?
     }
 
-    // 3. Delete from Recall
-    if (calendarIdToDelete) {
+    if (!connectionIdToDelete) {
+      // If we can't find the connection, we can't delete it.
+      // But we should still update our local DB to reflect "disconnected"
+      console.warn(`[Disconnect] Connection ID not found for user ${userId} on ${platform}. Force updating local DB.`);
+    } else {
+      // 3. Delete from Recall
+      // Endpoint: DELETE /calendar/connections/{id}/
       try {
-        await axios.delete(`${RECALL_BASE_URL}/calendars/${calendarIdToDelete}/`, {
+        await axios.delete(`${RECALL_BASE_URL}/calendar/connections/${connectionIdToDelete}/`, {
           headers: { Authorization: `Token ${apiKey}` }
         });
-        console.log(`[Disconnect] Deleted calendar ${calendarIdToDelete} from Recall.`);
-      } catch (e) {
-        console.error("Error deleting calendar from Recall:", e.message);
-        // Continue to update DB anyway to keep inconsistent state away
+        console.log(`[Disconnect] Deleted connection ${connectionIdToDelete} for user ${userId}`);
+      } catch (delErr) {
+        console.error("[Disconnect] Failed to delete from Recall:", delErr.message);
+        // If 404, it's already gone. Proceed to DB update.
       }
     }
-
     // 4. Update Database
     const updatePayload = {};
     if (platform === 'google_calendar') {
@@ -894,20 +901,19 @@ app.post('/api/recall/calendar-disconnect', async (req, res) => {
       updatePayload.recall_id = null;
     }
 
-    // If specific disconnect, check if ANY remains connected to update legacy flag?
-    // Simplified: If disconnecting one, we assume legacy flag relies on the remaining one.
-    // Ideally we should re-sync. For now, let's trust the granular columns.
-
     const { error } = await supabase.from('profiles').update(updatePayload).eq('id', userId);
 
     if (error) throw error;
 
     res.json({ success: true, message: "Agenda desconectada com sucesso." });
+
   } catch (err) {
     logger.error("Disconnect Error: " + err.message);
     res.status(500).json({ error: err.message });
   }
 });
+
+
 
 // 2.5 Instant Bot Join (Manual Link)
 // 2.5 Instant Bot Join (Real Integration)

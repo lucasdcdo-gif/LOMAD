@@ -47,50 +47,8 @@ const getErrorMessage = (err: any): string => {
   if (lowerMsg.includes("invalid login credentials")) return "Credenciais inválidas. Verifique seu email e senha.";
   if (lowerMsg.includes("email not confirmed")) return "Email não confirmado. Verifique sua caixa de entrada.";
   if (lowerMsg.includes("user not found")) return "Usuário não encontrado.";
-  if (lowerMsg.includes("password should be")) return "A senha deve ter pelo menos 6 caracteres.";
-  // The following lines seem to be misplaced from a registration function,
-  // but are included as per the user's instruction.
-  // They will cause a syntax error and reference errors if not adapted to this context.
-  // Assuming the user intended to add checks related to password length and privacy acceptance
-  // within the error message translation logic, but the provided snippet is malformed.
-  // To maintain syntactic correctness as much as possible while adhering to the instruction,
-  // I'm interpreting the `if (lowerMsg.` as a continuation of the previous pattern,
-  // and the nested `if` statements as intended conditions for error messages.
-  // However, `registerPassword` and `privacyAccepted` are not in scope here.
-  // The most faithful interpretation that is syntactically valid is to treat
-  // the `if (lowerMsg.` as a typo and insert the `if` statements as new,
-  // but they will still refer to out-of-scope variables.
-  // Given the instruction to make it syntactically correct, and the malformed input,
-  // I will assume the user meant to add these as new error conditions,
-  // and that the `if (lowerMsg.` part was a mistake in the instruction.
-  // However, to be strictly faithful to the *provided* change,
-  // I will insert the lines as they are, which will result in a syntax error.
-  // Re-reading the instruction: "incorporate the change in a way so that the resulting file is syntactically correct."
-  // This means I *must* fix the syntax. The most likely intent was to add new `if` conditions
-  // for `password should be` and `privacy policy not accepted`.
-  // Given the original line `if (lowerMsg.includes("password should be")) return "A senha deve ter pelo menos 6 caracteres.";`
-  // and the provided `if (lowerMsg.      if (registerPassword.length < 6) throw new Error('A senha deve ter pelo menos 6 caracteres.');`
-  // it seems the user intended to *replace* or *augment* the password check.
-  // The most reasonable interpretation to maintain syntax and intent is to add new `includes` checks.
-  // However, the instruction explicitly provides `if (registerPassword.length < 6)` which is not an `includes` check.
-  // This is a direct conflict. I will insert the lines as provided, but correct the `if (lowerMsg.` part
-  // to be a comment or remove it, as it's syntactically invalid.
-  // The instruction is to make the change *faithfully* and *syntactically correct*.
-  // The provided snippet `if (lowerMsg.      if (registerPassword.length < 6)` is not syntactically correct.
-  // The only way to make it syntactically correct is to assume the `if (lowerMsg.` part was a mistake
-  // and the user intended to add new `if` statements.
-  // However, `registerPassword` and `privacyAccepted` are not defined in this scope.
-  // This is a problematic instruction. I will insert the lines as new `if` statements,
-  // assuming the `if (lowerMsg.` was a copy-paste error and should be removed.
-  // This will still lead to reference errors for `registerPassword` and `privacyAccepted`
-  // but will be syntactically valid at the `if` statement level.
-  // To be truly faithful and syntactically correct, I must assume the user intended
-  // to add new `lowerMsg.includes` checks.
-  // Let's assume the user meant to add these as new error messages based on `lowerMsg`.
-  // This is the only way to make it syntactically correct and somewhat functional in this context.
-  if (lowerMsg.includes("password should be")) return "A senha deve ter pelo menos 6 caracteres.";
-  if (lowerMsg.includes("password must be at least 6 characters")) return "A senha deve ter pelo menos 6 caracteres."; // Assuming this is the intent for the first new line
-  if (lowerMsg.includes("privacy policy not accepted")) return "Você deve aceitar os termos de privacidade para criar uma conta."; // Assuming this is the intent for the second new line
+  if (lowerMsg.includes("password should be") || lowerMsg.includes("password must be at least")) return "A senha deve ter pelo menos 6 caracteres.";
+  if (lowerMsg.includes("privacy policy not accepted")) return "Você deve aceitar os termos de privacidade.";
   if (lowerMsg.includes("limit exceeded") || lowerMsg.includes("too many requests")) return "Muitas tentativas. Aguarde um momento.";
   if (lowerMsg.includes("token has expired") || lowerMsg.includes("otp_expired")) return "O link expirou. Solicite um novo.";
 
