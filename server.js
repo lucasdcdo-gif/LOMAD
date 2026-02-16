@@ -466,8 +466,29 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
     let outlookConnected = false;
 
     try {
+      // 2a. Lookup Recall User ID using External ID
+      let recallUserId = null;
+      try {
+        const userResponse = await axios.get(`${RECALL_BASE_URL}/users/`, {
+          params: { external_id: userId },
+          headers: { Authorization: `Token ${apiKey}` }
+        });
+        const users = userResponse.data.results || userResponse.data;
+        const foundUser = users.find(u => u.external_id === userId);
+        if (foundUser) recallUserId = foundUser.id;
+        console.log(`[Sync Calendar] Resolved External ID ${userId} to Recall ID: ${recallUserId}`);
+      } catch (userErr) {
+        console.error("[Sync Calendar] Error looking up user:", userErr.message);
+      }
+
+      if (!recallUserId) {
+        console.error("[Sync Calendar] Recall User not found for external_id:", userId);
+        // Fallback: try using userId as recall_id if it happens to be one (unlikely but safe)
+        recallUserId = userId;
+      }
+
       const response = await axios.get(`${RECALL_BASE_URL}/calendars/`, {
-        params: { external_id: userId },
+        params: { user_id: recallUserId }, // Now using the resolved Recall ID
         headers: { Authorization: `Token ${apiKey}` }
       });
 
@@ -612,8 +633,27 @@ app.get('/api/recall/events', async (req, res) => {
 
     // 1. Find Connected Calendar
     // We reuse the logic from sync-calendar: list calendars by external_id
+    // 1. Find Connected Calendar
+    // Lookup Recall User ID first
+    let recallUserId = null;
+    try {
+      const userResponse = await axios.get(`${RECALL_BASE_URL}/users/`, {
+        params: { external_id: userId },
+        headers: { Authorization: `Token ${apiKey}` }
+      });
+      const users = userResponse.data.results || userResponse.data;
+      const foundUser = users.find(u => u.external_id === userId);
+      if (foundUser) recallUserId = foundUser.id;
+    } catch (e) {
+      console.error("Error resolving recall user:", e.message);
+    }
+
+    if (!recallUserId) {
+      return res.json([]); // Cannot find user
+    }
+
     const calResponse = await axios.get(`${RECALL_BASE_URL}/calendars/`, {
-      params: { external_id: userId },
+      params: { user_id: recallUserId },
       headers: { Authorization: `Token ${apiKey}` }
     });
 
