@@ -4095,6 +4095,7 @@ const App: React.FC = () => {
               if (data) setUser({ ...user, ...data } as any);
             }}
             onClose={() => setView('PROFILE')}
+            onDisconnectCalendar={handleCalendarDisconnect}
           />
         )
       }

@@ -6,9 +6,10 @@ interface RecallConfigProps {
     onUpdateUser: () => void;
     onClose: () => void;
     setView: (view: any) => void;
+    onDisconnectCalendar?: (platform: string) => void;
 }
 
-export const RecallConfig: React.FC<RecallConfigProps> = ({ user, onUpdateUser, onClose, setView }) => {
+export const RecallConfig: React.FC<RecallConfigProps> = ({ user, onUpdateUser, onClose, setView, onDisconnectCalendar }) => {
     const [botName, setBotName] = useState(user.botName?.replace('.LOMAD.IA', '') || '');
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -63,6 +64,14 @@ export const RecallConfig: React.FC<RecallConfigProps> = ({ user, onUpdateUser, 
     };
 
     const handleDisconnectCalendar = async () => {
+        if (onDisconnectCalendar) {
+            // Determine platform based on user state
+            const platform = user.googleCalendarConnected ? 'google_calendar' : 'outlook_calendar';
+            onDisconnectCalendar(platform);
+            return;
+        }
+
+        // Fallback for standalone usage (though App.tsx should always provide the handler)
         try {
             setLoading(true);
             const res = await fetch('/api/recall/calendar-disconnect', {
