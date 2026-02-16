@@ -458,7 +458,8 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
     if (!apiKey) return res.status(500).json({ error: "Recall API Key missing." });
 
     // 2. Query Recall for Calendars
-    const RECALL_BASE_URL = 'https://api.recall.ai/api/v1'; // Changed to generic API URL
+    // 2. Query Recall for Calendars
+    const RECALL_BASE_URL = 'https://us-west-2.recall.ai/api/v1'; // Reverted to Regional URL for Auth
 
     console.log(`[Sync Calendar] Checking status for user ${userId}...`);
 
@@ -644,7 +645,7 @@ app.get('/api/recall/events', async (req, res) => {
 
     if (!process.env.RECALL_API_KEY) dotenv.config();
     const apiKey = process.env.RECALL_API_KEY;
-    const RECALL_BASE_URL = 'https://api.recall.ai/api/v1';
+    const RECALL_BASE_URL = 'https://us-west-2.recall.ai/api/v1';
 
     // 1. Find Connected Calendar
     // We reuse the logic from sync-calendar: list calendars by external_id
