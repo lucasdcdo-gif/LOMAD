@@ -17,6 +17,7 @@ import { RecallConfig } from './components/RecallConfig.tsx';
 import { FullAgenda } from './components/FullAgenda.tsx';
 import { PrivacyPage } from './components/PrivacyPage.tsx';
 import { TermsPage } from './components/TermsPage.tsx';
+import { UpcomingMeetings } from './components/UpcomingMeetings.tsx';
 
 const MODEL_NAME = import.meta.env.VITE_GEMINI_LIVE_MODEL || 'gemini-2.0-flash-exp';
 
@@ -648,7 +649,7 @@ const App: React.FC = () => {
       setError('Falha ao conectar agenda. Tente novamente.');
       window.history.replaceState(null, '', '/profile');
     }
-  }, [authLoading, user]); // Depend on authLoading to ensure we wait for init
+  }, [user]); // Removed authLoading dependency to prevent race condition loop, logic inside handles it
 
   // Reactive Redirect: If user is authenticated, force MAIN view
   // This bypasses any hanging promises in login/register forms
@@ -2426,6 +2427,19 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
+                {/* --- UPCOMING MEETINGS --- */}
+                {(user.googleCalendarConnected || user.outlookCalendarConnected || user.calendarConnected) && (
+                  <div className="mt-6">
+                    <h3 className="text-xl font-bold text-white mb-4">Próximas Reuniões</h3>
+                    <UpcomingMeetings userId={user.id} onJoinMeeting={(url: string) => {
+                      setQuickMeetingUrl(url);
+                      if (window.confirm(`Deseja enviar o bot para esta reunião agora?\n${url}`)) {
+                        handleQuickBotJoin();
+                      }
+                    }} />
+                  </div>
+                )}
+
                 {/* --- USAGE STATS CARD --- */}
                 <div className="p-8 rounded-[2.5rem] bg-slate-800/50 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all">
                   <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -2565,14 +2579,24 @@ const App: React.FC = () => {
             </div>
           ) : (
             <div className="w-full h-[60vh] flex flex-col items-center justify-center animate-fade-in gap-4">
-              <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
-                <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-              </div>
-              <h3 className="text-xl font-bold text-white">Perfil não encontrado</h3>
-              <p className="text-slate-400">Não foi possível carregar seus dados.</p>
-              <button onClick={() => window.location.reload()} className="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold transition-all">
-                Recarregar Página
-              </button>
+              {/* Show loading if auth is still initializing OR if we have the connected param (waiting for sync) */}
+              {(authLoading || window.location.search.includes('calendar_connected')) ? (
+                <>
+                  <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-slate-400">Sincronizando perfil...</p>
+                </>
+              ) : (
+                <>
+                  <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-white">Perfil não encontrado</h3>
+                  <p className="text-slate-400">Não foi possível carregar seus dados.</p>
+                  <button onClick={() => window.location.reload()} className="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold transition-all">
+                    Recarregar Página
+                  </button>
+                </>
+              )}
             </div>
           )
         )}

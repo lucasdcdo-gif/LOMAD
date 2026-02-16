@@ -600,6 +600,64 @@ app.post('/api/recall/config', async (req, res) => {
   }
 });
 
+// 2. Fetch Upcoming Events
+app.get('/api/recall/events', async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) return res.status(400).json({ error: "UserId required" });
+
+    if (!process.env.RECALL_API_KEY) dotenv.config();
+    const apiKey = process.env.RECALL_API_KEY;
+    const RECALL_BASE_URL = 'https://us-west-2.recall.ai/api/v1';
+
+    // 1. Find Connected Calendar
+    // We reuse the logic from sync-calendar: list calendars by user_id
+    const calResponse = await axios.get(`${RECALL_BASE_URL}/calendars/`, {
+      params: { user_id: userId },
+      headers: { Authorization: `Token ${apiKey}` }
+    });
+
+    const calendars = calResponse.data.results || calResponse.data;
+    const connectedCal = calendars.find(c => c.status === 'connected' && (c.platform === 'google_calendar' || c.platform === 'microsoft_outlook'));
+
+    if (!connectedCal) {
+      return res.json([]); // No connected calendar
+    }
+
+    // 2. Fetch Events
+    // Recall API: GET /calendars/{id}/events
+    // We need to specify a time range, e.g., now to now + 7 days
+    const startTime = new Date().toISOString();
+    const endTime = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+
+    const eventsResponse = await axios.get(`${RECALL_BASE_URL}/calendars/${connectedCal.id}/events`, {
+      params: {
+        start_time: startTime,
+        end_time: endTime
+      },
+      headers: { Authorization: `Token ${apiKey}` }
+    });
+
+    const events = eventsResponse.data.results || eventsResponse.data;
+
+    // 3. Format/Sort
+    const formattedEvents = events.map(e => ({
+      id: e.id,
+      title: e.title,
+      start_time: e.start_time,
+      end_time: e.end_time,
+      meeting_url: e.meeting_url,
+      platform: e.platform || connectedCal.platform
+    })).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+    res.json(formattedEvents);
+
+  } catch (err) {
+    logger.error("Recall Events Error: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 2. Connect Calendar (Mock/Proxy)
 // 2. Connect Calendar (Real Integration)
 app.get('/api/recall/calendar-auth', async (req, res) => {
