@@ -874,65 +874,45 @@ app.post('/api/recall/calendar-disconnect', async (req, res) => {
     const apiKey = process.env.RECALL_API_KEY;
     const RECALL_BASE_URL = 'https://us-west-2.recall.ai/api/v1';
 
-    // 2. Identify Calendar Connection ID to delete from Recall
-    // We reuse the logic: get user -> find connection -> get ID
-    let connectionIdToDelete = null;
-
+    // 2. Auth to get Token (User Verified Flow)
+    // Endpoint: POST /calendar/authenticate/
+    let authToken = null;
     try {
-      // Correct Endpoint: /calendar/users/
-      const userResponse = await axios.get(`${RECALL_BASE_URL}/calendar/users/`, {
-        params: { external_id: userId },
+      const authResponse = await axios.post(`${RECALL_BASE_URL}/calendar/authenticate/`, {
+        user_id: userId // This internal ID is what we used to create/connect the user.
+      }, {
         headers: { Authorization: `Token ${apiKey}` }
       });
-      const users = userResponse.data.results || userResponse.data;
-      const foundUser = users.find(u => u.external_id === userId);
-
-      if (foundUser && foundUser.connections) {
-        const connection = foundUser.connections.find(c =>
-        (c.platform === platform ||
-          (platform === 'google_calendar' && c.platform === 'google') ||
-          (platform === 'outlook_calendar' && c.platform === 'microsoft'))
-        );
-        if (connection) {
-          connectionIdToDelete = connection.id;
-        }
-      }
-
-    } catch (e) {
-      console.error("[Disconnect] Error finding user:", e.message);
-      // If user not found, maybe they are already disconnected?
+      authToken = authResponse.data.token;
+    } catch (authErr) {
+      console.error("[Disconnect] Auth Failed:", authErr.message);
+      // If auth fails, maybe user doesn't exist? Proceed to DB update anyway.
     }
 
-    if (!connectionIdToDelete) {
-      // If we can't find the connection, we can't delete it.
-      // But we should still update our local DB to reflect "disconnected"
-      console.warn(`[Disconnect] Connection ID not found for user ${userId} on ${platform}. Force updating local DB.`);
-    } else {
-      // 3. Delete from Recall
-      // Endpoint: DELETE /calendar/connections/{id}/
+    if (authToken) {
+      // 3. Delete Calendar User (Removes all connections)
+      // Endpoint: DELETE /calendar/user/ (Requires x-recallcalendarauthtoken)
       try {
-        await axios.delete(`${RECALL_BASE_URL}/calendar/connections/${connectionIdToDelete}/`, {
-          headers: { Authorization: `Token ${apiKey}` }
+        await axios.delete(`${RECALL_BASE_URL}/calendar/user/`, {
+          headers: {
+            'x-recallcalendarauthtoken': authToken,
+            'accept': 'application/json'
+          }
         });
-        console.log(`[Disconnect] Deleted connection ${connectionIdToDelete} for user ${userId}`);
+        console.log(`[Disconnect] Deleted Calendar User for ${userId}`);
       } catch (delErr) {
-        console.error("[Disconnect] Failed to delete from Recall:", delErr.message);
-        // If 404, it's already gone. Proceed to DB update.
+        console.error("[Disconnect] Delete Failed:", delErr.message);
       }
     }
-    // 4. Update Database
-    const updatePayload = {};
-    if (platform === 'google_calendar') {
-      updatePayload.google_calendar_connected = false;
-    } else if (platform === 'outlook_calendar') {
-      updatePayload.outlook_calendar_connected = false;
-    } else {
-      // Disconnect all
-      updatePayload.google_calendar_connected = false;
-      updatePayload.outlook_calendar_connected = false;
-      updatePayload.calendar_connected = false; // Legacy
-      updatePayload.recall_id = null;
-    }
+
+    // 4. Update Database - Reset ALL calendar flags
+    // Since we deleted the user, we disconnected EVERYTHING.
+    const updatePayload = {
+      google_calendar_connected: false,
+      outlook_calendar_connected: false,
+      calendar_connected: false,
+      recall_id: null
+    };
 
     const { error } = await supabase.from('profiles').update(updatePayload).eq('id', userId);
 
