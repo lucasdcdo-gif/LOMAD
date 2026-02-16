@@ -35,6 +35,7 @@ export interface User {
   phone?: string;
   postalCode?: string;
   addressNumber?: string;
+  addressComplement?: string;
 
   // New Fields for Reviews
   botName?: string;

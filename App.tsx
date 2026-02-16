@@ -122,7 +122,7 @@ const App: React.FC = () => {
   const [showMfaEnrollment, setShowMfaEnrollment] = useState(false);
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editForm, setEditForm] = useState({ phone: '', postalCode: '', addressNumber: '' });
+  const [editForm, setEditForm] = useState({ phone: '', postalCode: '', addressNumber: '', addressComplement: '' });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [consentGiven, setConsentGiven] = useState(false); // Compliance LGPD
 
@@ -252,13 +252,20 @@ const App: React.FC = () => {
     if (!user) return;
     setSaveLoading(true);
     try {
-      const { error } = await supabase.from('profiles').update({
-        phone: editForm.phone,
-        postal_code: editForm.postalCode,
-        address_number: editForm.addressNumber
-      }).eq('id', user.id);
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          phone: editForm.phone,
+          postalCode: editForm.postalCode,
+          addressNumber: editForm.addressNumber,
+          addressComplement: editForm.addressComplement
+        })
+      });
 
-      if (error) throw error;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao atualizar perfil');
 
       setSuccessMessage("Perfil atualizado com sucesso!");
       // Refresh
@@ -266,7 +273,7 @@ const App: React.FC = () => {
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (e: any) {
       console.error("Save profile error:", e);
-      setError("Erro ao salvar perfil: " + e.message);
+      setError("Erro ao salvar perfil: " + (e.message || "Erro desconhecido"));
     } finally {
       setSaveLoading(false);
     }
@@ -537,6 +544,7 @@ const App: React.FC = () => {
           phone: data.phone,
           postalCode: data.postal_code,
           addressNumber: data.address_number,
+          addressComplement: data.address_complement,
           meetings_recorded: data.meetings_recorded || 0,
           botName: data.bot_name,
           recallId: data.recall_id,
@@ -550,7 +558,8 @@ const App: React.FC = () => {
         setEditForm({
           phone: data.phone || '',
           postalCode: data.postal_code || '',
-          addressNumber: data.address_number || ''
+          addressNumber: data.address_number || '',
+          addressComplement: data.address_complement || ''
         });
 
         loadMeetings(uid);
@@ -1278,32 +1287,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleUpdateProfile = async () => {
-    if (!user) return;
-    setPaymentLoading(true);
-    try {
-      const response = await fetch('/api/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          phone: editForm.phone,
-          postalCode: editForm.postalCode,
-          addressNumber: editForm.addressNumber
-        })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Erro ao atualizar');
 
-      setUser({ ...user, ...editForm });
-      setIsEditingProfile(false);
-      setSuccessMessage('Dados atualizados com sucesso!');
-    } catch (e) {
-      setError('Erro ao atualizar: ' + getErrorMessage(e));
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
 
 
 
