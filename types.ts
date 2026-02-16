@@ -58,6 +58,8 @@ export interface Meeting {
   timestamp: number;
   expires_at: number;
   pinned_response?: string;
+  access_role?: 'owner' | 'viewer' | 'editor';
+  owner_email?: string;
 }
 
 export type Language = 'pt' | 'en';

@@ -93,9 +93,63 @@ app.post('/api/meetings', async (req, res) => {
 
 app.get('/api/meetings/:uid', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('meetings').select('*').eq('user_id', req.params.uid).order('timestamp', { ascending: false });
-    if (error) throw error;
-    res.json(data);
+    const uid = req.params.uid;
+
+    // 1. Fetch User Email (for sharing check)
+    const { data: profile } = await supabase.from('profiles').select('email').eq('id', uid).single();
+    const userEmail = profile?.email;
+
+    // 2. Fetch Owned Meetings
+    const { data: owned, error: ownedError } = await supabase
+      .from('meetings')
+      .select('*')
+      .eq('user_id', uid)
+      .order('timestamp', { ascending: false });
+
+    if (ownedError) throw ownedError;
+
+    // 3. Fetch Shared Meetings IDs & Roles
+    let sharedMeetings = [];
+    if (userEmail) {
+      const { data: accessData } = await supabase
+        .from('meeting_access')
+        .select('meeting_id, role')
+        .or(`user_id.eq.${uid},email.eq.${userEmail}`);
+
+      if (accessData && accessData.length > 0) {
+        const meetingIds = accessData.map(a => a.meeting_id);
+        const roleMap = new Map(accessData.map(a => [a.meeting_id, a.role]));
+
+        const { data: shared } = await supabase
+          .from('meetings')
+          .select('*, profiles:user_id (email)') // Join to get owner email
+          .in('id', meetingIds)
+          .order('timestamp', { ascending: false });
+
+        if (shared) {
+          sharedMeetings = shared.map(m => ({
+            ...m,
+            access_role: roleMap.get(m.id) || 'viewer',
+            owner_email: m.profiles?.email // Flattens the owner email
+          }));
+        }
+      }
+    }
+
+    // 4. Merge and Sort
+    const ownedWithRole = (owned || []).map(m => ({ ...m, access_role: 'owner' }));
+
+    // Filter duplicates just in case (e.g. if I am owner but also have an access entry? unlikely but safe)
+    const allMeetings = [...ownedWithRole];
+    sharedMeetings.forEach(sm => {
+      if (!allMeetings.find(m => m.id === sm.id)) {
+        allMeetings.push(sm);
+      }
+    });
+
+    allMeetings.sort((a, b) => b.timestamp - a.timestamp);
+
+    res.json(allMeetings);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1010,13 +1064,15 @@ app.post('/api/save-meeting-external', async (req, res) => {
 
     // IF data is missing (common in 'bot.status_change' events), fetch from API
     let participantsText = '';
+    let botInfo; // Declare outer scope
 
     if (!transcript || !video_url) {
       try {
         logger.info(`[Webhook] Fetching full details for bot ${recall_id}...`);
-        const { data: botInfo } = await axios.get(`${RECALL_BASE_URL}/bot/${recall_id}`, {
+        const { data: bInfo } = await axios.get(`${RECALL_BASE_URL}/bot/${recall_id}`, {
           headers: { Authorization: `Token ${process.env.RECALL_API_KEY}` }
         });
+        botInfo = bInfo;
 
         // Update variables with fetched data
         const tArr = botInfo.transcript || [];
@@ -1233,7 +1289,7 @@ app.post('/api/save-meeting-external', async (req, res) => {
       : Date.now();
 
     // Upsert Meeting (Update if recall_id exists, Insert if not)
-    const { error: upsertError } = await supabase.from('meetings').upsert({
+    const { data: upsertData, error: upsertError } = await supabase.from('meetings').upsert({
       recall_id: recall_id, // Unique Key
       user_id: user.id,
       title: title || 'Reunião Recall.ai',
@@ -1242,7 +1298,61 @@ app.post('/api/save-meeting-external', async (req, res) => {
       timestamp: validTimestamp,
       notes: finalNotes,
       video_url: video_url // Save video URL
-    }, { onConflict: 'recall_id' });
+    }, { onConflict: 'recall_id' }).select().single();
+
+    if (upsertError) throw upsertError;
+    const meetingId = upsertData.id;
+
+    // --- SHARED TRANSCRIPTS LOGIC ---
+    // Extract Attendees from Bot Info (if available in payload or fetched botInfo)
+    // We need 'botInfo' which we might have fetched above.
+    // If we didn't fetch botInfo (because transcript was present in webhook), we might miss attendees.
+    // Ideally, we should ALWAYS fetch botInfo or relying on what we have.
+    // In strict webhook mode, 'data' has 'attendees'? Recall documentation varies.
+    // Let's assume we need to fetch it if we want accurate calendar data.
+    // But to save API calls, let's check if 'botInfo' variable exists (it was created in the Fetch block).
+
+    // If we didn't fetch botInfo yet, and we want to do sharing...
+    // We effectively need the calendar event participants.
+    // Let's rely on the strategy: If we have 'botInfo', use it.
+    // If 'data' has 'calendar_event', use it.
+
+    let attendeesToProcess = [];
+    // 1. Try botInfo (fetched from API)
+    if (typeof botInfo !== 'undefined' && botInfo?.calendar_event?.attendees) {
+      attendeesToProcess = botInfo.calendar_event.attendees;
+    }
+    // 2. Try webhook data (if provided)
+    else if (data.calendar_event?.attendees) {
+      attendeesToProcess = data.calendar_event.attendees;
+    }
+
+    if (attendeesToProcess.length > 0) {
+      const acceptedEmails = attendeesToProcess
+        .filter(a => a.status === 'accepted' && !a.is_organizer)
+        .map(a => a.email);
+
+      // Remove duplicates
+      const uniqueEmails = [...new Set(acceptedEmails)];
+
+      for (const email of uniqueEmails) {
+        // 1. Check if user exists
+        const { data: existingUser } = await supabase.from('profiles').select('id').eq('email', email).single();
+        const userId = existingUser ? existingUser.id : null;
+
+        // 2. Insert into meeting_access (Ignore if already exists)
+        await supabase.from('meeting_access').upsert({
+          meeting_id: meetingId,
+          email: email,
+          user_id: userId,
+          role: 'viewer',
+          status: 'accepted'
+        }, { onConflict: 'meeting_id, email' });
+
+        logger.info(`[Sharing] Shared meeting ${meetingId} with ${email} (User: ${userId ? 'Found' : 'Pending'})`);
+      }
+    }
+    // ----------------------------
 
     if (upsertError) throw upsertError;
 

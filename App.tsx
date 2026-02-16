@@ -1890,8 +1890,16 @@ const App: React.FC = () => {
                   <div className="flex items-center gap-2 mb-4">
                     <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                     <p className="text-xs font-bold text-cyan-400 uppercase tracking-wider">{new Date(m.timestamp).toLocaleDateString('pt-BR')}</p>
+                    {m.access_role !== 'owner' && (
+                      <span className="ml-auto px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase border border-indigo-500/30">
+                        Compartilhado
+                      </span>
+                    )}
                   </div>
                   <h3 className="text-xl font-black text-white mb-3 group-hover:text-cyan-400 transition-colors line-clamp-2">{m.title}</h3>
+                  {m.owner_email && m.access_role !== 'owner' && (
+                    <p className="text-xs text-slate-500 mb-2">De: {m.owner_email}</p>
+                  )}
                   <p className="text-slate-400 text-sm line-clamp-3 leading-relaxed">{m.summary || "Nenhum resumo disponível"}</p>
                 </div>
               ))}
@@ -1931,13 +1939,15 @@ const App: React.FC = () => {
                   ) : (
                     <div className="flex items-center gap-3 mb-2 md:mb-4 group">
                       <h1 className="text-2xl md:text-5xl font-black text-white tracking-tight leading-tight">{selectedMeeting.title}</h1>
-                      <button
-                        onClick={() => { setEditTitle(selectedMeeting.title); setIsEditingTitle(true); }}
-                        className="opacity-0 group-hover:opacity-100 p-2 text-slate-500 hover:text-cyan-400 transition-all rounded-lg hover:bg-white/5"
-                        title="Renomear Reunião"
-                      >
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                      </button>
+                      {selectedMeeting.access_role === 'owner' && (
+                        <button
+                          onClick={() => { setEditTitle(selectedMeeting.title); setIsEditingTitle(true); }}
+                          className="opacity-0 group-hover:opacity-100 p-2 text-slate-500 hover:text-cyan-400 transition-all rounded-lg hover:bg-white/5"
+                          title="Renomear Reunião"
+                        >
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        </button>
+                      )}
                     </div>
                   )}
                   <div className="flex items-center gap-3 text-slate-400">
@@ -1994,13 +2004,15 @@ const App: React.FC = () => {
                     </a>
                   )}
 
-                  <button
-                    onClick={() => handleDeleteMeeting(selectedMeeting.id)}
-                    className="flex-1 md:flex-none justify-center px-4 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    Excluir
-                  </button>
+                  {selectedMeeting.access_role === 'owner' && (
+                    <button
+                      onClick={() => handleDeleteMeeting(selectedMeeting.id)}
+                      className="flex-1 md:flex-none justify-center px-4 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      Excluir
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -2015,8 +2027,9 @@ const App: React.FC = () => {
                 <textarea
                   value={meetingNotes}
                   onChange={(e) => setMeetingNotes(e.target.value)}
-                  onBlur={() => handleUpdateNotes(selectedMeeting.id, meetingNotes)}
-                  placeholder="Adicione suas anotações sobre esta reunião..."
+                  onBlur={() => selectedMeeting.access_role === 'owner' && handleUpdateNotes(selectedMeeting.id, meetingNotes)}
+                  disabled={selectedMeeting.access_role !== 'owner'}
+                  placeholder={selectedMeeting.access_role === 'owner' ? "Adicione suas anotações sobre esta reunião..." : "Anotações (Somente leitura para compartilhamento)"}
                   className="w-full min-h-[120px] bg-slate-950/50 border border-white/10 rounded-xl px-5 py-4 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-y"
                 />
                 <div className="flex items-center justify-between mt-4">
