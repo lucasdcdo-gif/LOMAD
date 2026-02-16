@@ -469,6 +469,8 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
     try {
       // 2a. Lookup Recall User ID using External ID
       let recallUserId = null;
+      let connections = []; // Store connections from user object
+
       try {
         const userResponse = await axios.get(`${RECALL_BASE_URL}/calendar/users/`, {
           params: { external_id: userId },
@@ -476,8 +478,13 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
         });
         const users = userResponse.data.results || userResponse.data;
         const foundUser = users.find(u => u.external_id === userId);
-        if (foundUser) recallUserId = foundUser.id;
-        console.log(`[Sync Calendar] Resolved External ID ${userId} to Recall ID: ${recallUserId}`);
+
+        if (foundUser) {
+          recallUserId = foundUser.id;
+          connections = foundUser.connections || [];
+          console.log(`[Sync Calendar] Resolved External ID ${userId} to Recall ID: ${recallUserId}`);
+          console.log(`[Sync Calendar] User Connections:`, JSON.stringify(connections));
+        }
       } catch (userErr) {
         // If 404 or empty, try to create user
         console.log(`[Sync Calendar] User not found (${userErr.message}). Creating Recall User for ${userId}...`);
@@ -488,37 +495,26 @@ app.post('/api/recall/sync-calendar', async (req, res) => {
             headers: { Authorization: `Token ${apiKey}` }
           });
           recallUserId = createResponse.data.id;
+          connections = []; // New user has no connections
           console.log(`[Sync Calendar] Created Recall User: ${recallUserId}`);
         } catch (createErr) {
           console.error("[Sync Calendar] Failed to create user:", createErr.message);
-          // If creation fails, we can't proceed with sync using recall_id, 
-          // but maybe the user exists and we just missed it? 
-          // Fallback to userId is basically a hail mary.
         }
       }
 
       if (!recallUserId) {
-        console.error("[Sync Calendar] Recall User not found for external_id:", userId);
-        // Fallback: try using userId as recall_id if it happens to be one (unlikely but safe)
-        recallUserId = userId;
+        // If we still don't have a user, we can't check calendars.
+        console.warn("[Sync Calendar] Could not resolving Recall User ID. Assuming no connections.");
+      } else {
+        // Check connections from the user object directly
+        // The /calendars/ endpoint provided 404, so we rely on the user object.
+        googleConnected = connections.some(c => c.platform === 'google_calendar' && c.connected);
+        outlookConnected = connections.some(c => c.platform === 'microsoft_outlook' && c.connected);
+        console.log(`[Sync Calendar] Status - Google: ${googleConnected}, Outlook: ${outlookConnected}`);
       }
 
-      const response = await axios.get(`${RECALL_BASE_URL}/calendars/`, {
-        params: { user_id: recallUserId }, // Now using the resolved Recall ID
-        headers: { Authorization: `Token ${apiKey}` }
-      });
-
-      const calendars = response.data.results || response.data; // Handle pagination if present
-      console.log(`[Sync Calendar] Found ${calendars.length} calendars for user.`);
-
-      // Check connections by platform
-      googleConnected = calendars.some(c => c.platform === 'google_calendar' && c.status === 'connected');
-      outlookConnected = calendars.some(c => c.platform === 'microsoft_outlook' && c.status === 'connected');
-
-      console.log(`[Sync Calendar] Status - Google: ${googleConnected}, Outlook: ${outlookConnected}`);
-
     } catch (recallErr) {
-      console.error("[Sync Calendar] Recall API Error:", recallErr.message);
+      console.error("[Sync Calendar] Recall Logic Error:", recallErr.message);
     }
 
     // 3. Update Database (Dual Columns)
@@ -652,6 +648,7 @@ app.get('/api/recall/events', async (req, res) => {
     // 1. Find Connected Calendar
     // Lookup Recall User ID first
     let recallUserId = null;
+    let connections = []; // Store connections
     try {
       // Correct Endpoint: /calendar/users/
       const userResponse = await axios.get(`${RECALL_BASE_URL}/calendar/users/`, {
@@ -660,7 +657,10 @@ app.get('/api/recall/events', async (req, res) => {
       });
       const users = userResponse.data.results || userResponse.data;
       const foundUser = users.find(u => u.external_id === userId);
-      if (foundUser) recallUserId = foundUser.id;
+      if (foundUser) {
+        recallUserId = foundUser.id;
+        connections = foundUser.connections || [];
+      }
     } catch (e) {
       // If 404 or empty, try to create user
       console.log(`[Events] User not found (${e.message}). Creating Recall User for ${userId}...`);
@@ -680,13 +680,8 @@ app.get('/api/recall/events', async (req, res) => {
       return res.json([]); // Cannot find user
     }
 
-    const calResponse = await axios.get(`${RECALL_BASE_URL}/calendars/`, {
-      params: { user_id: recallUserId },
-      headers: { Authorization: `Token ${apiKey}` }
-    });
-
-    const calendars = calResponse.data.results || calResponse.data;
-    const connectedCal = calendars.find(c => c.status === 'connected' && (c.platform === 'google_calendar' || c.platform === 'microsoft_outlook'));
+    // Identify connected calendar from 'connections' array
+    const connectedCal = connections.find(c => c.connected && (c.platform === 'google_calendar' || c.platform === 'microsoft_outlook'));
 
     if (!connectedCal) {
       return res.json([]); // No connected calendar
