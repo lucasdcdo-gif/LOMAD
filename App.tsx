@@ -2558,10 +2558,14 @@ const App: React.FC = () => {
             <div className="w-full h-[60vh] flex flex-col items-center justify-center animate-fade-in gap-4">
               {/* Show loading if auth is still initializing OR if we have the connected param (waiting for sync) */}
               {(authLoading || window.location.search.includes('calendar_connected')) ? (
-                <>
+                <div className="flex flex-col items-center gap-4">
                   <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-                  <p className="text-slate-400">Sincronizando perfil...</p>
-                </>
+                  <p className="text-slate-400 font-medium text-center max-w-md animate-pulse">
+                    {window.location.search.includes('calendar_connected')
+                      ? "Aguarde alguns segundos, estamos conectando seu calendário ao seu novo assistente..."
+                      : "Sincronizando perfil..."}
+                  </p>
+                </div>
               ) : (
                 <>
                   <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
