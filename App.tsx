@@ -97,6 +97,7 @@ const App: React.FC = () => {
   const [privacyAccepted, setPrivacyAccepted] = useState<boolean>(false);
   const [resetEmail, setResetEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [loginStatus, setLoginStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS'>('IDLE');
   const [botStatus, setBotStatus] = useState<'IDLE' | 'JOINING' | 'RECORDING' | 'LEAVING'>('IDLE');
 
   // Dashboard State
