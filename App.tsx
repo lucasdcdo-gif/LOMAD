@@ -303,13 +303,17 @@ const App: React.FC = () => {
       setSuccessMessage('Agenda desconectada com sucesso.');
 
       // Optimistic Update: Immediately reflect disconnection in UI
-      setUser(prev => prev ? ({
-        ...prev,
-        googleCalendarConnected: platform === 'google_calendar' ? false : prev.googleCalendarConnected,
-        outlookCalendarConnected: platform === 'outlook_calendar' ? false : prev.outlookCalendarConnected,
-        calendarConnected: false, // Fallback if using generic flag
-        recallId: null // Clear recall ID as we deleted the user
-      }) : null);
+      // Reset ALL calendar flags because we deleted the user in Recall
+      setUser(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          googleCalendarConnected: false,
+          outlookCalendarConnected: false,
+          calendarConnected: false,
+          recallId: null
+        };
+      });
 
       // Background Refresh to sync with DB
       fetchProfile(user.id, user.email, true);
@@ -317,6 +321,8 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error("Disconnect error:", err);
       setError("Erro ao desconectar agenda: " + (err.message || 'Erro desconhecido'));
+      // In case of error, force refresh to restore correct state
+      fetchProfile(user.id, user.email, true);
     } finally {
       setAuthLoading(false);
       setCalendarToDisconnect(null);
