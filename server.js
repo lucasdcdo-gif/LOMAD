@@ -1902,12 +1902,13 @@ app.post('/api/meetings/process-recording', async (req, res) => {
         if (profile) {
           await supabase.from('profiles').update({ meetings_recorded: (profile.meetings_recorded || 0) + 1 }).eq('id', meetingData.user_id);
 
-          // Send Email Notification (PRO+ only)
+          // Send Email Notification (All plans, including FREE)
+          const isFree = profile.role === 'FREE';
           const isPro = profile.role === 'PRO';
           const isProPlus = profile.role === 'PRO_PLUS';
           const isLomadPlus = profile.role === 'LOMAD_PLUS';
 
-          if (isPro || isProPlus || isLomadPlus) {
+          if (isFree || isPro || isProPlus || isLomadPlus) {
             if (profile.email) {
               emailService.sendTranscriptionReadyEmail(
                 profile.email,
