@@ -1893,9 +1893,30 @@ app.post('/api/meetings/process-recording', async (req, res) => {
 
         // Increment usage
         await supabase.rpc('increment_meeting_count', { user_id: meetingData.user_id });
-        const { data: profile } = await supabase.from('profiles').select('meetings_recorded').eq('id', meetingData.user_id).single();
+        const { data: profile } = await supabase.from('profiles')
+          .select('meetings_recorded, email, name, role')
+          .eq('id', meetingData.user_id)
+          .single();
+
         if (profile) {
           await supabase.from('profiles').update({ meetings_recorded: (profile.meetings_recorded || 0) + 1 }).eq('id', meetingData.user_id);
+
+          // Send Email Notification (PRO+ only)
+          const isPro = profile.role === 'PRO';
+          const isProPlus = profile.role === 'PRO_PLUS';
+          const isLomadPlus = profile.role === 'LOMAD_PLUS';
+
+          if (isPro || isProPlus || isLomadPlus) {
+            if (profile.email) {
+              emailService.sendTranscriptionReadyEmail(
+                profile.email,
+                profile.name || 'Usuário',
+                insertedMeeting.title || 'Reunião Processada',
+                insertedMeeting.id,
+                false
+              );
+            }
+          }
         }
 
         logger.info(`[Async Process] Completed successfull for user ${meetingData?.user_id}`);
