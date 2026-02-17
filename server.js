@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import os from 'os';
 import logger, { logRequest } from './logger.js';
+import { emailService } from './lib/email.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -492,6 +493,9 @@ app.post('/api/profiles/create', async (req, res) => {
       logger.error("Profile creation error: " + JSON.stringify(error));
       return res.status(500).json({ error: error.message });
     }
+
+    // Send Welcome Email (Async)
+    emailService.sendWelcomeEmail(email, email.split('@')[0]);
 
     res.json(data);
   } catch (err) {
@@ -1303,20 +1307,32 @@ app.post('/api/save-meeting-external', async (req, res) => {
     if (upsertError) throw upsertError;
     const meetingId = upsertData.id;
 
-    // --- SHARED TRANSCRIPTS LOGIC ---
-    // Extract Attendees from Bot Info (if available in payload or fetched botInfo)
-    // We need 'botInfo' which we might have fetched above.
-    // If we didn't fetch botInfo (because transcript was present in webhook), we might miss attendees.
-    // Ideally, we should ALWAYS fetch botInfo or relying on what we have.
-    // In strict webhook mode, 'data' has 'attendees'? Recall documentation varies.
-    // Let's assume we need to fetch it if we want accurate calendar data.
-    // But to save API calls, let's check if 'botInfo' variable exists (it was created in the Fetch block).
+    // --- SHARED TRANSCRIPTS LOGIC & EMAILS ---
 
-    // If we didn't fetch botInfo yet, and we want to do sharing...
-    // We effectively need the calendar event participants.
-    // Let's rely on the strategy: If we have 'botInfo', use it.
-    // If 'data' has 'calendar_event', use it.
+    // 1. Definição do Dono e Regras de Email
+    const isPro = user.role === 'PRO';
+    const isProPlus = user.role === 'PRO_PLUS';
+    const isLomadPlus = user.role === 'LOMAD_PLUS';
+    const shouldNotifyOwner = isPro || isProPlus || isLomadPlus;
+    const shouldNotifyParticipants = isProPlus || isLomadPlus;
 
+    // Send Email to Owner
+    if (shouldNotifyOwner) {
+      // Need to fetch owner email if not available in 'user' object (which only selected role/usage)
+      const { data: ownerProfile } = await supabase.from('profiles').select('email, name').eq('id', user.id).single();
+
+      if (ownerProfile?.email) {
+        emailService.sendTranscriptionReadyEmail(
+          ownerProfile.email,
+          ownerProfile.name || 'Usuário',
+          title || 'Reunião Processada',
+          meetingId,
+          false
+        );
+      }
+    }
+
+    // Participants Logic
     let attendeesToProcess = [];
     // 1. Try botInfo (fetched from API)
     if (typeof botInfo !== 'undefined' && botInfo?.calendar_event?.attendees) {
@@ -1336,9 +1352,10 @@ app.post('/api/save-meeting-external', async (req, res) => {
       const uniqueEmails = [...new Set(acceptedEmails)];
 
       for (const email of uniqueEmails) {
-        // 1. Check if user exists
-        const { data: existingUser } = await supabase.from('profiles').select('id').eq('email', email).single();
+        // 1. Check if user exists (for Sharing Access)
+        const { data: existingUser } = await supabase.from('profiles').select('id, name').eq('email', email).single();
         const userId = existingUser ? existingUser.id : null;
+        const participantName = existingUser?.name || 'Participante';
 
         // 2. Insert into meeting_access (Ignore if already exists)
         await supabase.from('meeting_access').upsert({
@@ -1350,6 +1367,17 @@ app.post('/api/save-meeting-external', async (req, res) => {
         }, { onConflict: 'meeting_id, email' });
 
         logger.info(`[Sharing] Shared meeting ${meetingId} with ${email} (User: ${userId ? 'Found' : 'Pending'})`);
+
+        // 3. Send Email (If qualified)
+        if (shouldNotifyParticipants) {
+          emailService.sendTranscriptionReadyEmail(
+            email,
+            participantName,
+            title || 'Reunião Compartilhada',
+            meetingId,
+            true
+          );
+        }
       }
     }
     // ----------------------------
