@@ -1310,10 +1310,11 @@ app.post('/api/save-meeting-external', async (req, res) => {
     // --- SHARED TRANSCRIPTS LOGIC & EMAILS ---
 
     // 1. Definição do Dono e Regras de Email
+    const isFree = user.role === 'FREE'; // Allow FREE users to get emails (growth loop)
     const isPro = user.role === 'PRO';
     const isProPlus = user.role === 'PRO_PLUS';
     const isLomadPlus = user.role === 'LOMAD_PLUS';
-    const shouldNotifyOwner = isPro || isProPlus || isLomadPlus;
+    const shouldNotifyOwner = isFree || isPro || isProPlus || isLomadPlus;
     const shouldNotifyParticipants = isProPlus || isLomadPlus;
 
     // Send Email to Owner
