@@ -1228,8 +1228,10 @@ app.post('/api/save-meeting-external', async (req, res) => {
             }
           })();
 
-          // Return success immediately to Recall (we are handling it async)
-          return res.json({ success: true, message: "Processing with Gemini Fallback" });
+          // Context: We used to return here, but that prevented the meeting from being created in the DB!
+          // Now we let the flow continue so the meeting is UPSERTED below (Line 1300+),
+          // and the Gemini async task will UPDATE it when finished.
+          logger.info("[Webhook] Gemini Task started. Proceeding to create initial meeting record...");
         }
 
         if (!transcript && !video_url) {
