@@ -840,7 +840,9 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
         // Microsoft Scopes: Standard Full Suite with Fixed Secret
         // Now that the Client Secret is correct, we retry the robust standard scopes.
         // 'User.Read' is often essential for OpenID flows on Personal accounts.
-        const scope = "offline_access openid email User.Read Calendars.Read Calendars.ReadWrite";
+        // Microsoft Scopes: Simplified to essentials to ensure refresh_token grant
+        // offline_access is CRITICAL for refresh_token. User.Read for identity. Calendars.ReadWrite for function.
+        const scope = "offline_access User.Read Calendars.ReadWrite";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
         const state = JSON.stringify({
@@ -848,8 +850,9 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
           ms_oauth_redirect_url: `${appUrl}/profile?calendar_connected=true`
         });
 
-        // Microsoft: explicit response_mode=query and prompt=consent
-        oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&response_mode=query&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&prompt=consent`;
+        // Microsoft: Removed response_mode (default is query) to avoid conflicts.
+        // prompt=consent is kept to force refresh_token issuance.
+        oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&prompt=consent`;
       }
 
       console.log(`[Recall Manual Auth] Generated ${platform} URL for user ${userId}`);
