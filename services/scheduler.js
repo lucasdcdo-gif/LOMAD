@@ -129,7 +129,13 @@ async function scheduleBotForEvent(user, event) {
     const meetingUrl = event.meeting_url;
     const startTime = new Date(event.start_time).getTime();
 
-    if (!meetingUrl) return; // Can't join without URL
+    // DEBUG: Log event details
+    // log(`[Scheduler] Checking Event: ${event.title} (${eventId}) - URL: ${meetingUrl}`);
+
+    if (!meetingUrl) {
+        log(`[Scheduler] Skipping ${event.title} - No Meeting URL found.`);
+        return;
+    }
 
     // 1. Idempotency Check (Avoid duplicates)
     // We check Supabase if we already created a 'scheduled' meeting or if we already have a bot for this time.
@@ -152,6 +158,8 @@ async function scheduleBotForEvent(user, event) {
 
         if (botsRes.data.results && botsRes.data.results.length > 0) {
             // Bot already scheduled/active
+            const bot = botsRes.data.results[0];
+            log(`[Scheduler] Skipping ${event.title} - Bot already exists (ID: ${bot.id}, Status: ${bot.status_changes[bot.status_changes.length - 1]?.status}).`);
             return;
         }
 
