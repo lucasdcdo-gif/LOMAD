@@ -1129,109 +1129,129 @@ app.post('/api/save-meeting-external', async (req, res) => {
         // RETRY STRATEGY / GEMINI FALLBACK
         // If transcript missing but VIDEO exists, use Gemini to transcribe!
         if (!transcript && video_url) {
-          logger.info(`[Webhook] Transcript missing. Attempting Gemini Video Transcription for ${video_url}...`);
 
-          // Async processing (Fire and Forget to avoid timeout)
-          // We catch errors inside to log them
-          (async () => {
-            // specific declarations outside try/catch for visibility in finally
-            const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);
-            var videoPath = null;
-            var uploadResult = null;
+          // 1. IDEMPOTENCY CHECK (Critical Fix)
+          // prevent parallel scheduled tasks or retries from triggering multiple Gemini jobs
+          const { data: existingJob } = await supabase
+            .from('meetings')
+            .select('summary, notes')
+            .eq('recall_id', recall_id)
+            .single();
 
-            try {
-              const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-              // Use the model configured in Render (e.g. gemini-2.0-flash)
-              const modelName = process.env.GEMINI_CHAT_MODEL || "gemini-2.0-flash";
-              const model = genAI.getGenerativeModel({ model: modelName });
+          // If we already have a record indicating processing or completion, STOP.
+          if (existingJob && (
+            existingJob.summary === 'Processando...' ||
+            existingJob.summary?.includes('Gemini') ||
+            existingJob.notes?.includes('Fallback Gemini')
+          )) {
+            logger.warn(`[Webhook] Duplicate processing detected for ${recall_id}. Skipping Gemini Task.`);
+            // We still continue to the logic below to ensure '200 OK' is sent to Recall
+          } else {
+            // Only start if not processed
+            logger.info(`[Webhook] Transcript missing. Attempting Gemini Video Transcription for ${video_url}...`);
 
-              logger.info(`[Gemini] Using model: ${modelName}`);
+            // Async processing (Fire and Forget)
+            (async () => {
+              // ... (Async Block)
+              // specific declarations outside try/catch for visibility in finally
+              const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);
+              var videoPath = null;
+              var uploadResult = null;
 
-              // 1. Download Video
-              videoPath = path.join(os.tmpdir(), `${recall_id}.mp4`);
-              const writer = fs.createWriteStream(videoPath);
-              const response = await axios({
-                url: video_url,
-                method: 'GET',
-                responseType: 'stream'
-              });
-              response.data.pipe(writer);
-
-              await new Promise((resolve, reject) => {
-                writer.on('finish', resolve);
-                writer.on('error', reject);
-              });
-
-              // 2. Upload to Gemini
-              uploadResult = await fileManager.uploadFile(videoPath, {
-                mimeType: "video/mp4",
-                displayName: `Meeting ${recall_id}`,
-              });
-
-              logger.info(`[Gemini] Video uploaded: ${uploadResult.file.uri} (State: ${uploadResult.file.state})`);
-
-              // 2.5 Wait for processing to be ACTIVE
-              let fileState = await fileManager.getFile(uploadResult.file.name);
-              while (fileState.state === "PROCESSING") {
-                logger.info(`[Gemini] Processing video...`);
-                await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10s
-                fileState = await fileManager.getFile(uploadResult.file.name);
-              }
-
-              if (fileState.state === "FAILED") {
-                throw new Error("[Gemini] Video processing failed on Google servers.");
-              }
-
-              logger.info(`[Gemini] Video Active. Generating content...`);
-
-              // 3. Generate Content
-              const result = await model.generateContent([
-                "Transcreva esta reunião detalhadamente, identificando os falantes se possível. Em seguida, crie um resumo executivo.",
-                {
-                  fileData: {
-                    fileUri: uploadResult.file.uri,
-                    mimeType: uploadResult.file.mimeType,
-                  },
-                },
-              ]);
-
-              const aiText = result.response.text();
-              logger.info(`[Gemini] Transcription generated (${aiText.length} chars). Updating DB...`);
-
-              // 4. Update Database
-              const baseNotes = `Gravação Automática via Bot (Fallback Gemini). Video: ${video_url}`;
-              const finalNotes = baseNotes + participantsText; // Append participants
-
-              const { data: updateData, error: updateError } = await supabase.from('meetings').update({
-                transcriptions: [{ role: 'model', text: aiText, timestamp: Date.now() }],
-                summary: 'Transcrito via Gemini AI (Backup)',
-                notes: finalNotes,
-                video_url: video_url // Persist video URL
-              }).eq('recall_id', recall_id).select();
-
-              if (updateError) {
-                logger.error(`[Gemini DB Update Error] ${updateError.message} - Details: ${JSON.stringify(updateError)}`);
-              } else {
-                logger.info(`[Gemini DB Update Success] Rows affected: ${updateData?.length}. RecallID: ${recall_id}`);
-              }
-
-            } catch (geminiErr) {
-              logger.error(`[Gemini Fallback Error] ${geminiErr.message}`);
-            } finally {
-              // Cleanup (Always run)
               try {
-                if (videoPath && fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
-                if (uploadResult && uploadResult.file) await fileManager.deleteFile(uploadResult.file.name).catch(() => { });
-              } catch (cleanupErr) {
-                logger.warn(`[Gemini Cleanup Warning] ${cleanupErr.message}`);
-              }
-            }
-          })();
+                const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+                // Use the model configured in Render (e.g. gemini-2.0-flash)
+                const modelName = process.env.GEMINI_CHAT_MODEL || "gemini-2.0-flash";
+                const model = genAI.getGenerativeModel({ model: modelName });
 
-          // Context: We used to return here, but that prevented the meeting from being created in the DB!
-          // Now we let the flow continue so the meeting is UPSERTED below (Line 1300+),
-          // and the Gemini async task will UPDATE it when finished.
-          logger.info("[Webhook] Gemini Task started. Proceeding to create initial meeting record...");
+                logger.info(`[Gemini] Using model: ${modelName}`);
+
+                // 1. Download Video
+                videoPath = path.join(os.tmpdir(), `${recall_id}.mp4`);
+                const writer = fs.createWriteStream(videoPath);
+                const response = await axios({
+                  url: video_url,
+                  method: 'GET',
+                  responseType: 'stream'
+                });
+                response.data.pipe(writer);
+
+                await new Promise((resolve, reject) => {
+                  writer.on('finish', resolve);
+                  writer.on('error', reject);
+                });
+
+                // 2. Upload to Gemini
+                uploadResult = await fileManager.uploadFile(videoPath, {
+                  mimeType: "video/mp4",
+                  displayName: `Meeting ${recall_id}`,
+                });
+
+                logger.info(`[Gemini] Video uploaded: ${uploadResult.file.uri} (State: ${uploadResult.file.state})`);
+
+                // 2.5 Wait for processing to be ACTIVE
+                let fileState = await fileManager.getFile(uploadResult.file.name);
+                while (fileState.state === "PROCESSING") {
+                  logger.info(`[Gemini] Processing video...`);
+                  await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10s
+                  fileState = await fileManager.getFile(uploadResult.file.name);
+                }
+
+                if (fileState.state === "FAILED") {
+                  throw new Error("[Gemini] Video processing failed on Google servers.");
+                }
+
+                logger.info(`[Gemini] Video Active. Generating content...`);
+
+                // 3. Generate Content
+                const result = await model.generateContent([
+                  "Transcreva esta reunião detalhadamente, identificando os falantes se possível. Em seguida, crie um resumo executivo.",
+                  {
+                    fileData: {
+                      fileUri: uploadResult.file.uri,
+                      mimeType: uploadResult.file.mimeType,
+                    },
+                  },
+                ]);
+
+                const aiText = result.response.text();
+                logger.info(`[Gemini] Transcription generated (${aiText.length} chars). Updating DB...`);
+
+                // 4. Update Database
+                const baseNotes = `Gravação Automática via Bot (Fallback Gemini). Video: ${video_url}`;
+                const finalNotes = baseNotes + participantsText; // Append participants
+
+                const { data: updateData, error: updateError } = await supabase.from('meetings').update({
+                  transcriptions: [{ role: 'model', text: aiText, timestamp: Date.now() }],
+                  summary: 'Transcrito via Gemini AI (Backup)',
+                  notes: finalNotes,
+                  video_url: video_url // Persist video URL
+                }).eq('recall_id', recall_id).select();
+
+                if (updateError) {
+                  logger.error(`[Gemini DB Update Error] ${updateError.message} - Details: ${JSON.stringify(updateError)}`);
+                } else {
+                  logger.info(`[Gemini DB Update Success] Rows affected: ${updateData?.length}. RecallID: ${recall_id}`);
+                }
+
+              } catch (geminiErr) {
+                logger.error(`[Gemini Fallback Error] ${geminiErr.message}`);
+              } finally {
+                // Cleanup (Always run)
+                try {
+                  if (videoPath && fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
+                  if (uploadResult && uploadResult.file) await fileManager.deleteFile(uploadResult.file.name).catch(() => { });
+                } catch (cleanupErr) {
+                  logger.warn(`[Gemini Cleanup Warning] ${cleanupErr.message}`);
+                }
+              }
+            })();
+
+            // Context: We used to return here, but that prevented the meeting from being created in the DB!
+            // Now we let the flow continue so the meeting is UPSERTED below (Line 1300+),
+            // and the Gemini async task will UPDATE it when finished.
+            logger.info("[Webhook] Gemini Task started. Proceeding to create initial meeting record...");
+          }
         }
 
         if (!transcript && !video_url) {
