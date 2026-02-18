@@ -1072,6 +1072,35 @@ app.post('/api/save-meeting-external', async (req, res) => {
     // Extract variables for usage later (Fixes ReferenceError)
     let { transcript, title, start_time, video_url } = data;
 
+    // --- USER RESOLUTION (Moved to top for Gemini Fallback) ---
+    // 1. Try to get User ID from Bot Metadata
+    let userId = data.metadata?.user_id;
+    let user = null;
+
+    if (userId) {
+      const { data: u, error: uErr } = await supabase.from('profiles')
+        .select('id, role, usage_minutes, plan_limit_minutes, extra_minutes').eq('id', userId).single();
+      if (!uErr) user = u;
+    }
+
+    // 2. Fallback: Find user by recall_id
+    if (!user) {
+      const { data: u, error: uErr } = await supabase.from('profiles')
+        .select('id, role, usage_minutes, plan_limit_minutes, extra_minutes')
+        .eq('recall_id', recall_id)
+        .single();
+      if (!uErr) user = u;
+    }
+
+    if (!user) {
+      logger.warn(`[Webhook] User not found for ${recall_id}`);
+      // Return 200 to stop retries if user is missing, or throw to error?
+      // Throwing ensures we see it in logs, but might cause infinite retries.
+      // Let's throw for now as per original logic.
+      throw new Error("Usuário não identificado para esta gravação.");
+    }
+    // ----------------------------------------
+
     // IF data is missing (common in 'bot.status_change' events), fetch from API
     let participantsText = '';
     let botInfo; // Declare outer scope
@@ -1131,127 +1160,139 @@ app.post('/api/save-meeting-external', async (req, res) => {
         if (!transcript && video_url) {
 
           // 1. IDEMPOTENCY CHECK (Critical Fix)
-          // prevent parallel scheduled tasks or retries from triggering multiple Gemini jobs
           const { data: existingJob } = await supabase
             .from('meetings')
             .select('summary, notes')
             .eq('recall_id', recall_id)
             .single();
 
-          // If we already have a record indicating processing or completion, STOP.
           if (existingJob && (
             existingJob.summary === 'Processando...' ||
             existingJob.summary?.includes('Gemini') ||
             existingJob.notes?.includes('Fallback Gemini')
           )) {
-            logger.warn(`[Webhook] Duplicate processing detected for ${recall_id}. Skipping Gemini Task.`);
-            // We still continue to the logic below to ensure '200 OK' is sent to Recall
-          } else {
-            // Only start if not processed
-            logger.info(`[Webhook] Transcript missing. Attempting Gemini Video Transcription for ${video_url}...`);
-
-            // Async processing (Fire and Forget)
-            (async () => {
-              // ... (Async Block)
-              // specific declarations outside try/catch for visibility in finally
-              const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);
-              var videoPath = null;
-              var uploadResult = null;
-
-              try {
-                const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-                // Use the model configured in Render (e.g. gemini-2.0-flash)
-                const modelName = process.env.GEMINI_CHAT_MODEL || "gemini-2.0-flash";
-                const model = genAI.getGenerativeModel({ model: modelName });
-
-                logger.info(`[Gemini] Using model: ${modelName}`);
-
-                // 1. Download Video
-                videoPath = path.join(os.tmpdir(), `${recall_id}.mp4`);
-                const writer = fs.createWriteStream(videoPath);
-                const response = await axios({
-                  url: video_url,
-                  method: 'GET',
-                  responseType: 'stream'
-                });
-                response.data.pipe(writer);
-
-                await new Promise((resolve, reject) => {
-                  writer.on('finish', resolve);
-                  writer.on('error', reject);
-                });
-
-                // 2. Upload to Gemini
-                uploadResult = await fileManager.uploadFile(videoPath, {
-                  mimeType: "video/mp4",
-                  displayName: `Meeting ${recall_id}`,
-                });
-
-                logger.info(`[Gemini] Video uploaded: ${uploadResult.file.uri} (State: ${uploadResult.file.state})`);
-
-                // 2.5 Wait for processing to be ACTIVE
-                let fileState = await fileManager.getFile(uploadResult.file.name);
-                while (fileState.state === "PROCESSING") {
-                  logger.info(`[Gemini] Processing video...`);
-                  await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10s
-                  fileState = await fileManager.getFile(uploadResult.file.name);
-                }
-
-                if (fileState.state === "FAILED") {
-                  throw new Error("[Gemini] Video processing failed on Google servers.");
-                }
-
-                logger.info(`[Gemini] Video Active. Generating content...`);
-
-                // 3. Generate Content
-                const result = await model.generateContent([
-                  "Transcreva esta reunião detalhadamente, identificando os falantes se possível. Em seguida, crie um resumo executivo.",
-                  {
-                    fileData: {
-                      fileUri: uploadResult.file.uri,
-                      mimeType: uploadResult.file.mimeType,
-                    },
-                  },
-                ]);
-
-                const aiText = result.response.text();
-                logger.info(`[Gemini] Transcription generated (${aiText.length} chars). Updating DB...`);
-
-                // 4. Update Database
-                const baseNotes = `Gravação Automática via Bot (Fallback Gemini). Video: ${video_url}`;
-                const finalNotes = baseNotes + participantsText; // Append participants
-
-                const { data: updateData, error: updateError } = await supabase.from('meetings').update({
-                  transcriptions: [{ role: 'model', text: aiText, timestamp: Date.now() }],
-                  summary: 'Transcrito via Gemini AI (Backup)',
-                  notes: finalNotes,
-                  video_url: video_url // Persist video URL
-                }).eq('recall_id', recall_id).select();
-
-                if (updateError) {
-                  logger.error(`[Gemini DB Update Error] ${updateError.message} - Details: ${JSON.stringify(updateError)}`);
-                } else {
-                  logger.info(`[Gemini DB Update Success] Rows affected: ${updateData?.length}. RecallID: ${recall_id}`);
-                }
-
-              } catch (geminiErr) {
-                logger.error(`[Gemini Fallback Error] ${geminiErr.message}`);
-              } finally {
-                // Cleanup (Always run)
-                try {
-                  if (videoPath && fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
-                  if (uploadResult && uploadResult.file) await fileManager.deleteFile(uploadResult.file.name).catch(() => { });
-                } catch (cleanupErr) {
-                  logger.warn(`[Gemini Cleanup Warning] ${cleanupErr.message}`);
-                }
-              }
-            })();
-
-            // Context: We used to return here, but that prevented the meeting from being created in the DB!
-            // Now we let the flow continue so the meeting is UPSERTED below (Line 1300+),
-            // and the Gemini async task will UPDATE it when finished.
-            logger.info("[Webhook] Gemini Task started. Proceeding to create initial meeting record...");
+            logger.warn(`[Webhook] Duplicate processing detected for ${recall_id} (Summary Check). Skipping.`);
+            return res.json({ success: true, message: "Duplicate processing" });
           }
+
+          // 2. LOCK WITH UPSERT
+          const validTimestamp = (start_time && new Date(start_time).getFullYear() > 1970) ? new Date(start_time).getTime() : Date.now();
+          const baseNotes = `Gravação Automática via Bot. Video: ${video_url}`;
+
+          const { data: upsertData, error: upsertError } = await supabase.from('meetings').upsert({
+            recall_id: recall_id,
+            user_id: user.id,
+            title: title || 'Reunião Recall.ai (Processando...)',
+            transcriptions: [{ role: 'model', text: '', timestamp: Date.now() }],
+            summary: 'Processando...',
+            timestamp: validTimestamp,
+            notes: baseNotes,
+            video_url: video_url
+          }, { onConflict: 'recall_id' }).select().single();
+
+          if (upsertError) {
+            logger.error(`[Webhook] Failed to lock meeting: ${upsertError.message}`);
+            // Proceed or fail? If DB is down, we can't save anyway.
+            throw upsertError;
+          }
+
+          const meetingId = upsertData.id;
+          logger.info(`[Webhook] Gemini Task Init. Locked Meeting ID: ${meetingId}`);
+
+          // 3. ASYNC PROCESSING (Fire and Forget)
+          (async () => {
+            // ... (Async Block)
+            const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);
+            var videoPath = null;
+            var uploadResult = null;
+
+            try {
+              const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+              const modelName = process.env.GEMINI_CHAT_MODEL || "gemini-2.0-flash";
+              const model = genAI.getGenerativeModel({ model: modelName });
+
+              logger.info(`[Gemini] Using model: ${modelName}`);
+
+              // 1. Download Video
+              videoPath = path.join(os.tmpdir(), `${recall_id}.mp4`);
+              const writer = fs.createWriteStream(videoPath);
+              const response = await axios({
+                url: video_url,
+                method: 'GET',
+                responseType: 'stream'
+              });
+              response.data.pipe(writer);
+
+              await new Promise((resolve, reject) => {
+                writer.on('finish', resolve);
+                writer.on('error', reject);
+              });
+
+              // 2. Upload to Gemini
+              uploadResult = await fileManager.uploadFile(videoPath, {
+                mimeType: "video/mp4",
+                displayName: `Meeting ${recall_id}`,
+              });
+
+              logger.info(`[Gemini] Video uploaded: ${uploadResult.file.uri} (State: ${uploadResult.file.state})`);
+
+              // 2.5 Wait for processing
+              let fileState = await fileManager.getFile(uploadResult.file.name);
+              while (fileState.state === "PROCESSING") {
+                logger.info(`[Gemini] Processing video...`);
+                await new Promise((resolve) => setTimeout(resolve, 10000));
+                fileState = await fileManager.getFile(uploadResult.file.name);
+              }
+
+              if (fileState.state === "FAILED") {
+                throw new Error("[Gemini] Video processing failed on Google servers.");
+              }
+
+              logger.info(`[Gemini] Video Active. Generating content...`);
+
+              // 3. Generate Content
+              const result = await model.generateContent([
+                "Transcreva esta reunião detalhadamente, identificando os falantes se possível. Em seguida, crie um resumo executivo.",
+                { fileData: { fileUri: uploadResult.file.uri, mimeType: uploadResult.file.mimeType } },
+              ]);
+
+              const aiText = result.response.text();
+              logger.info(`[Gemini] Transcription generated (${aiText.length} chars). Updating DB...`);
+
+              // 4. Update Database
+              const finalNotes = baseNotes + participantsText;
+
+              const { data: updateData, error: updateError } = await supabase.from('meetings').update({
+                transcriptions: [{ role: 'model', text: aiText, timestamp: Date.now() }],
+                summary: 'Transcrito via Gemini AI (Backup)',
+                notes: finalNotes,
+                video_url: video_url
+              }).eq('recall_id', recall_id).select();
+
+              if (updateError) {
+                logger.error(`[Gemini DB Update Error] ${updateError.message}`);
+              } else {
+                logger.info(`[Gemini DB Update Success] Rows affected: ${updateData?.length}`);
+
+                // 5. SEND EMAILS (Now SAFE to send)
+                await processMeetingCompletion(meetingId, user, title, botInfo, data, video_url);
+              }
+
+            } catch (geminiErr) {
+              logger.error(`[Gemini Fallback Error] ${geminiErr.message}`);
+              // Optional: Update DB to state 'Failed' so we can retry?
+            } finally {
+              // Cleanup
+              try {
+                if (videoPath && fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
+                if (uploadResult && uploadResult.file) await fileManager.deleteFile(uploadResult.file.name).catch(() => { });
+              } catch (cleanupErr) { logger.warn(`[Gemini Cleanup Warning] ${cleanupErr.message}`); }
+            }
+          })();
+
+          // 4. RETURN EARLY (Stop Main Flow)
+          // This prevents the code at the bottom (Duplicate Email Logic) from running.
+          return res.json({ success: true, message: "Gemini Task Started" });
         }
 
         if (!transcript && !video_url) {
@@ -1266,28 +1307,7 @@ app.post('/api/save-meeting-external', async (req, res) => {
       }
     }
 
-    // 1. Try to get User ID from Bot Metadata (Robust method)
-    // We didn't save metadata in v1, but we added it now.
-    let userId = data.metadata?.user_id;
-    let user = null;
 
-    if (userId) {
-      // Fetch user by ID directly
-      const { data: u, error: uErr } = await supabase.from('profiles')
-        .select('id, role, usage_minutes, plan_limit_minutes, extra_minutes').eq('id', userId).single();
-      if (!uErr) user = u;
-    }
-
-    // 2. Fallback: Find user by recall_id (Legacy method)
-    if (!user) {
-      const { data: u, error: uErr } = await supabase.from('profiles')
-        .select('id, role, usage_minutes, plan_limit_minutes, extra_minutes')
-        .eq('recall_id', recall_id)
-        .single();
-      if (!uErr) user = u;
-    }
-
-    if (!user) throw new Error("Usuário não identificado para esta gravação.");
 
     // CHECK LIMITS (Post-recording check? Or Pre? Recall usually joins first).
     // If we want to block entrance, we need a webhook on "bot_join_attempt".
@@ -1335,81 +1355,10 @@ app.post('/api/save-meeting-external', async (req, res) => {
     if (upsertError) throw upsertError;
     const meetingId = upsertData.id;
 
+    // ... (This part is inside the webhook handler, replacing lines 1338-1411)
+
     // --- SHARED TRANSCRIPTS LOGIC & EMAILS ---
-
-    // 1. Definição do Dono e Regras de Email
-    const isFree = user.role === 'FREE'; // Allow FREE users to get emails (growth loop)
-    const isPro = user.role === 'PRO';
-    const isProPlus = user.role === 'PRO_PLUS';
-    const isLomadPlus = user.role === 'LOMAD_PLUS';
-    const shouldNotifyOwner = isFree || isPro || isProPlus || isLomadPlus;
-    const shouldNotifyParticipants = isProPlus || isLomadPlus;
-
-    // Send Email to Owner
-    if (shouldNotifyOwner) {
-      // Need to fetch owner email if not available in 'user' object (which only selected role/usage)
-      const { data: ownerProfile } = await supabase.from('profiles').select('email, name').eq('id', user.id).single();
-
-      if (ownerProfile?.email) {
-        emailService.sendTranscriptionReadyEmail(
-          ownerProfile.email,
-          ownerProfile.name || 'Usuário',
-          title || 'Reunião Processada',
-          meetingId,
-          false
-        );
-      }
-    }
-
-    // Participants Logic
-    let attendeesToProcess = [];
-    // 1. Try botInfo (fetched from API)
-    if (typeof botInfo !== 'undefined' && botInfo?.calendar_event?.attendees) {
-      attendeesToProcess = botInfo.calendar_event.attendees;
-    }
-    // 2. Try webhook data (if provided)
-    else if (data.calendar_event?.attendees) {
-      attendeesToProcess = data.calendar_event.attendees;
-    }
-
-    if (attendeesToProcess.length > 0) {
-      const acceptedEmails = attendeesToProcess
-        .filter(a => a.status === 'accepted' && !a.is_organizer)
-        .map(a => a.email);
-
-      // Remove duplicates
-      const uniqueEmails = [...new Set(acceptedEmails)];
-
-      for (const email of uniqueEmails) {
-        // 1. Check if user exists (for Sharing Access)
-        const { data: existingUser } = await supabase.from('profiles').select('id, name').eq('email', email).single();
-        const userId = existingUser ? existingUser.id : null;
-        const participantName = existingUser?.name || 'Participante';
-
-        // 2. Insert into meeting_access (Ignore if already exists)
-        await supabase.from('meeting_access').upsert({
-          meeting_id: meetingId,
-          email: email,
-          user_id: userId,
-          role: 'viewer',
-          status: 'accepted'
-        }, { onConflict: 'meeting_id, email' });
-
-        logger.info(`[Sharing] Shared meeting ${meetingId} with ${email} (User: ${userId ? 'Found' : 'Pending'})`);
-
-        // 3. Send Email (If qualified)
-        if (shouldNotifyParticipants) {
-          emailService.sendTranscriptionReadyEmail(
-            email,
-            participantName,
-            title || 'Reunião Compartilhada',
-            meetingId,
-            true
-          );
-        }
-      }
-    }
-    // ----------------------------
+    await processMeetingCompletion(meetingId, user, title, botInfo, data, video_url);
 
     if (upsertError) throw upsertError;
 
@@ -1421,6 +1370,85 @@ app.post('/api/save-meeting-external', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+/**
+ * Shared function to handle meeting completion logic (Sharing & Emails)
+ * Used by both standard Recall webhooks and Gemini Fallback tasks.
+ */
+async function processMeetingCompletion(meetingId, user, title, botInfo, data, video_url) {
+  try {
+    // 1. Determine Notification Rules
+    const isFree = user.role === 'FREE';
+    const isPro = user.role === 'PRO';
+    const isProPlus = user.role === 'PRO_PLUS';
+    const isLomadPlus = user.role === 'LOMAD_PLUS'; // Assuming LOMAD_PLUS exists based on context
+    const shouldNotifyOwner = isFree || isPro || isProPlus || isLomadPlus;
+    const shouldNotifyParticipants = isProPlus || isLomadPlus;
+
+    // 2. Notify Owner
+    if (shouldNotifyOwner) {
+      const { data: ownerProfile } = await supabase.from('profiles').select('email, name').eq('id', user.id).single();
+      if (ownerProfile?.email) {
+        emailService.sendTranscriptionReadyEmail(
+          ownerProfile.email,
+          ownerProfile.name || 'Usuário',
+          title || 'Reunião Processada',
+          meetingId,
+          false
+        );
+        logger.info(`[Email] Transcription Ready email sent to owner: ${ownerProfile.email}`);
+      }
+    }
+
+    // 3. Process Participants (Sharing & Notification)
+    let attendeesToProcess = [];
+    if (botInfo?.calendar_event?.attendees) {
+      attendeesToProcess = botInfo.calendar_event.attendees;
+    } else if (data?.calendar_event?.attendees) {
+      attendeesToProcess = data.calendar_event.attendees;
+    }
+
+    if (attendeesToProcess.length > 0) {
+      const acceptedEmails = attendeesToProcess
+        .filter(a => a.status === 'accepted' && !a.is_organizer)
+        .map(a => a.email);
+      const uniqueEmails = [...new Set(acceptedEmails)];
+
+      for (const email of uniqueEmails) {
+        // Check if user exists
+        const { data: existingUser } = await supabase.from('profiles').select('id, name').eq('email', email).single();
+        const userId = existingUser ? existingUser.id : null;
+        const participantName = existingUser?.name || 'Participante';
+
+        // Share Access
+        await supabase.from('meeting_access').upsert({
+          meeting_id: meetingId,
+          email: email,
+          user_id: userId,
+          role: 'viewer',
+          status: 'accepted'
+        }, { onConflict: 'meeting_id, email' });
+
+        logger.info(`[Sharing] Shared meeting ${meetingId} with ${email}`);
+
+        // Notify Participant
+        if (shouldNotifyParticipants) {
+          emailService.sendTranscriptionReadyEmail(
+            email,
+            participantName,
+            title || 'Reunião Compartilhada',
+            meetingId,
+            true
+          );
+        }
+      }
+    }
+  } catch (err) {
+    logger.error(`[ProcessMeetingCompletion Error] ${err.message}`);
+  }
+}
+
+
 
 // Asaas Webhook Endpoint
 app.post('/api/webhooks/asaas', async (req, res) => {
