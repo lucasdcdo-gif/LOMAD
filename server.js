@@ -837,10 +837,9 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
       } else if (platform === 'outlook_calendar') {
         const redirectUri = `https://${RECALL_REGION}.recall.ai/api/v1/calendar/ms_oauth_callback/`;
 
-        // Microsoft Scopes: Matches Recall Demo EXACTLY.
-        // Source: https://github.com/recallai/calendar-integration-demo/blob/v2/v2-demo/logic/oauth.js#L26
-        // Removed prompt=consent and response_mode to align 100% with the demo.
-        const scope = "offline_access openid email https://graph.microsoft.com/Calendars.Read";
+        // Microsoft Scopes: Standard short-form for maximum compatibility with Personal Accounts
+        // 'User.Read' gives profile access, 'Calendars.ReadWrite' gives calendar access.
+        const scope = "offline_access openid email User.Read Calendars.ReadWrite";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
         const state = JSON.stringify({
@@ -848,8 +847,8 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
           ms_oauth_redirect_url: `${appUrl}/profile?calendar_connected=true`
         });
 
-        // Microsoft: Removed prompt and response_mode. Using defaults.
-        oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}`;
+        // Microsoft: Restore prompt=consent. For Personal accounts, this is often required to get a refresh_token.
+        oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&prompt=consent`;
       }
 
       console.log(`[Recall Manual Auth] Generated ${platform} URL for user ${userId}`);
