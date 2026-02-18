@@ -12,9 +12,21 @@ const __dirname = path.dirname(__filename);
 // Load .env
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // MUST use Service Role Key
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Lazy Init
+let supabase = null;
+
+const getSupabase = () => {
+    if (supabase) return supabase;
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL; // Fallback
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY; // Matching server.js
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        console.error("[Scheduler] Missing Supabase Credentials. skipping...");
+        return null;
+    }
+    supabase = createClient(supabaseUrl, supabaseServiceKey);
+    return supabase;
+};
 
 const RECALL_BASE_URL = 'https://us-west-2.recall.ai/api/v1';
 const RECALL_API_KEY = process.env.RECALL_API_KEY;
@@ -32,7 +44,10 @@ async function checkUpcomingMeetings() {
     try {
         // 1. Get Qualified Users (PRO/PLUS with connected calendar)
         // We only automate for paid users as per busines rules.
-        const { data: users, error } = await supabase
+        const sb = getSupabase();
+        if (!sb) return; // Skip if no db
+
+        const { data: users, error } = await sb
             .from('profiles')
             .select('id, recall_id, bot_name, role, calendar_connected')
             .eq('calendar_connected', true)
