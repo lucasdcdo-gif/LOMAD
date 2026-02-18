@@ -101,7 +101,14 @@ async function processUserMeetings(user) {
 
         const events = meetingsRes.data.results || meetingsRes.data || [];
 
-        if (events.length === 0) return; // No meetings soon
+        log(`[Scheduler] User ${user.id} - Window: ${now.toISOString()} to ${futureWindow.toISOString()}`);
+        log(`[Scheduler] User ${user.id} - Events Found: ${events.length}`);
+
+        if (events.length === 0) {
+            // DEBUG: Log raw response if empty to ensure structure is correct
+            // log(`[Scheduler] Raw Response: ${JSON.stringify(meetingsRes.data)}`);
+            return;
+        }
 
         // C. Check and Schedule
         for (const event of events) {
