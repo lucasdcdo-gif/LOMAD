@@ -836,8 +836,8 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
 
       } else if (platform === 'outlook_calendar') {
         const redirectUri = `https://${RECALL_REGION}.recall.ai/api/v1/calendar/ms_oauth_callback/`;
-        // Microsoft Scopes: Simplified to match Azure registration exactly (no URL prefix for v2 endpoint)
-        const scope = "offline_access openid email User.Read Calendars.Read Calendars.ReadWrite";
+        // Microsoft Scopes: Use explicit Graph URL to ensure v2 endpoint behavior correctly issues refresh_token
+        const scope = "offline_access openid email profile https://graph.microsoft.com/User.Read https://graph.microsoft.com/Calendars.Read https://graph.microsoft.com/Calendars.ReadWrite";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
         const state = JSON.stringify({
@@ -845,8 +845,8 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
           ms_oauth_redirect_url: `${appUrl}/profile?calendar_connected=true` // Updated key name
         });
 
-        // Microsoft: prompt=consent ensures refresh token is returned
-        oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&response_mode=query&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&prompt=consent`;
+        // Microsoft: prompt=login forces a full re-authentication, guaranteeing a fresh token response
+        oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&response_mode=query&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&prompt=login`;
       }
 
       console.log(`[Recall Manual Auth] Generated ${platform} URL for user ${userId}`);
