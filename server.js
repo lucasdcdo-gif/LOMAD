@@ -2084,9 +2084,13 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   logger.error(`UNHANDLED REJECTION: ${JSON.stringify(reason)}`);
 });
+// Start the Automated Bot Scheduler (Cron Job)
+const { startScheduler } = require('./services/scheduler');
+startScheduler();
 
-const port = process.env.PORT || 3001;
-app.listen(port, () => {
-  logger.info(`🚀 MeetingMind Ativo em http://localhost:${port}`);
-  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+// Start Server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  logger.info(`Server running on port ${PORT}`);
+  console.log(`[Recall] Webhook URL: ${process.env.VITE_APP_URL}/api/save-meeting-external`);
 });
