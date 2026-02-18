@@ -126,14 +126,58 @@ async function processUserMeetings(user) {
  */
 async function scheduleBotForEvent(user, event) {
     const eventId = event.id;
-    const meetingUrl = event.meeting_url;
+    let meetingUrl = event.meeting_url;
     const startTime = new Date(event.start_time).getTime();
 
     // DEBUG: Log event details
     // log(`[Scheduler] Checking Event: ${event.title} (${eventId}) - URL: ${meetingUrl}`);
 
+    // Fallback: If no meeting_url, try to extract from platform specific invites
+    if (!meetingUrl) {
+        // 1. Google Meet
+        if (event.meet_invite && event.meet_invite.meeting_id) {
+            meetingUrl = `https://meet.google.com/${event.meet_invite.meeting_id}`;
+            log(`[Scheduler] Constructed Google Meet URL: ${meetingUrl}`);
+        }
+        // 2. Zoom
+        else if (event.zoom_invite && event.zoom_invite.join_url) {
+            meetingUrl = event.zoom_invite.join_url;
+            log(`[Scheduler] Found Zoom URL: ${meetingUrl}`);
+        }
+        // 3. Microsoft Teams
+        else if (event.teams_invite && event.teams_invite.join_url) {
+            meetingUrl = event.teams_invite.join_url;
+            log(`[Scheduler] Found Teams URL: ${meetingUrl}`);
+        }
+    }
+
+    // Fallback 2: Extract from location or description (Regex)
+    if (!meetingUrl) {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+        // Check Location
+        if (event.location) {
+            const locMatch = event.location.match(urlRegex);
+            if (locMatch) {
+                meetingUrl = locMatch[0];
+                log(`[Scheduler] Found URL in Location: ${meetingUrl}`);
+            }
+        }
+
+        // Check Description (if still null)
+        if (!meetingUrl && event.description) {
+            const descMatch = event.description.match(urlRegex);
+            if (descMatch) {
+                meetingUrl = descMatch[0];
+                log(`[Scheduler] Found URL in Description: ${meetingUrl}`);
+            }
+        }
+    }
+
     if (!meetingUrl) {
         log(`[Scheduler] Skipping ${event.title} - No Meeting URL found.`);
+        // DEBUG: Log full event to see where the URL is
+        log(`[Scheduler] Event Dump: ${JSON.stringify(event)}`);
         return;
     }
 
