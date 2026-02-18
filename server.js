@@ -836,9 +836,12 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
 
       } else if (platform === 'outlook_calendar') {
         const redirectUri = `https://${RECALL_REGION}.recall.ai/api/v1/calendar/ms_oauth_callback/`;
-        // Microsoft Scopes: Exact match with Recall Dashboard success case
-        // Note: 'offline_access' MUST be present for refresh_token.
-        const scope = "offline_access openid email User.Read Calendars.Read Calendars.ReadWrite";
+
+        // Microsoft Scopes: Matches Recall Demo EXACTLY.
+        // Source: https://github.com/recallai/calendar-integration-demo/blob/v2/v2-demo/logic/oauth.js#L26
+        // Note: They use 'https://graph.microsoft.com/Calendars.Read' but NOT ReadWrite in the demo.
+        // We will stick to this base config to ensure connection first.
+        const scope = "offline_access openid email https://graph.microsoft.com/Calendars.Read";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
         const state = JSON.stringify({
