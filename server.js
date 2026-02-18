@@ -839,8 +839,7 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
 
         // Microsoft Scopes: Matches Recall Demo EXACTLY.
         // Source: https://github.com/recallai/calendar-integration-demo/blob/v2/v2-demo/logic/oauth.js#L26
-        // Note: They use 'https://graph.microsoft.com/Calendars.Read' but NOT ReadWrite in the demo.
-        // We will stick to this base config to ensure connection first.
+        // Removed prompt=consent and response_mode to align 100% with the demo.
         const scope = "offline_access openid email https://graph.microsoft.com/Calendars.Read";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
@@ -849,8 +848,8 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
           ms_oauth_redirect_url: `${appUrl}/profile?calendar_connected=true`
         });
 
-        // Microsoft: prompt=consent is critical to force refresh_token issuance even if previously granted
-        oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&response_mode=query&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&prompt=consent`;
+        // Microsoft: Removed prompt and response_mode. Using defaults.
+        oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}`;
       }
 
       console.log(`[Recall Manual Auth] Generated ${platform} URL for user ${userId}`);
