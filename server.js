@@ -836,9 +836,9 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
 
       } else if (platform === 'outlook_calendar') {
         const redirectUri = `https://${RECALL_REGION}.recall.ai/api/v1/calendar/ms_oauth_callback/`;
-        // Microsoft Scopes: Add 'profile' (standard v2 requirement) and remove redundant 'Calendars.Read'.
-        // 'Calendars.ReadWrite' implies read access. 'offline_access' is mandatory.
-        const scope = "openid profile email offline_access User.Read Calendars.ReadWrite";
+        // Microsoft Scopes: Exact match with Recall Dashboard success case
+        // Note: 'offline_access' MUST be present for refresh_token.
+        const scope = "offline_access openid email User.Read Calendars.Read Calendars.ReadWrite";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
         const state = JSON.stringify({
@@ -851,6 +851,7 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
       }
 
       console.log(`[Recall Manual Auth] Generated ${platform} URL for user ${userId}`);
+      console.log(`[DEBUG FULL URL] ${oauthUrl}`); // Log full URL for inspection
       res.json({ url: oauthUrl });
 
     } catch (apiError) {
