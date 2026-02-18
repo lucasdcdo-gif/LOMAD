@@ -836,8 +836,8 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
 
       } else if (platform === 'outlook_calendar') {
         const redirectUri = `https://${RECALL_REGION}.recall.ai/api/v1/calendar/ms_oauth_callback/`;
-        // Microsoft Scopes: Add User.Read and Calendars.ReadWrite as configured in Azure
-        const scope = "offline_access openid email User.Read https://graph.microsoft.com/Calendars.Read https://graph.microsoft.com/Calendars.ReadWrite";
+        // Microsoft Scopes: Simplified to match Azure registration exactly (no URL prefix for v2 endpoint)
+        const scope = "offline_access openid email User.Read Calendars.Read Calendars.ReadWrite";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
         const state = JSON.stringify({
