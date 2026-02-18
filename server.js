@@ -837,10 +837,10 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
       } else if (platform === 'outlook_calendar') {
         const redirectUri = `https://${RECALL_REGION}.recall.ai/api/v1/calendar/ms_oauth_callback/`;
 
-        // Microsoft Scopes: Switching to Recall Demo standard.
-        // Now that the Client Secret is fixed, we must match the scopes Recall expects/uses.
-        // Source: https://github.com/recallai/calendar-integration-demo/blob/v2/v2-demo/logic/oauth.js#L26
-        const scope = "offline_access openid email https://graph.microsoft.com/Calendars.Read";
+        // Microsoft Scopes: Standard Full Suite with Fixed Secret
+        // Now that the Client Secret is correct, we retry the robust standard scopes.
+        // 'User.Read' is often essential for OpenID flows on Personal accounts.
+        const scope = "offline_access openid email User.Read Calendars.Read Calendars.ReadWrite";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
         const state = JSON.stringify({
@@ -848,8 +848,8 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
           ms_oauth_redirect_url: `${appUrl}/profile?calendar_connected=true`
         });
 
-        // Microsoft: Keeping prompt=consent to ensure we get a refresh_token for these new scopes.
-        oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&prompt=consent`;
+        // Microsoft: explicit response_mode=query and prompt=consent
+        oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&response_mode=query&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&prompt=consent`;
       }
 
       console.log(`[Recall Manual Auth] Generated ${platform} URL for user ${userId}`);
