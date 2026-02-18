@@ -836,17 +836,17 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
 
       } else if (platform === 'outlook_calendar') {
         const redirectUri = `https://${RECALL_REGION}.recall.ai/api/v1/calendar/ms_oauth_callback/`;
-        // Microsoft Scopes: Standard short-form scopes for v2 endpoint.
-        // 'offline_access' is critical for refresh_token. 'prompt=consent' forces refresh_token issuance.
-        const scope = "offline_access openid email User.Read Calendars.Read Calendars.ReadWrite";
+        // Microsoft Scopes: Add 'profile' (standard v2 requirement) and remove redundant 'Calendars.Read'.
+        // 'Calendars.ReadWrite' implies read access. 'offline_access' is mandatory.
+        const scope = "openid profile email offline_access User.Read Calendars.ReadWrite";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
         const state = JSON.stringify({
           recall_calendar_auth_token: recallToken,
-          ms_oauth_redirect_url: `${appUrl}/profile?calendar_connected=true` // Updated key name
+          ms_oauth_redirect_url: `${appUrl}/profile?calendar_connected=true`
         });
 
-        // Microsoft: prompt=consent is the standard way to ensure a refresh_token is returned
+        // Microsoft: prompt=consent is critical to force refresh_token issuance even if previously granted
         oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&response_mode=query&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&prompt=consent`;
       }
 
