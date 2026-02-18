@@ -2085,7 +2085,7 @@ process.on('unhandledRejection', (reason, promise) => {
   logger.error(`UNHANDLED REJECTION: ${JSON.stringify(reason)}`);
 });
 // Start the Automated Bot Scheduler (Cron Job)
-const { startScheduler } = require('./services/scheduler');
+import { startScheduler } from './services/scheduler.js';
 startScheduler();
 
 // Start Server

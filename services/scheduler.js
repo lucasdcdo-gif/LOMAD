@@ -1,10 +1,17 @@
-const cron = require('node-cron');
-const axios = require('axios');
-const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+import cron from 'node-cron';
+import axios from 'axios';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 
-// Setup Supabase (Using service key for admin access)
-const { createClient } = require('@supabase/supabase-js');
+// Setup __dirname for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // MUST use Service Role Key
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -161,7 +168,7 @@ async function scheduleBotForEvent(user, event) {
 
 // Start the Cron Job
 // Schedule: Every 5 minutes */5 * * * *
-const startScheduler = () => {
+export const startScheduler = () => {
     log("Initializing Job Scheduler...");
     cron.schedule('*/5 * * * *', () => {
         checkUpcomingMeetings();
@@ -170,5 +177,3 @@ const startScheduler = () => {
     // Custom: Run immediately on start (optional, good for dev testing)
     // checkUpcomingMeetings();
 };
-
-module.exports = { startScheduler };
