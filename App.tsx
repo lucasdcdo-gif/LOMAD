@@ -279,10 +279,24 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCalendarConnect = (provider: string) => {
+  const handleCalendarConnect = async (provider: string) => {
     if (!user) return;
-    // Redirect to backend auth endpoint with platform param
-    window.location.href = `/api/recall/calendar-auth?userId=${user.id}&platform=${provider}`;
+    try {
+      setAuthLoading(true);
+      const res = await fetch(`/api/recall/calendar-auth?userId=${user.id}&platform=${provider}`);
+      const data = await res.json();
+
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || "Falha ao obter link de conexão.");
+      }
+    } catch (e: any) {
+      console.error("Calendar connect error:", e);
+      setError("Erro ao conectar agenda: " + (e.message || "Erro desconhecido"));
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const handleCalendarDisconnect = async (platform: string) => {
