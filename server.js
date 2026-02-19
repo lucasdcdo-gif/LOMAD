@@ -1072,15 +1072,23 @@ app.post('/api/save-meeting-external', async (req, res) => {
     // Extract variables for usage later (Fixes ReferenceError)
     let { transcript, title, start_time, video_url } = data;
 
-    // --- USER RESOLUTION (Moved to top for Gemini Fallback) ---
+    // --- USER RESOLUTION (Enhanced) ---
     // 1. Try to get User ID from Bot Metadata
-    let userId = data.metadata?.user_id;
+    // Metadata location varies by event type (e.g. data.metadata OR data.bot.metadata)
+    let userId = data.metadata?.user_id || data.bot?.metadata?.user_id || data.extra_metadata?.user_id;
+
+    // DEBUG: Log metadata to help diagnosis
+    logger.info(`[Webhook debug] Event: ${eventType}, ID: ${recall_id}, Metadata keys: ${JSON.stringify(data.metadata || {})}, BotMeta keys: ${JSON.stringify(data.bot?.metadata || {})}`);
+
     let user = null;
 
     if (userId) {
       const { data: u, error: uErr } = await supabase.from('profiles')
         .select('id, role, usage_minutes, plan_limit_minutes, extra_minutes').eq('id', userId).single();
-      if (!uErr) user = u;
+      if (!uErr) {
+        user = u;
+        logger.info(`[Webhook] User resolved via metadata: ${user.id}`);
+      }
     }
 
     // 2. Fallback: Find user by recall_id
