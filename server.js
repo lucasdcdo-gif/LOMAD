@@ -845,7 +845,7 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
         // Microsoft Scopes: recall.ai documentation requires fully qualified graph URLs
         // Doc: offline_access openid email https://graph.microsoft.com/Calendars.Read
         // We also want ReadWrite just in case.
-        const scope = "offline_access openid email https://graph.microsoft.com/User.Read https://graph.microsoft.com/Calendars.Read https://graph.microsoft.com/Calendars.ReadWrite";
+        const scope = "offline_access openid email User.Read https://graph.microsoft.com/Calendars.Read https://graph.microsoft.com/Calendars.ReadWrite";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
         const state = JSON.stringify({
@@ -1188,6 +1188,14 @@ app.post('/api/save-meeting-external', async (req, res) => {
           )) {
             logger.warn(`[Webhook] Duplicate processing detected for ${recall_id} (Summary Check). Skipping.`);
             return res.json({ success: true, message: "Duplicate processing" });
+          }
+
+          // FIX: LOCK COMPLETED TRANSCRIPTIONS
+          // If the meeting already has a valid summary that is NOT "Processando...", do not touch it.
+          // This prevents overwrites by delayed events or race conditions.
+          if (existingJob && existingJob.summary && existingJob.summary !== 'Processando...' && existingJob.summary.length > 20) {
+            logger.info(`[Webhook] Meeting ${recall_id} is already finalized (Summary present). Skipping overwrite.`);
+            return res.json({ success: true, message: "Meeting already finalized" });
           }
 
           // 2. LOCK WITH UPSERT
