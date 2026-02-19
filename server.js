@@ -845,10 +845,13 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
         const scope = "offline_access openid email User.Read Calendars.ReadWrite";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
-        const state = JSON.stringify({
-          recall_calendar_auth_token: recallToken,
-          ms_oauth_redirect_url: `${appUrl}/profile?calendar_connected=true`
-        });
+        const state = Buffer.from(JSON.stringify({
+          userId: userId,
+          platform: 'microsoft_outlook',
+          recall_calendar_auth_token: recallToken, // CRITICAL: Restored token
+          ms_oauth_redirect_url: redirectUri, // MUST match Recall's callback
+          success_url: `${appUrl}/profile?calendar_connected=true` // User redirect after success
+        })).toString('base64');
 
         // Microsoft: explicit response_mode=query and prompt=consent
         oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&prompt=consent`;
