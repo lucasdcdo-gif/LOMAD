@@ -214,7 +214,7 @@ async function scheduleBotForEvent(user, event) {
 
         const botName = user.bot_name || "LOMAD Assistant";
 
-        const createRes = await axios.post(`${RECALL_BASE_URL}/bot/`, {
+        const payload = {
             meeting_url: meetingUrl,
             bot_name: botName,
             join_at: joinTime.toISOString(),
@@ -223,17 +223,24 @@ async function scheduleBotForEvent(user, event) {
                 event_id: eventId,
                 source: 'auto_scheduler'
             },
-            recording_mode: 'audio_video' // Enforce premium recording
-        }, {
+            recording_mode: 'audio_video'
+        };
+
+        log(`[Scheduler] Scheduling Bot Payload: ${JSON.stringify(payload)}`);
+
+        const createRes = await axios.post(`${RECALL_BASE_URL}/bot/`, payload, {
             headers: { Authorization: `Token ${RECALL_API_KEY}` }
         });
 
         log(`Scheduled bot for ${user.id} -> ${event.title} (ID: ${createRes.data.id})`);
 
     } catch (err) {
-        if (err.response && err.response.status === 422) {
-            // Already passed or invalid url
-            console.warn(`[Scheduler] Skipped invalid event ${eventId}: ${JSON.stringify(err.response.data)}`);
+        if (err.response) {
+            // Log full response data for API errors
+            log(`[Scheduler] API Error (${err.response.status}): ${JSON.stringify(err.response.data)}`);
+            if (err.response.status === 422) {
+                console.warn(`[Scheduler] Skipped invalid event ${eventId}: ${JSON.stringify(err.response.data)}`);
+            }
         } else {
             console.error(`[Scheduler] Failed to schedule ${eventId}: ${err.message}`);
         }
