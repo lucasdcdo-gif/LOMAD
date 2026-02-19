@@ -842,7 +842,9 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
         // 'User.Read' is often essential for OpenID flows on Personal accounts.
         // Microsoft Scopes: Modified to include 'openid' and 'email' - ESSENTIAL for offline_access
         // offline_access requires openid to return a refresh_token on the v2 endpoint.
-        const scope = "offline_access openid email User.Read Calendars.ReadWrite";
+        // Microsoft Scopes: Include 'profile', 'Calendars.Read', and 'Calendars.ReadWrite' for full coverage.
+        // Recall likely validates against specific read scopes too.
+        const scope = "offline_access openid email profile User.Read Calendars.Read Calendars.ReadWrite";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
         const state = JSON.stringify({
