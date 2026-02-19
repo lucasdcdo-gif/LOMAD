@@ -845,13 +845,13 @@ app.get('/api/recall/calendar-auth', async (req, res) => {
         const scope = "offline_access openid email User.Read Calendars.ReadWrite";
 
         // Fix: Recall expects 'ms_oauth_redirect_url', not 'microsoft_oauth_redirect_url'
-        const state = Buffer.from(JSON.stringify({
+        const state = JSON.stringify({
           userId: userId,
           platform: 'microsoft_outlook',
           recall_calendar_auth_token: recallToken, // CRITICAL: Restored token
           ms_oauth_redirect_url: redirectUri, // MUST match Recall's callback
           success_url: `${appUrl}/profile?calendar_connected=true` // User redirect after success
-        })).toString('base64');
+        });
 
         // Microsoft: explicit response_mode=query and prompt=consent
         oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}&prompt=consent`;
@@ -1168,7 +1168,8 @@ app.post('/api/save-meeting-external', async (req, res) => {
 
         // RETRY STRATEGY / GEMINI FALLBACK
         // If transcript missing but VIDEO exists, use Gemini to transcribe!
-        if (!transcript && video_url) {
+        // Fix: Restrict to 'bot.done' or 'bot.call_ended' to avoid duplicate processing on intermediate events like 'recording.done'
+        if (!transcript && video_url && ['bot.done', 'bot.call_ended'].includes(eventType)) {
 
           // 1. IDEMPOTENCY CHECK (Critical Fix)
           const { data: existingJob } = await supabase
