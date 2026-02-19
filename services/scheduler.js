@@ -222,8 +222,7 @@ async function scheduleBotForEvent(user, event) {
                 user_id: user.id,
                 event_id: eventId,
                 source: 'auto_scheduler'
-            },
-            recording_mode: 'audio_video'
+            }
         };
 
         log(`[Scheduler] Scheduling Bot Payload: ${JSON.stringify(payload)}`);
