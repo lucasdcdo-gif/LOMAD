@@ -257,11 +257,10 @@ async function checkWelcomeEmails() {
         const sb = getSupabase();
         if (!sb) return;
 
-        // Note: Make sure the 'email' and 'full_name' exist on profiles depending on user logic
-        // If not relying on full_name, fallback to "Usuário"
+        // Note: Make sure the 'email' exists on profiles depending on user logic
         const { data: users, error } = await sb
             .from('profiles')
-            .select('id, email, full_name')
+            .select('id, email')
             .eq('opl', 0);
 
         if (error) {
@@ -278,7 +277,7 @@ async function checkWelcomeEmails() {
         for (const user of users) {
             if (user.email) {
                 log(`Sending welcome email to ${user.email}`);
-                await emailService.sendWelcomeEmail(user.email, user.full_name || 'Usuário');
+                await emailService.sendWelcomeEmail(user.email, 'Usuário');
 
                 // Update opl to 1 on success
                 const { error: updateError } = await sb
