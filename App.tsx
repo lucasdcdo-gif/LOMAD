@@ -2361,8 +2361,8 @@ const App: React.FC = () => {
                             <div className="text-left md:text-right bg-black/20 p-3 rounded-xl border border-white/5 w-full md:w-auto">
                               <p className="text-xs font-bold text-slate-500 uppercase">Uso de Gravação</p>
                               <p className="text-xl font-black text-white">
-                                {Math.floor((user.usage_minutes || 0) / 60)}h {(user.usage_minutes || 0) % 60}m
-                                <span className="text-sm text-slate-500 font-medium"> / {user.role === 'LOMAD_PLUS' ? 'ILIMITADO' : `${Math.floor((user.plan_limit_minutes || 600) / 60)}h`}</span>
+                                {Math.floor((user.usageMinutes || 0) / 60)}h {(user.usageMinutes || 0) % 60}m
+                                <span className="text-sm text-slate-500 font-medium"> / {user.role === 'LOMAD_PLUS' ? 'ILIMITADO' : `${Math.floor((user.planLimitMinutes || 600) / 60)}h`}</span>
                               </p>
                             </div>
                           )}
