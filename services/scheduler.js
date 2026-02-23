@@ -416,15 +416,18 @@ async function checkTranscriptionEmails() {
 async function checkMeetingParticipants() {
     log("Checking for meetings to fetch participants...");
     try {
-        const { data: meetings, error } = await supabase
+        const sb = getSupabase();
+        if (!sb) return;
+
+        const { data: meetings, error } = await sb
             .from('meetings')
             .select(`
                 id,
                 recall_id,
                 summary,
-                "OPLgetpeople"
+                OPLgetpeople
             `)
-            .eq('"OPLgetpeople"', 0)
+            .eq('OPLgetpeople', 0)
             .neq('summary', 'Processando...')
             .not('summary', 'is', null);
 
@@ -469,7 +472,7 @@ async function checkMeetingParticipants() {
                     }
                 }
 
-                const { error: updateError } = await supabase
+                const { error: updateError } = await sb
                     .from('meetings')
                     .update({
                         participants: participantsArray,
@@ -488,7 +491,7 @@ async function checkMeetingParticipants() {
 
                 // Set OPLgetpeople to 1 even on failure to avoid infinite crash loops if the bot is deleted/non-existent (404)
                 if (pErr.response && pErr.response.status === 404) {
-                    await supabase.from('meetings').update({ OPLgetpeople: 1 }).eq('id', meeting.id);
+                    await sb.from('meetings').update({ OPLgetpeople: 1 }).eq('id', meeting.id);
                 }
             }
         }
