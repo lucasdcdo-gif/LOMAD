@@ -1147,7 +1147,11 @@ app.post('/api/save-meeting-external', async (req, res) => {
         // Update variables with fetched data
         const tArr = botInfo.transcript || [];
         transcript = Array.isArray(tArr) ? tArr.map(t => t.text).join('\n') : '';
-        title = title || botInfo.meeting_metadata?.title || 'Reunião Recall.ai';
+        // Dynamic Fallback Title logic
+        const now = new Date();
+        const fallbackTitle = `Reunião ${now.toLocaleDateString('pt-BR')}, ${now.toLocaleTimeString('pt-BR')}`;
+
+        title = title || botInfo.meeting_metadata?.title || fallbackTitle;
         // Date Fix: Prioritize botInfo.start_time, fallback to metadata or current time
         start_time = botInfo.start_time || botInfo.meeting_metadata?.start_time || new Date().toISOString();
 
@@ -1222,7 +1226,7 @@ app.post('/api/save-meeting-external', async (req, res) => {
           const { data: upsertData, error: upsertError } = await supabase.from('meetings').upsert({
             recall_id: recall_id,
             user_id: user.id,
-            title: title || 'Reunião Recall.ai (Processando...)',
+            title: title || `${fallbackTitle} (Processando...)`,
             transcriptions: [{ role: 'model', text: '', timestamp: Date.now() }],
             summary: 'Processando...',
             timestamp: validTimestamp,
@@ -1392,7 +1396,7 @@ app.post('/api/save-meeting-external', async (req, res) => {
     const { data: upsertData, error: upsertError } = await supabase.from('meetings').upsert({
       recall_id: recall_id, // Unique Key
       user_id: user.id,
-      title: title || 'Reunião Recall.ai',
+      title: title || fallbackTitle,
       transcriptions: [{ role: 'model', text: transcript || '', timestamp: Date.now() }],
       summary: 'Processando...',
       timestamp: validTimestamp,
