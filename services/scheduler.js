@@ -300,6 +300,118 @@ async function checkWelcomeEmails() {
     }
 }
 
+/**
+ * Job to Check and Send Transcription Emails
+ * Runs every 5 minutes for meetings with opl = 0 and summary complete
+ */
+async function checkTranscriptionEmails() {
+    log("Checking for unsent transcription emails...");
+    try {
+        const sb = getSupabase();
+        if (!sb) return;
+
+        // Fetch meetings that have opl = 0 and are NOT 'Processando...'
+        const { data: meetings, error } = await sb
+            .from('meetings')
+            .select('id, user_id, title, summary')
+            .eq('opl', 0)
+            .neq('summary', 'Processando...')
+            .not('summary', 'is', null);
+
+        if (error) {
+            console.error("[Scheduler] Fetch meetings for emails error:", error.message);
+            return;
+        }
+
+        if (!meetings || meetings.length === 0) {
+            return;
+        }
+
+        log(`Found ${meetings.length} meetings pending transcription email.`);
+
+        for (const meeting of meetings) {
+            log(`Processing emails for meeting: ${meeting.id}`);
+
+            // 1. Get owner profile
+            const { data: owner } = await sb
+                .from('profiles')
+                .select('id, email, name, role')
+                .eq('id', meeting.user_id)
+                .single();
+
+            if (owner && owner.email) {
+                const isFree = owner.role === 'FREE';
+                const isPro = owner.role === 'PRO';
+                const isProPlus = owner.role === 'PRO_PLUS';
+                const isLomadPlus = owner.role === 'LOMAD_PLUS';
+                const shouldNotifyOwner = isFree || isPro || isProPlus || isLomadPlus;
+                const shouldNotifyParticipants = isProPlus || isLomadPlus;
+
+                // Notify Owner
+                if (shouldNotifyOwner) {
+                    await emailService.sendTranscriptionReadyEmail(
+                        owner.email,
+                        owner.name || 'Usuário',
+                        meeting.title || 'Reunião Processada',
+                        meeting.id,
+                        false
+                    );
+                    log(`Transcription email sent to owner ${owner.email}`);
+                }
+
+                // 2. Notify Participants (if owner plan allows)
+                if (shouldNotifyParticipants) {
+                    const { data: participants } = await sb
+                        .from('meeting_access')
+                        .select('email, user_id')
+                        .eq('meeting_id', meeting.id)
+                        .eq('status', 'accepted');
+
+                    if (participants && participants.length > 0) {
+                        for (const p of participants) {
+                            if (!p.email) continue;
+
+                            // Find name if user_id exists
+                            let participantName = 'Participante';
+                            if (p.user_id) {
+                                const { data: pProfile } = await sb.from('profiles').select('name').eq('id', p.user_id).single();
+                                if (pProfile?.name) participantName = pProfile.name;
+                            } else {
+                                // Try fallback finding by email
+                                const { data: pProfileEmail } = await sb.from('profiles').select('name').eq('email', p.email).single();
+                                if (pProfileEmail?.name) participantName = pProfileEmail.name;
+                            }
+
+                            await emailService.sendTranscriptionReadyEmail(
+                                p.email,
+                                participantName,
+                                meeting.title || 'Reunião Compartilhada',
+                                meeting.id,
+                                true
+                            );
+                            log(`Transcription email sent to participant ${p.email}`);
+                        }
+                    }
+                }
+            }
+
+            // 3. Mark meeting opl = 1 (even if owner didn't have email to avoid infinite loops)
+            const { error: updateError } = await sb
+                .from('meetings')
+                .update({ opl: 1 })
+                .eq('id', meeting.id);
+
+            if (updateError) {
+                console.error(`[Scheduler] Failed to update OPL to 1 for meeting ${meeting.id}:`, updateError.message);
+            } else {
+                log(`Updated OPL to 1 for meeting ${meeting.id}`);
+            }
+        }
+    } catch (err) {
+        console.error("[Scheduler] Error in checkTranscriptionEmails:", err.message);
+    }
+}
+
 // Start the Cron Job
 // Schedule: Every 5 minutes */5 * * * *
 export const startScheduler = () => {
@@ -311,6 +423,11 @@ export const startScheduler = () => {
     // Welcome Email Job: Every 3 minutes
     cron.schedule('*/3 * * * *', () => {
         checkWelcomeEmails();
+    });
+
+    // Transcription Ready Email Job: Every 5 minutes
+    cron.schedule('*/5 * * * *', () => {
+        checkTranscriptionEmails();
     });
 
     // Custom: Run immediately on start (optional, good for dev testing)

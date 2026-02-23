@@ -1409,17 +1409,19 @@ async function processMeetingCompletion(meetingId, user, title, botInfo, data, v
     const shouldNotifyParticipants = isProPlus || isLomadPlus;
 
     // 2. Notify Owner
+    // Email dispatch removed from here. Managed by scheduler now.
     if (shouldNotifyOwner) {
       const { data: ownerProfile } = await supabase.from('profiles').select('email, name').eq('id', user.id).single();
       if (ownerProfile?.email) {
-        emailService.sendTranscriptionReadyEmail(
-          ownerProfile.email,
-          ownerProfile.name || 'Usuário',
-          title || 'Reunião Processada',
-          meetingId,
-          false
-        );
-        logger.info(`[Email] Transcription Ready email sent to owner: ${ownerProfile.email}`);
+        // emailService.sendTranscriptionReadyEmail(
+        //   ownerProfile.email,
+        //   ownerProfile.name || 'Usuário',
+        //   title || 'Reunião Processada',
+        //   meetingId,
+        //   false
+        // );
+        // logger.info(`[Email] Transcription Ready email sent to owner: ${ownerProfile.email}`);
+        logger.info(`[Meeting Completion] Owner identified for meeting ${meetingId}. Email will be dispatched by scheduler.`);
       }
     }
 
@@ -1455,15 +1457,16 @@ async function processMeetingCompletion(meetingId, user, title, botInfo, data, v
         logger.info(`[Sharing] Shared meeting ${meetingId} with ${email}`);
 
         // Notify Participant
-        if (shouldNotifyParticipants) {
-          emailService.sendTranscriptionReadyEmail(
-            email,
-            participantName,
-            title || 'Reunião Compartilhada',
-            meetingId,
-            true
-          );
-        }
+        // Email dispatch removed from here. Managed by scheduler now.
+        // if (shouldNotifyParticipants) {
+        //   emailService.sendTranscriptionReadyEmail(
+        //     email,
+        //     participantName,
+        //     title || 'Reunião Compartilhada',
+        //     meetingId,
+        //     true
+        //   );
+        // }
       }
     }
   } catch (err) {
