@@ -502,6 +502,100 @@ async function checkMeetingParticipants() {
 }
 
 
+// --- NEW JOB: Fetch Meeting Durations ---
+async function checkMeetingDurations() {
+    log("Checking for meetings to fetch durations...");
+    try {
+        const sb = getSupabase();
+        if (!sb) return;
+
+        const { data: meetings, error } = await sb
+            .from('meetings')
+            .select(`
+                id,
+                recall_id,
+                summary,
+                OPLQTNCALL
+            `)
+            .eq('OPLQTNCALL', 0)
+            .neq('summary', 'Processando...')
+            .not('summary', 'is', null)
+            .not('recall_id', 'is', null)
+            .is('started_at', null);
+
+        if (error) {
+            console.error("[Scheduler] Fetch meetings for durations error:", error.message);
+            return;
+        }
+
+        if (!meetings || meetings.length === 0) return;
+
+        log(`Found ${meetings.length} meetings pending duration fetch.`);
+
+        const RECALL_API_KEY = process.env.RECALL_API_KEY;
+        if (!RECALL_API_KEY) {
+            console.error("[Scheduler] Missing RECALL_API_KEY for fetching durations.");
+            return;
+        }
+
+        for (const meeting of meetings) {
+            try {
+                if (!meeting.recall_id) continue;
+
+                log(`Fetching duration for meeting recall_id: ${meeting.recall_id}`);
+                const { data: botInfo } = await axios.get(`https://us-west-2.recall.ai/api/v1/bot/${meeting.recall_id}/`, {
+                    headers: { Authorization: `Token ${RECALL_API_KEY}` }
+                });
+
+                let startedAt = null;
+                let completedAt = null;
+                let durationMinutes = null;
+
+                if (botInfo.recordings && botInfo.recordings.length > 0) {
+                    startedAt = botInfo.recordings[0].started_at || null;
+                    completedAt = botInfo.recordings[0].completed_at || null;
+
+                    if (startedAt && completedAt) {
+                        const start = new Date(startedAt);
+                        const end = new Date(completedAt);
+                        const diffMs = end - start;
+                        if (diffMs > 0) {
+                            durationMinutes = Math.round(diffMs / 60000); // convert Ms to minutes
+                        }
+                    }
+                }
+
+                // se falhar em achar a gravação logica normal salva nulo, mas encerra opl pra nao ficar em loop
+                const { error: updateError } = await sb
+                    .from('meetings')
+                    .update({
+                        started_at: startedAt,
+                        completed_at: completedAt,
+                        duration_minutes: durationMinutes,
+                        OPLQTNCALL: 1
+                    })
+                    .eq('id', meeting.id);
+
+                if (updateError) {
+                    console.error(`[Scheduler] Failed to update duration for meeting ${meeting.id}:`, updateError.message);
+                } else {
+                    log(`Successfully fetched duration for meeting ${meeting.id} (${durationMinutes} mins)`);
+                }
+
+            } catch (pErr) {
+                console.error(`[Scheduler] Error fetching duration for meeting ${meeting.id}:`, pErr.message);
+
+                if (pErr.response && pErr.response.status === 404) {
+                    await sb.from('meetings').update({ OPLQTNCALL: 1 }).eq('id', meeting.id);
+                }
+            }
+        }
+    } catch (err) {
+        console.error("[Scheduler] Error in checkMeetingDurations:", err.message);
+    }
+}
+
+
 // Start the Cron Job
 // Schedule: Every 5 minutes */5 * * * *
 export const startScheduler = () => {
@@ -523,6 +617,11 @@ export const startScheduler = () => {
     // Participant Fetch Job: Every 2 minutes
     cron.schedule('*/2 * * * *', () => {
         checkMeetingParticipants();
+    });
+
+    // Meeting Duration Fetch Job: Every 2 minutes
+    cron.schedule('*/2 * * * *', () => {
+        checkMeetingDurations();
     });
 
     // Custom: Run immediately on start (optional, good for dev testing)
