@@ -515,6 +515,7 @@ async function checkMeetingDurations() {
                 id,
                 recall_id,
                 summary,
+                user_id,
                 OPLQTNCALL
             `)
             .eq('OPLQTNCALL', 0)
@@ -565,6 +566,18 @@ async function checkMeetingDurations() {
                     }
                 }
 
+                // 1. Calculate new limits using current snapshot inside database
+                if (durationMinutes && durationMinutes > 0 && meeting.user_id) {
+                    const { data: userData } = await sb.from('profiles').select('usage_minutes').eq('id', meeting.user_id).single();
+                    if (userData) {
+                        const newUsage = (userData.usage_minutes || 0) + durationMinutes;
+                        const { error: usageErr } = await sb.from('profiles').update({ usage_minutes: newUsage }).eq('id', meeting.user_id);
+                        if (usageErr) console.error(`[Scheduler] Failed to deduct ${durationMinutes} mins from user ${meeting.user_id}:`, usageErr.message);
+                        else log(`Deducted ${durationMinutes} mins from user ${meeting.user_id}. New Total: ${newUsage}m`);
+                    }
+                }
+
+                // 2. Mark this meeting as having its time measured
                 // se falhar em achar a gravação logica normal salva nulo, mas encerra opl pra nao ficar em loop
                 const { error: updateError } = await sb
                     .from('meetings')

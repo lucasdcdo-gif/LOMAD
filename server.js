@@ -1378,9 +1378,10 @@ app.post('/api/save-meeting-external', async (req, res) => {
     }
 
     if (!existingMeeting) {
-      // Only update usage if it's a new meeting
-      const newUsage = (user.usage_minutes || 0) + durationMinutes;
-      await supabase.from('profiles').update({ usage_minutes: newUsage }).eq('id', user.id);
+      // (Legacy logic removed): Only update usage if it's a new meeting
+      // const newUsage = (user.usage_minutes || 0) + durationMinutes;
+      // await supabase.from('profiles').update({ usage_minutes: newUsage }).eq('id', user.id);
+      logger.info(`[Webhook] Inserted new meeting for ${recall_id}. Usage limits now tracked by Scheduler OPLQTNCALL.`);
     }
 
     // Prepare Notes
