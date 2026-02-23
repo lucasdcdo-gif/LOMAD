@@ -50,7 +50,7 @@ async function checkUpcomingMeetings() {
 
         const { data: users, error } = await sb
             .from('profiles')
-            .select('id, recall_id, bot_name, role, calendar_connected')
+            .select('id, recall_id, bot_name, role, calendar_connected, usage_minutes, plan_limit_minutes, extra_minutes')
             .eq('calendar_connected', true)
             .in('role', ['PRO', 'PRO_PLUS', 'LOMAD_PLUS']);
 
@@ -77,7 +77,18 @@ async function checkUpcomingMeetings() {
  */
 async function processUserMeetings(user) {
     try {
-        // A. Authenticate with Recall to see their calendar
+        // A. Limit Enforcement
+        const usage = user.usage_minutes || 0;
+        const planLimit = user.plan_limit_minutes || 600; // PRO usually is 600m
+        const extras = user.extra_minutes || 0;
+        const totalLimit = planLimit + extras;
+
+        if (user.role !== 'LOMAD_PLUS' && usage >= totalLimit) {
+            log(`[Scheduler] Skipping user ${user.id} - Usage limit reached (${usage}/${totalLimit}m)`);
+            return;
+        }
+
+        // B. Authenticate with Recall to see their calendar
         const authRes = await axios.post(`${RECALL_BASE_URL}/calendar/authenticate/`,
             { user_id: user.id },
             { headers: { Authorization: `Token ${RECALL_API_KEY}` } }
