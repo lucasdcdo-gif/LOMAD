@@ -2112,6 +2112,34 @@ const App: React.FC = () => {
                 </div>
               </div>
 
+              {/* Participants Section (PRO+ / LOMAD+ / MASTER ONLY) */}
+              {((user?.role === 'PRO_PLUS' || user?.role === 'LOMAD_PLUS' || user?.role === 'MASTER') && selectedMeeting) && (
+                <div className="glass p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-indigo-950/10 to-transparent">
+                  <div className="flex items-center gap-3 mb-4">
+                    <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <h3 className="text-xl font-black text-white uppercase tracking-wide">Participantes</h3>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {selectedMeeting.participants && selectedMeeting.participants.length > 0 ? (
+                      selectedMeeting.participants.map((p, idx) => (
+                        <div key={p.id || idx} className="px-4 py-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between">
+                          <span className="font-semibold text-slate-200">{p.name || `Participante ${idx + 1}`}</span>
+                          {p.email && <span className="text-sm text-slate-400">{p.email}</span>}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 bg-white/5 rounded-xl border border-white/5 flex flex-col gap-2">
+                        <span className="font-semibold text-slate-200">Participante 1</span>
+                        <span className="font-semibold text-slate-200">Participante 2</span>
+                        <span className="text-sm text-slate-500 italic mt-1">A lista exata de participantes da reunião será apresentada em instantes...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Transcriptions Section - Collapsible */}
               <div className="glass p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/5">
                 <button

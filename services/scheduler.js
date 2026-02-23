@@ -412,6 +412,92 @@ async function checkTranscriptionEmails() {
     }
 }
 
+// --- NEW JOB: Fetch Participants for Completed Meetings ---
+async function checkMeetingParticipants() {
+    log("Checking for meetings to fetch participants...");
+    try {
+        const { data: meetings, error } = await sb
+            .from('meetings')
+            .select(`
+                id,
+                recall_id,
+                summary,
+                "OPLgetpeople"
+            `)
+            .eq('"OPLgetpeople"', 0)
+            .neq('summary', 'Processando...')
+            .not('summary', 'is', null);
+
+        if (error) {
+            console.error("[Scheduler] Fetch meetings for participants error:", error.message);
+            return;
+        }
+
+        if (!meetings || meetings.length === 0) return;
+
+        log(`Found ${meetings.length} meetings pending participant fetch.`);
+
+        const RECALL_API_KEY = process.env.RECALL_API_KEY;
+        if (!RECALL_API_KEY) {
+            console.error("[Scheduler] Missing RECALL_API_KEY for fetching participants.");
+            return;
+        }
+
+        for (const meeting of meetings) {
+            try {
+                if (!meeting.recall_id) continue;
+
+                log(`Fetching participants for meeting recall_id: ${meeting.recall_id}`);
+                const { data: botInfo } = await axios.get(`https://us-west-2.recall.ai/api/v1/bot/${meeting.recall_id}/`, {
+                    headers: { Authorization: `Token ${RECALL_API_KEY}` }
+                });
+
+                let participantsArray = null;
+
+                if (botInfo.recordings && botInfo.recordings.length > 0) {
+                    const downloadUrl = botInfo.recordings[0]?.media_shortcuts?.participant_events?.data?.participants_download_url;
+
+                    if (downloadUrl) {
+                        log(`Found participants URL, downloading...`);
+                        const { data: participantsData } = await axios.get(downloadUrl);
+
+                        if (Array.isArray(participantsData)) {
+                            participantsArray = participantsData
+                                .filter(p => p.name)
+                                .map(p => ({ id: p.id, name: p.name, email: p.email }));
+                        }
+                    }
+                }
+
+                const { error: updateError } = await sb
+                    .from('meetings')
+                    .update({
+                        participants: participantsArray,
+                        '"OPLgetpeople"': 1
+                    })
+                    .eq('id', meeting.id);
+
+                if (updateError) {
+                    console.error(`[Scheduler] Failed to update participants for meeting ${meeting.id}:`, updateError.message);
+                } else {
+                    log(`Successfully fetched and saved participants for meeting ${meeting.id} (Total: ${participantsArray?.length || 0})`);
+                }
+
+            } catch (pErr) {
+                console.error(`[Scheduler] Error fetching participants for meeting ${meeting.id}:`, pErr.message);
+
+                // Set OPLgetpeople to 1 even on failure to avoid infinite crash loops if the bot is deleted/non-existent (404)
+                if (pErr.response && pErr.response.status === 404) {
+                    await sb.from('meetings').update({ '"OPLgetpeople"': 1 }).eq('id', meeting.id);
+                }
+            }
+        }
+    } catch (err) {
+        console.error("[Scheduler] Error in checkMeetingParticipants:", err.message);
+    }
+}
+
+
 // Start the Cron Job
 // Schedule: Every 5 minutes */5 * * * *
 export const startScheduler = () => {
@@ -428,6 +514,11 @@ export const startScheduler = () => {
     // Transcription Ready Email Job: Every 5 minutes
     cron.schedule('*/5 * * * *', () => {
         checkTranscriptionEmails();
+    });
+
+    // Participant Fetch Job: Every 2 minutes
+    cron.schedule('*/2 * * * *', () => {
+        checkMeetingParticipants();
     });
 
     // Custom: Run immediately on start (optional, good for dev testing)
