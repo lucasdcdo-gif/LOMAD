@@ -1363,7 +1363,15 @@ app.post('/api/save-meeting-external', async (req, res) => {
     // Ideally, we check if meeting exists first.
 
     // Check if meeting exists
-    const { data: existingMeeting } = await supabase.from('meetings').select('id, recall_id').eq('recall_id', recall_id).single();
+    const { data: existingMeeting } = await supabase.from('meetings').select('id, recall_id, summary').eq('recall_id', recall_id).single();
+
+    // FIX: LOCK COMPLETED TRANSCRIPTIONS
+    // If the meeting has already been transcribed (by Gemini or Recall) and has a valid summary, 
+    // prevent late or out-of-order webhooks from overwriting the database.
+    if (existingMeeting && existingMeeting.summary && existingMeeting.summary !== 'Processando...' && existingMeeting.summary.length > 20) {
+      logger.info(`[Webhook] Meeting ${recall_id} is already finalized (Summary present). Skipping late webhook overwrite.`);
+      return res.json({ success: true, message: "Meeting already finalized. Skipping overwrite." });
+    }
 
     if (!existingMeeting) {
       // Only update usage if it's a new meeting
