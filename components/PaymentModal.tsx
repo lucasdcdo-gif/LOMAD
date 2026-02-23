@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 interface PaymentModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCheckout: (plan: 'monthly' | 'yearly' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'ADDON_10H', cardData: any) => Promise<void>;
+    onCheckout: (plan: 'monthly' | 'yearly' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'ADDON_10H', cardData: any, couponCode?: string) => Promise<void>;
     loading: boolean;
     userRole: string; // To detect if upgrading
     translations?: any;
@@ -56,9 +56,42 @@ export const PaymentModal = ({
         return getPlanInfo(plan).active;
     };
 
+    const [couponInput, setCouponInput] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+    const [couponLoadingState, setCouponLoadingState] = useState(false);
+    const [couponMessage, setCouponMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
+
+    const getFinalPrice = (plan: 'monthly' | 'yearly' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'ADDON_10H') => {
+        const basePrice = getPlanPrice(plan);
+        if (!appliedCoupon) return basePrice;
+        if (appliedCoupon.type === 'PERCENTAGE') {
+            return basePrice - (basePrice * (appliedCoupon.value / 100));
+        }
+        return Math.max(0, basePrice - appliedCoupon.value);
+    };
+
+    const handleApplyCoupon = async () => {
+        if (!couponInput.trim()) return;
+        setCouponLoadingState(true);
+        setCouponMessage(null);
+        try {
+            const res = await fetch(`/api/coupons/validate?code=${encodeURIComponent(couponInput.trim())}`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Cupom inválido');
+            setAppliedCoupon(data.coupon);
+            setCouponMessage({ type: 'success', text: `Cupom aplicado! Desconto de ${data.coupon.type === 'PERCENTAGE' ? data.coupon.value + '%' : 'R$ ' + data.coupon.value}.` });
+            setCouponInput('');
+        } catch (e: any) {
+            setAppliedCoupon(null);
+            setCouponMessage({ type: 'error', text: e.message || 'Erro ao validar cupom.' });
+        } finally {
+            setCouponLoadingState(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        await onCheckout(selectedPlan, cardForm);
+        await onCheckout(selectedPlan, cardForm, appliedCoupon?.code);
     };
 
     return (
@@ -90,9 +123,9 @@ export const PaymentModal = ({
                                 onClick={() => isPlanActive('monthly') && setSelectedPlan('monthly')}
                                 disabled={!isPlanActive('monthly')}
                                 className={`p-4 rounded-xl border-2 transition-all text-left relative ${!isPlanActive('monthly') ? 'opacity-50 cursor-not-allowed border-white/5 bg-slate-950/30' :
-                                        selectedPlan === 'monthly'
-                                            ? 'border-cyan-500 bg-cyan-500/10'
-                                            : 'border-white/10 bg-slate-950/50 hover:border-white/20'
+                                    selectedPlan === 'monthly'
+                                        ? 'border-cyan-500 bg-cyan-500/10'
+                                        : 'border-white/10 bg-slate-950/50 hover:border-white/20'
                                     }`}
                             >
                                 <div className="flex justify-between items-center mb-1">
@@ -111,9 +144,9 @@ export const PaymentModal = ({
                                 onClick={() => isPlanActive('yearly') && setSelectedPlan('yearly')}
                                 disabled={!isPlanActive('yearly')}
                                 className={`p-4 rounded-xl border-2 transition-all text-left relative ${!isPlanActive('yearly') ? 'opacity-50 cursor-not-allowed border-white/5 bg-slate-950/30' :
-                                        selectedPlan === 'yearly'
-                                            ? 'border-emerald-500 bg-emerald-500/10'
-                                            : 'border-white/10 bg-slate-950/50 hover:border-white/20'
+                                    selectedPlan === 'yearly'
+                                        ? 'border-emerald-500 bg-emerald-500/10'
+                                        : 'border-white/10 bg-slate-950/50 hover:border-white/20'
                                     }`}
                             >
                                 {isPlanActive('yearly') && <div className="absolute -top-3 right-4 bg-emerald-600 text-xs px-2 py-0.5 rounded-full font-bold text-white">ECONOMIZE 14%</div>}
@@ -136,9 +169,9 @@ export const PaymentModal = ({
                                 onClick={() => isPlanActive('PRO_PLUS') && setSelectedPlan('PRO_PLUS')}
                                 disabled={!isPlanActive('PRO_PLUS')}
                                 className={`p-4 rounded-xl border-2 transition-all text-left relative ${!isPlanActive('PRO_PLUS') ? 'opacity-50 cursor-not-allowed border-white/5 bg-slate-950/30' :
-                                        selectedPlan === 'PRO_PLUS'
-                                            ? 'border-purple-500 bg-purple-500/10'
-                                            : 'border-white/10 bg-slate-950/50 hover:border-white/20'
+                                    selectedPlan === 'PRO_PLUS'
+                                        ? 'border-purple-500 bg-purple-500/10'
+                                        : 'border-white/10 bg-slate-950/50 hover:border-white/20'
                                     }`}
                             >
                                 <div className="flex justify-between items-center mb-1">
@@ -161,9 +194,9 @@ export const PaymentModal = ({
                                 onClick={() => isPlanActive('LOMAD_PLUS') && setSelectedPlan('LOMAD_PLUS')}
                                 disabled={!isPlanActive('LOMAD_PLUS')}
                                 className={`p-4 rounded-xl border-2 transition-all text-left relative ${!isPlanActive('LOMAD_PLUS') ? 'opacity-50 cursor-not-allowed border-white/5 bg-slate-950/30' :
-                                        selectedPlan === 'LOMAD_PLUS'
-                                            ? 'border-amber-500 bg-amber-500/10'
-                                            : 'border-white/10 bg-slate-950/50 hover:border-white/20'
+                                    selectedPlan === 'LOMAD_PLUS'
+                                        ? 'border-amber-500 bg-amber-500/10'
+                                        : 'border-white/10 bg-slate-950/50 hover:border-white/20'
                                     }`}
                             >
                                 <div className="flex justify-between items-center mb-1">
@@ -189,9 +222,9 @@ export const PaymentModal = ({
                                 onClick={() => isPlanActive('ADDON_10H') && setSelectedPlan('ADDON_10H')}
                                 disabled={!isPlanActive('ADDON_10H')}
                                 className={`w-full p-3 rounded-xl border border-dashed transition-all flex items-center justify-between ${!isPlanActive('ADDON_10H') ? 'opacity-50 cursor-not-allowed border-slate-700 bg-slate-900' :
-                                        selectedPlan === 'ADDON_10H'
-                                            ? 'border-blue-400 bg-blue-400/10'
-                                            : 'border-slate-600 hover:border-slate-400 hover:bg-slate-800'
+                                    selectedPlan === 'ADDON_10H'
+                                        ? 'border-blue-400 bg-blue-400/10'
+                                        : 'border-slate-600 hover:border-slate-400 hover:bg-slate-800'
                                     }`}
                             >
                                 <div className="text-left">
@@ -209,6 +242,44 @@ export const PaymentModal = ({
                             </button>
                         )}
                     </div>
+                </div>
+
+                {/* Coupon Section */}
+                <div className="mb-6 p-4 rounded-xl border border-white/10 bg-slate-900/50 flex flex-col gap-3">
+                    <label className="block text-sm font-bold text-slate-300">CUPOM DE DESCONTO (OPCIONAL)</label>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={couponInput}
+                            onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                            className="flex-1 bg-slate-950/80 border border-white/10 rounded-lg px-4 py-2 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 uppercase transition-all"
+                            placeholder="INSERIR CÓDIGO"
+                            disabled={couponLoadingState || !!appliedCoupon}
+                        />
+                        {appliedCoupon ? (
+                            <button
+                                type="button"
+                                onClick={() => { setAppliedCoupon(null); setCouponMessage(null); }}
+                                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-400 font-bold rounded-lg transition-colors border border-red-500/30"
+                            >
+                                Remover
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={handleApplyCoupon}
+                                disabled={!couponInput.trim() || couponLoadingState}
+                                className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold rounded-lg transition-colors disabled:opacity-50 border border-white/5"
+                            >
+                                {couponLoadingState ? 'Validando...' : 'Aplicar'}
+                            </button>
+                        )}
+                    </div>
+                    {couponMessage && (
+                        <p className={`text-xs font-bold ${couponMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                            {couponMessage.text}
+                        </p>
+                    )}
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -377,7 +448,14 @@ export const PaymentModal = ({
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                     </svg>
-                                    Pagar R$ {getPlanPrice(selectedPlan).toFixed(2).replace('.', ',')}
+                                    {appliedCoupon ? (
+                                        <span className="flex flex-col items-center leading-tight">
+                                            <span className="line-through text-[10px] text-white/50">R$ {getPlanPrice(selectedPlan).toFixed(2).replace('.', ',')}</span>
+                                            <span>Pagar R$ {getFinalPrice(selectedPlan).toFixed(2).replace('.', ',')}</span>
+                                        </span>
+                                    ) : (
+                                        <span>Pagar R$ {getPlanPrice(selectedPlan).toFixed(2).replace('.', ',')}</span>
+                                    )}
                                 </>
                             )}
                         </button>

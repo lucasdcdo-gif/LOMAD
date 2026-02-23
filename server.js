@@ -204,7 +204,7 @@ app.post('/api/ai/summarize', async (req, res) => {
 // Checkout / Upgrade endpoint
 app.post('/api/checkout', async (req, res) => {
   try {
-    const { userId, plan, cardData } = req.body;
+    const { userId, plan, cardData, couponCode } = req.body;
 
     // Validar dados básicos
     if (!cardData || !cardData.number || !cardData.expiry || !cardData.cvc || !cardData.name) {
@@ -279,6 +279,23 @@ app.post('/api/checkout', async (req, res) => {
       value = 129.00; // Fixed Price Add-on
     } else {
       value = defaultMonthly; // Fallback
+    }
+
+    // Apply Coupon Discount
+    if (couponCode) {
+      const { data: coupon } = await supabase.from('coupons').select('*').eq('code', couponCode.toUpperCase()).single();
+      if (coupon && coupon.is_active) {
+        const now = new Date();
+        const isValidDate = (!coupon.valid_from || new Date(coupon.valid_from) <= now) &&
+          (!coupon.valid_until || new Date(coupon.valid_until) >= now);
+        if (isValidDate) {
+          if (coupon.type === 'PERCENTAGE') {
+            value = value - (value * (coupon.value / 100));
+          } else if (coupon.type === 'FIXED') {
+            value = Math.max(0, value - coupon.value);
+          }
+        }
+      }
     }
 
     // 3. Criar Assinatura (Recorrência)
@@ -2137,6 +2154,75 @@ app.post('/api/ai/chat', async (req, res) => {
     logger.error("Chat Error: " + err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// --- COUPON ENDPOINTS ---
+
+// Admin: Get All Coupons (Only MASTER)
+app.get('/api/admin/coupons', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('coupons').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Admin: Create Coupon (Only MASTER)
+app.post('/api/admin/coupons', async (req, res) => {
+  try {
+    const { code, type, value, valid_from, valid_until } = req.body;
+    const { data, error } = await supabase.from('coupons').insert([{
+      code: code.toUpperCase(),
+      type,
+      value,
+      valid_from: valid_from || null,
+      valid_until: valid_until || null
+    }]).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Admin: Toggle Coupon Status (Only MASTER)
+app.patch('/api/admin/coupons/:id/status', async (req, res) => {
+  try {
+    const { isActive } = req.body;
+    const { data, error } = await supabase.from('coupons').update({ is_active: isActive }).eq('id', req.params.id).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Public: Validate Coupon
+app.get('/api/coupons/validate', async (req, res) => {
+  try {
+    const { code } = req.query;
+    if (!code) return res.status(400).json({ error: 'Código de cupom não informado.' });
+
+    const { data: coupon, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .eq('code', code.toUpperCase())
+      .single();
+
+    if (error || !coupon) {
+      return res.status(404).json({ error: 'Cupom inválido ou não encontrado.' });
+    }
+
+    if (!coupon.is_active) {
+      return res.status(400).json({ error: 'Este cupom não está mais ativo.' });
+    }
+
+    const now = new Date();
+    if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+      return res.status(400).json({ error: 'Este cupom ainda não é válido.' });
+    }
+    if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+      return res.status(400).json({ error: 'Este cupom já expirou.' });
+    }
+
+    res.json({ success: true, coupon });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // SPA Fallback: Qualquer rota que não seja arquivo ou API serve o index.html

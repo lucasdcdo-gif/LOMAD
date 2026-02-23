@@ -65,7 +65,7 @@ const App: React.FC = () => {
 
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView] = useState<'MAIN' | 'HISTORY' | 'MEETING_DETAILS' | 'LOGIN' | 'REGISTER' | 'PROFILE' | 'ADMIN_DASHBOARD' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD' | 'HOW_IT_WORKS' | 'TERMS' | 'PRIVACY' | 'PRICING' | 'RECALL_CONFIG' | 'FULL_AGENDA' | 'CONTACT' | 'ABOUT' | 'PRIVACY_PAGE' | 'TERMS_PAGE'>(window.location.pathname === '/profile' ? 'PROFILE' : 'MAIN');
+  const [view, setView] = useState<'MAIN' | 'HISTORY' | 'MEETING_DETAILS' | 'LOGIN' | 'REGISTER' | 'PROFILE' | 'ADMIN_DASHBOARD' | 'COUPONS' | 'FORGOT_PASSWORD' | 'UPDATE_PASSWORD' | 'HOW_IT_WORKS' | 'TERMS' | 'PRIVACY' | 'PRICING' | 'RECALL_CONFIG' | 'FULL_AGENDA' | 'CONTACT' | 'ABOUT' | 'PRIVACY_PAGE' | 'TERMS_PAGE'>(window.location.pathname === '/profile' ? 'PROFILE' : 'MAIN');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   // States for Meeting Management
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -192,6 +192,11 @@ const App: React.FC = () => {
     lomad_plus: { price: 199.00, active: true },
     addon_10h: { price: 129.00, active: true }
   });
+
+  // Coupons Admin State
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [couponForm, setCouponForm] = useState({ code: '', type: 'PERCENTAGE', value: '', valid_from: '', valid_until: '' });
+  const [couponLoading, setCouponLoading] = useState(false);
 
   // Routing Handler for clean URLs
   useEffect(() => {
@@ -1367,16 +1372,55 @@ const App: React.FC = () => {
 
   const fetchAdminData = async () => {
     try {
-      const [statsRes, usersRes, pricingRes] = await Promise.all([
+      const [statsRes, usersRes, pricingRes, couponsRes] = await Promise.all([
         fetch('/api/admin/stats').then(res => res.json()),
         fetch('/api/admin/users').then(res => res.json()),
-        fetch('/api/admin/pricing').then(res => res.json())
+        fetch('/api/admin/pricing').then(res => res.json()),
+        fetch('/api/admin/coupons').then(res => res.json())
       ]);
       setAdminStats(statsRes);
       setAdminUsers(usersRes);
       setAdminPricing(pricingRes);
+      setCoupons(couponsRes);
     } catch (e) {
       setError("Erro ao carregar dados do admin: " + getErrorMessage(e));
+    }
+  };
+
+  const createCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!couponForm.code || !couponForm.value) return;
+    setCouponLoading(true);
+    try {
+      const res = await fetch('/api/admin/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(couponForm)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao criar cupom');
+
+      setSuccessMessage('Cupom criado com sucesso!');
+      setCouponForm({ code: '', type: 'PERCENTAGE', value: '', valid_from: '', valid_until: '' });
+      fetchAdminData(); // Refresh list
+    } catch (e) {
+      setError("Erro ao criar cupom: " + getErrorMessage(e));
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const toggleCouponStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      await fetch(`/api/admin/coupons/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !currentStatus })
+      });
+      fetchAdminData();
+      setSuccessMessage(`Status do cupom alterado com sucesso!`);
+    } catch (e) {
+      setError("Erro ao atualizar status do cupom: " + getErrorMessage(e));
     }
   };
 
@@ -1407,8 +1451,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCheckout = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCheckout = async (plan: string, cardData: any, couponCode?: string) => {
     if (!user) return;
 
     setPaymentLoading(true);
@@ -1423,8 +1466,9 @@ const App: React.FC = () => {
         },
         body: JSON.stringify({
           userId: user.id,
-          plan: selectedPlan,
-          cardData: cardForm
+          plan: plan,
+          cardData: cardData,
+          couponCode: couponCode
         })
       });
 
@@ -1499,9 +1543,14 @@ const App: React.FC = () => {
                 <button onClick={() => setView('HISTORY')} className="px-3 py-2.5 text-sm font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all">Histórico</button>
                 <div className="flex items-center gap-2">
                   {user.role === 'MASTER' && (
-                    <button onClick={() => { fetchAdminData(); setView('ADMIN_DASHBOARD'); }} className="px-4 py-2.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl font-bold text-xs uppercase tracking-wide transition-all">
-                      Painel Admin
-                    </button>
+                    <>
+                      <button onClick={() => { fetchAdminData(); setView('ADMIN_DASHBOARD'); }} className="px-4 py-2.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl font-bold text-xs uppercase tracking-wide transition-all">
+                        Painel Admin
+                      </button>
+                      <button onClick={() => { fetchAdminData(); setView('COUPONS'); }} className="px-4 py-2.5 bg-fuchsia-600/20 hover:bg-fuchsia-600 text-fuchsia-400 hover:text-white border border-fuchsia-500/30 rounded-xl font-bold text-xs uppercase tracking-wide transition-all">
+                        Cupons
+                      </button>
+                    </>
                   )}
                   <div onClick={() => setView('PROFILE')} className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 rounded-xl border border-cyan-500/20 cursor-pointer hover:bg-white/10 transition-colors">
                     <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
@@ -1563,7 +1612,10 @@ const App: React.FC = () => {
                   <button onClick={() => { setView('HISTORY'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Histórico</button>
                   <button onClick={() => { setView('PROFILE'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Minha Conta</button>
                   {user.role === 'MASTER' && (
-                    <button onClick={() => { fetchAdminData(); setView('ADMIN_DASHBOARD'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl">Painel Admin</button>
+                    <>
+                      <button onClick={() => { fetchAdminData(); setView('ADMIN_DASHBOARD'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl">Painel Admin</button>
+                      <button onClick={() => { fetchAdminData(); setView('COUPONS'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-fuchsia-400 hover:text-fuchsia-300 hover:bg-fuchsia-500/10 rounded-xl">Cupons</button>
+                    </>
                   )}
                   <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-400 hover:text-white hover:bg-white/5 rounded-xl border-t border-white/5 mt-2">Sair</button>
                 </>
@@ -2761,6 +2813,110 @@ const App: React.FC = () => {
                       Salvar Alterações
                     </button>
                     <p className="text-xs text-slate-500 text-center">Planos suspensos aparecerão como "Em Breve".</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        }
+
+        {
+          view === 'COUPONS' && user?.role === 'MASTER' && (
+            <div className="w-full max-w-6xl py-12 animate-fade-in">
+              <div className="flex justify-between items-end mb-12">
+                <div>
+                  <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-2">Gerenciar Cupons</h1>
+                  <p className="text-slate-400">Crie regras de desconto para assinaturas Asaas</p>
+                </div>
+                <button onClick={() => { fetchAdminData(); }} className="px-5 py-2 glass rounded-xl text-white font-bold text-xs hover:bg-white/10 flex items-center gap-2"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>Atualizar</button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Coupon Creation Form */}
+                <div className="glass rounded-[2rem] border border-white/10 p-8 h-fit">
+                  <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider flex items-center gap-3">
+                    <svg className="w-5 h-5 text-fuchsia-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+                    Novo Cupom
+                  </h3>
+                  <form onSubmit={createCoupon} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Código (Ex: VIP20)</label>
+                      <input type="text" required value={couponForm.code} onChange={e => setCouponForm(prev => ({ ...prev, code: e.target.value.toUpperCase() }))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-fuchsia-500 uppercase" placeholder="PROMO10" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Tipo Desconto</label>
+                        <select required value={couponForm.type} onChange={e => setCouponForm(prev => ({ ...prev, type: e.target.value }))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-fuchsia-500 appearance-none">
+                          <option value="PERCENTAGE">Percentual (%)</option>
+                          <option value="FIXED">Valor Fixo (R$)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Valor</label>
+                        <input type="number" step="0.01" required value={couponForm.value} onChange={e => setCouponForm(prev => ({ ...prev, value: e.target.value }))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-fuchsia-500" placeholder="10.00" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Válido De (Opc.)</label>
+                        <input type="date" value={couponForm.valid_from} onChange={e => setCouponForm(prev => ({ ...prev, valid_from: e.target.value }))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-slate-300 focus:outline-none focus:border-fuchsia-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Até (Opc.)</label>
+                        <input type="date" value={couponForm.valid_until} onChange={e => setCouponForm(prev => ({ ...prev, valid_until: e.target.value }))} className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-slate-300 focus:outline-none focus:border-fuchsia-500" />
+                      </div>
+                    </div>
+                    <button type="submit" disabled={couponLoading} className="w-full py-4 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white font-bold uppercase tracking-wide shadow-lg transition-all hover:scale-[1.02] disabled:opacity-50 mt-4">
+                      {couponLoading ? 'Criando...' : 'Criar Cupom'}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Coupon List */}
+                <div className="lg:col-span-2 glass rounded-[2rem] border border-white/10 p-8">
+                  <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider">Cupons Existentes</h3>
+                  <div className="overflow-auto max-h-[500px] custom-scrollbar">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="sticky top-0 bg-slate-900/90 backdrop-blur-md z-10">
+                        <tr className="border-b border-white/10 text-slate-400 text-xs uppercase tracking-wider">
+                          <th className="p-4 font-bold">Código</th>
+                          <th className="p-4 font-bold">Desconto</th>
+                          <th className="p-4 font-bold">Validade</th>
+                          <th className="p-4 font-bold">Status</th>
+                          <th className="p-4 font-bold text-right">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {coupons.map((c: any) => (
+                          <tr key={c.id} className="hover:bg-white/5 transition-colors">
+                            <td className="p-4 font-black text-white text-lg tracking-wider">{c.code}</td>
+                            <td className="p-4">
+                              <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-lg text-sm font-bold border border-green-500/30">
+                                {c.type === 'PERCENTAGE' ? `${c.value}%` : `R$ ${parseFloat(c.value).toFixed(2)}`}
+                              </span>
+                            </td>
+                            <td className="p-4 text-xs text-slate-400 space-y-1">
+                              <div>{c.valid_from ? new Date(c.valid_from).toLocaleDateString() : 'Aberto'} -</div>
+                              <div>{c.valid_until ? new Date(c.valid_until).toLocaleDateString() : 'Sem Limite'}</div>
+                            </td>
+                            <td className="p-4">
+                              <div className="flex justify-center">
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input type="checkbox" className="sr-only peer" checked={c.is_active} onChange={() => toggleCouponStatus(c.id, c.is_active)} />
+                                  <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-fuchsia-500"></div>
+                                </label>
+                              </div>
+                            </td>
+                            <td className="p-4 text-right">
+                              <span className={`text-[10px] uppercase font-bold ${c.is_active ? 'text-green-400' : 'text-slate-500'}`}>{c.is_active ? 'Ativo' : 'Inativo'}</span>
+                            </td>
+                          </tr>
+                        ))}
+                        {coupons.length === 0 && (
+                          <tr><td colSpan={5} className="p-8 text-center text-slate-500">Nenhum cupom criado.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
