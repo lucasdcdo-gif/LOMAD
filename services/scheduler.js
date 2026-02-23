@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+import { emailService } from '../lib/email.js';
 
 // Setup __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -246,12 +247,71 @@ async function scheduleBotForEvent(user, event) {
     }
 }
 
+/**
+ * Job to Check and Send Welcome Emails
+ * Runs every 3 minutes for users with opl = 0
+ */
+async function checkWelcomeEmails() {
+    log("Checking for unsent welcome emails...");
+    try {
+        const sb = getSupabase();
+        if (!sb) return;
+
+        // Note: Make sure the 'email' and 'full_name' exist on profiles depending on user logic
+        // If not relying on full_name, fallback to "Usuário"
+        const { data: users, error } = await sb
+            .from('profiles')
+            .select('id, email, full_name')
+            .eq('opl', 0);
+
+        if (error) {
+            console.error("[Scheduler] Fetch users for welcome email error:", error.message);
+            return;
+        }
+
+        if (!users || users.length === 0) {
+            return;
+        }
+
+        log(`Found ${users.length} users pending welcome email.`);
+
+        for (const user of users) {
+            if (user.email) {
+                log(`Sending welcome email to ${user.email}`);
+                await emailService.sendWelcomeEmail(user.email, user.full_name || 'Usuário');
+
+                // Update opl to 1 on success
+                const { error: updateError } = await sb
+                    .from('profiles')
+                    .update({ opl: 1 })
+                    .eq('id', user.id);
+
+                if (updateError) {
+                    console.error(`[Scheduler] Failed to update OPL to 1 for ${user.id}:`, updateError.message);
+                } else {
+                    log(`Updated OPL to 1 for user ${user.id}`);
+                }
+            } else {
+                // If user has no email, mark opl=1 to avoid retrying endlessly
+                await sb.from('profiles').update({ opl: 1 }).eq('id', user.id);
+            }
+        }
+    } catch (err) {
+        console.error("[Scheduler] Error in checkWelcomeEmails:", err.message);
+    }
+}
+
 // Start the Cron Job
 // Schedule: Every 5 minutes */5 * * * *
 export const startScheduler = () => {
     log("Initializing Job Scheduler...");
     cron.schedule('*/5 * * * *', () => {
         checkUpcomingMeetings();
+    });
+
+    // Welcome Email Job: Every 3 minutes
+    cron.schedule('*/3 * * * *', () => {
+        checkWelcomeEmails();
     });
 
     // Custom: Run immediately on start (optional, good for dev testing)
