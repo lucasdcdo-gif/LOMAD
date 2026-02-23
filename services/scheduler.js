@@ -473,7 +473,7 @@ async function checkMeetingParticipants() {
                     .from('meetings')
                     .update({
                         participants: participantsArray,
-                        '"OPLgetpeople"': 1
+                        OPLgetpeople: 1
                     })
                     .eq('id', meeting.id);
 
@@ -488,7 +488,7 @@ async function checkMeetingParticipants() {
 
                 // Set OPLgetpeople to 1 even on failure to avoid infinite crash loops if the bot is deleted/non-existent (404)
                 if (pErr.response && pErr.response.status === 404) {
-                    await supabase.from('meetings').update({ '"OPLgetpeople"': 1 }).eq('id', meeting.id);
+                    await supabase.from('meetings').update({ OPLgetpeople: 1 }).eq('id', meeting.id);
                 }
             }
         }
