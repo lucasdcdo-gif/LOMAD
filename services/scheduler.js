@@ -260,7 +260,7 @@ async function checkWelcomeEmails() {
         // Note: Make sure the 'email' exists on profiles depending on user logic
         const { data: users, error } = await sb
             .from('profiles')
-            .select('id, email')
+            .select('id, email, name')
             .eq('opl', 0);
 
         if (error) {
@@ -277,7 +277,7 @@ async function checkWelcomeEmails() {
         for (const user of users) {
             if (user.email) {
                 log(`Sending welcome email to ${user.email}`);
-                await emailService.sendWelcomeEmail(user.email, 'Usuário');
+                await emailService.sendWelcomeEmail(user.email, user.name || 'Usuário');
 
                 // Update opl to 1 on success
                 const { error: updateError } = await sb
