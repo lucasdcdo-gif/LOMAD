@@ -429,7 +429,8 @@ async function checkMeetingParticipants() {
             `)
             .eq('OPLgetpeople', 0)
             .neq('summary', 'Processando...')
-            .not('summary', 'is', null);
+            .not('summary', 'is', null)
+            .not('recall_id', 'is', null);
 
         if (error) {
             console.error("[Scheduler] Fetch meetings for participants error:", error.message);
