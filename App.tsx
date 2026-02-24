@@ -2498,7 +2498,7 @@ const App: React.FC = () => {
 
                     {/* AI & Automation Card for PLUS users */}
                     {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
-                      <div className="glass p-8 rounded-[2rem] border border-blue-500/20 bg-blue-500/5 relative overflow-hidden transition-all hover:border-blue-500/40">
+                      <div className="glass p-4 md:p-8 rounded-[2rem] border border-blue-500/20 bg-blue-500/5 relative overflow-hidden transition-all hover:border-blue-500/40">
                         <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                           <svg className="w-40 h-40 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
                         </div>
@@ -2521,8 +2521,8 @@ const App: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="mt-8 bg-gradient-to-br from-blue-900/40 to-slate-900/40 p-5 rounded-2xl border border-blue-500/20 relative z-10 shadow-lg">
-                          <label className="text-xs font-black text-blue-400 uppercase mb-3 block flex items-center justify-between tracking-wider">
+                        <div className="mt-8 bg-gradient-to-br from-blue-900/40 to-slate-900/40 p-4 md:p-5 rounded-2xl border border-blue-500/20 relative z-10 shadow-lg">
+                          <label className="text-xs font-black text-blue-400 uppercase mb-3 flex items-center justify-between tracking-wider">
                             <div className="flex items-center gap-2">
                               <div className="p-1 bg-blue-500/20 rounded text-blue-400"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
                               Bot Instantâneo
@@ -2543,7 +2543,7 @@ const App: React.FC = () => {
                               value={quickMeetingUrl}
                               onChange={(e) => setQuickMeetingUrl(e.target.value)}
                               disabled={user.role !== 'LOMAD_PLUS' && (user.usageMinutes || 0) >= ((user.planLimitMinutes || 600) + (user.extraMinutes || 0))}
-                              className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 shadow-inner placeholder:text-slate-600 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="flex-1 min-w-0 bg-slate-950 border border-white/10 rounded-xl px-3 md:px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 shadow-inner placeholder:text-slate-600 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <button
                               onClick={handleQuickBotJoin}
