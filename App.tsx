@@ -830,6 +830,22 @@ const App: React.FC = () => {
     }
   };
 
+  const handleMicrosoftLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: {
+          scopes: 'email profile',
+          redirectTo: import.meta.env.VITE_APP_URL || window.location.origin
+        }
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      console.error("Microsoft Login Error:", e);
+      setError("Erro no login com Microsoft: " + getErrorMessage(e));
+    }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!registerEmail || !registerPassword || !registerName) return;
@@ -3071,8 +3087,9 @@ const App: React.FC = () => {
 
               <div className="mb-6">
                 <button
+                  type="button"
                   onClick={handleGoogleLogin}
-                  className="w-full py-3.5 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-100 transition-all flex items-center justify-center gap-3"
+                  className="w-full py-3.5 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-100 transition-all flex items-center justify-center gap-3 mb-3"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -3081,6 +3098,17 @@ const App: React.FC = () => {
                     <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                   </svg>
                   Entrar com Google
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleMicrosoftLogin}
+                  className="w-full py-3.5 bg-[#00A4EF] text-white font-bold rounded-xl hover:bg-[#008CC9] transition-all flex items-center justify-center gap-3"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z" />
+                  </svg>
+                  Entrar com Microsoft
                 </button>
                 <div className="relative flex items-center gap-4 my-6">
                   <div className="h-px bg-white/10 flex-1"></div>
