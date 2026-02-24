@@ -1828,16 +1828,13 @@ const App: React.FC = () => {
                       </span>
                     </button>
                     <p className="mt-8 text-slate-400 text-sm font-semibold text-center leading-relaxed">Clique no botão e selecione a aba do navegador com sua reunião.<br />A transcrição iniciará automaticamente.</p>
-
-                    {user?.role === 'FREE' && (
-                      <button
-                        onClick={() => setShowHelpModal(true)}
-                        className="mt-6 flex items-center justify-center gap-2 px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-full text-sm font-black mx-auto border border-red-500/20 hover:border-red-500/40 transition-all uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]"
-                      >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        Ajuda
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setShowHelpModal(true)}
+                      className="mt-6 flex items-center justify-center gap-2 px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-full text-sm font-black mx-auto border border-red-500/20 hover:border-red-500/40 transition-all uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      Ajuda
+                    </button>
                   </>
                 ) : (
                   <>
