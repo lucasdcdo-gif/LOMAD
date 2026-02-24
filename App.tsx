@@ -128,6 +128,7 @@ const App: React.FC = () => {
 
   // Limits enforcement state
   const [showLimitAlert, setShowLimitAlert] = useState(false);
+  const [hasShownAlertThisSession, setHasShownAlertThisSession] = useState(false);
 
   // Quick Bot Join State (Dashboard)
   const [quickMeetingUrl, setQuickMeetingUrl] = useState('');
@@ -629,9 +630,10 @@ const App: React.FC = () => {
       const usage = user.usageMinutes || 0;
       const limit = (user.planLimitMinutes || 600) + (user.extraMinutes || 0);
 
-      // Show alert if over limit and not yet dismissed in this session
-      if (usage >= limit && !sessionStorage.getItem('limitAlertDismissed')) {
+      // Show alert if over limit and not yet dismissed in this React session (App load)
+      if (usage >= limit && !hasShownAlertThisSession) {
         setShowLimitAlert(true);
+        setHasShownAlertThisSession(true);
       }
     }
   }, [user]);
@@ -4356,7 +4358,6 @@ const App: React.FC = () => {
           <div className="bg-slate-900 border border-red-500/50 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
             <button
               onClick={() => {
-                sessionStorage.setItem('limitAlertDismissed', 'true');
                 setShowLimitAlert(false);
               }}
               className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
@@ -4374,7 +4375,6 @@ const App: React.FC = () => {
               <div className="flex flex-col gap-3 w-full">
                 <button
                   onClick={() => {
-                    sessionStorage.setItem('limitAlertDismissed', 'true');
                     setShowLimitAlert(false);
                     setView('PRICING');
                   }}
@@ -4384,7 +4384,6 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    sessionStorage.setItem('limitAlertDismissed', 'true');
                     setShowLimitAlert(false);
                   }}
                   className="w-full bg-slate-800 text-slate-300 font-semibold py-3 rounded-lg hover:bg-slate-700 transition-colors"
