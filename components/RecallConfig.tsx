@@ -129,7 +129,7 @@ export const RecallConfig: React.FC<RecallConfigProps> = ({ user, onUpdateUser, 
                                         type="text"
                                         value={botName}
                                         onChange={e => setBotName(e.target.value)}
-                                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2.5 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-sm transition-all text-white placeholder:text-slate-600"
+                                        className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-4 pr-20 md:pr-24 py-2.5 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-sm transition-all text-white placeholder:text-slate-600"
                                         placeholder="Nome do Bot"
                                     />
                                     <span className="absolute right-3 top-3 text-slate-600 text-xs font-medium select-none">.LOMAD.IA</span>
