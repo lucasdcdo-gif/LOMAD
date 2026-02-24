@@ -1963,21 +1963,21 @@ const App: React.FC = () => {
 
         {view === 'HISTORY' && (
           <div className="w-full max-w-6xl py-16 text-left">
-            <div className="flex justify-between items-end mb-16 pb-8 border-b border-white/10">
-              <div>
-                <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight mb-3">Histórico de Reuniões</h1>
-                <p className="text-slate-400 text-lg">Acesse suas transcrições e conversas anteriores</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 md:mb-16 pb-6 md:pb-8 border-b border-white/10">
+              <div className="w-full">
+                <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight mb-3 break-words">Histórico de Reuniões</h1>
+                <p className="text-slate-400 text-base md:text-lg">Acesse suas transcrições e conversas anteriores</p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3 w-full md:w-auto">
                 <button
                   onClick={() => user?.id && loadMeetings(user.id)}
-                  className="px-6 py-3 glass rounded-xl text-cyan-400 font-bold text-sm hover:bg-cyan-500/10 transition-all hover:scale-105 flex items-center gap-2"
+                  className="flex-1 md:flex-none px-6 py-3 glass rounded-xl text-cyan-400 font-bold text-sm hover:bg-cyan-500/10 transition-all hover:scale-105 flex items-center justify-center gap-2 whitespace-nowrap"
                   title="Recarregar lista de reuniões"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                   Atualizar
                 </button>
-                <button onClick={() => setView('MAIN')} className="px-6 py-3 glass rounded-xl text-white font-bold text-sm hover:bg-white/10 transition-all hover:scale-105">Voltar</button>
+                <button onClick={() => setView('MAIN')} className="flex-1 md:flex-none px-6 py-3 glass rounded-xl text-white font-bold text-sm hover:bg-white/10 transition-all hover:scale-105 whitespace-nowrap">Voltar</button>
               </div>
             </div>
 
@@ -2033,15 +2033,15 @@ const App: React.FC = () => {
                     setView('MEETING_DETAIL');
                   }}
                 >
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
                     <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                     <p className="text-xs font-bold text-cyan-400 uppercase tracking-wider">{new Date(m.timestamp).toLocaleDateString('pt-BR')}</p>
 
-                    <div className="flex items-center gap-1.5 ml-2">
+                    <div className="flex flex-wrap items-center gap-1.5 ml-0 md:ml-2">
                       {m.video_url ? (
                         <span className="px-2 py-0.5 bg-green-500 text-white text-[10px] font-black uppercase rounded-sm shadow-sm">Bot</span>
                       ) : (
-                        <span className="px-2 py-0.5 bg-orange-500 text-white text-[10px] font-black uppercase rounded-sm shadow-sm">Tela + Mic</span>
+                        <span className="px-2 py-0.5 bg-orange-500 text-white text-[10px] font-black uppercase rounded-sm shadow-sm whitespace-nowrap">Tela + Mic</span>
                       )}
                       {(() => {
                         const daysPassed = Math.floor((Date.now() - m.timestamp) / (1000 * 60 * 60 * 24));
