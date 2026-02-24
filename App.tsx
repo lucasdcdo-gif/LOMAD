@@ -2534,25 +2534,18 @@ const App: React.FC = () => {
                               )}
                             </label>
                             {editBotNameMode ? (
-                              <div className="flex flex-col gap-3 mt-1">
-                                <div className="relative w-full">
-                                  <input
-                                    type="text"
-                                    value={newBotNameProf}
-                                    onChange={(e) => setNewBotNameProf(e.target.value)}
-                                    maxLength={20}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-4 pr-20 md:pr-24 py-3 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-sm text-white transition-all shadow-inner"
-                                    placeholder="Nome do Bot"
-                                    autoFocus
-                                  />
-                                  <span className="absolute right-3 top-3.5 text-slate-500 text-[10px] md:text-xs font-medium select-none">.LOMAD.IA</span>
-                                </div>
-                                <div className="flex gap-2 justify-end">
-                                  <button onClick={() => setEditBotNameMode(false)} className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors border border-slate-700">
-                                    Cancelar
-                                  </button>
-                                  <button
-                                    onClick={async () => {
+                              <div className="flex gap-2 mt-2 items-stretch h-[46px]">
+                                <input
+                                  type="text"
+                                  value={newBotNameProf}
+                                  onChange={(e) => setNewBotNameProf(e.target.value)}
+                                  maxLength={20}
+                                  className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-sm text-white transition-all shadow-inner min-w-0 placeholder:text-slate-500"
+                                  placeholder="Digite novo nome..."
+                                  autoFocus
+                                  onKeyDown={async (e) => {
+                                    if (e.key === 'Escape') setEditBotNameMode(false);
+                                    if (e.key === 'Enter') {
                                       try {
                                         const res = await fetch('/api/recall/config', {
                                           method: 'POST',
@@ -2567,12 +2560,33 @@ const App: React.FC = () => {
                                       } catch (e) {
                                         console.error("Erro ao salvar bot nome", e);
                                       }
-                                    }}
-                                    className="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2 rounded-lg text-xs font-bold transition-colors shadow-lg shadow-cyan-900/20"
-                                  >
-                                    Salvar
-                                  </button>
-                                </div>
+                                    }
+                                  }}
+                                />
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch('/api/recall/config', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ userId: user.id, botName: newBotNameProf })
+                                      });
+                                      if (res.ok) {
+                                        const data = await res.json();
+                                        setUser(prev => prev ? { ...prev, botName: data.botName } : null);
+                                        setEditBotNameMode(false);
+                                      }
+                                    } catch (e) {
+                                      console.error("Erro ao salvar bot nome", e);
+                                    }
+                                  }}
+                                  className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-cyan-900/20 flex items-center justify-center whitespace-nowrap"
+                                >
+                                  Salvar
+                                </button>
+                                <button onClick={() => setEditBotNameMode(false)} className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-3 rounded-xl transition-colors border border-slate-700 flex items-center justify-center" aria-label="Cancelar">
+                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
                               </div>
                             ) : (
                               <div className="text-white font-bold text-lg break-all">{user.botName || 'Não configurado'}</div>
