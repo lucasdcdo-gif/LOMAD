@@ -4460,16 +4460,18 @@ const App: React.FC = () => {
             </button>
 
             <div
-              className="prose prose-invert prose-blue max-w-none prose-headings:font-black prose-p:text-slate-300 mb-8"
+              className="prose prose-invert prose-blue max-w-none prose-headings:font-black prose-p:text-slate-300 flex-1 overflow-y-auto"
               dangerouslySetInnerHTML={{ __html: helpContent || '<div class="flex justify-center p-8"><div class="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div></div>' }}
             />
 
-            <button
-              onClick={handleCloseHelp}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black py-4 rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all shadow-lg shadow-blue-500/20 text-lg uppercase tracking-wider"
-            >
-              Entendi
-            </button>
+            <div className="p-4 shrink-0 border-t border-slate-800">
+              <button
+                onClick={handleCloseHelp}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black py-4 rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all shadow-lg shadow-blue-500/20 text-lg uppercase tracking-wider"
+              >
+                Entendi
+              </button>
+            </div>
           </div>
         </div>
       )}

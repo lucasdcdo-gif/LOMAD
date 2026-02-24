@@ -1,668 +1,666 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <style>
+<style>
+  .lomad-help-content *,
+  .lomad-help-content *::before,
+  .lomad-help-content *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
-    .lomad-help-content *,
-    .lomad-help-content *::before,
-    .lomad-help-content *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+  .lomad-help-content {
+    --bg: #070c18;
+    --surface: #0d1526;
+    --surface2: #121e35;
+    --surface3: #1a2a47;
+    --border: rgba(255, 255, 255, .07);
+    --border2: rgba(255, 255, 255, .12);
+    --green: #10b981;
+    --cyan: #06b6d4;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --soft: #94a3b8;
+    --grad: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+    --grad-purple: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    --glow-green: 0 0 40px rgba(16, 185, 129, .18);
+    --glow-cyan: 0 0 40px rgba(6, 182, 212, .15);
+  }
 
-    .lomad-help-content {
-      --bg: #070c18;
-      --surface: #0d1526;
-      --surface2: #121e35;
-      --surface3: #1a2a47;
-      --border: rgba(255, 255, 255, .07);
-      --border2: rgba(255, 255, 255, .12);
-      --green: #10b981;
-      --cyan: #06b6d4;
-      --text: #e2e8f0;
-      --muted: #64748b;
-      --soft: #94a3b8;
-      --grad: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
-      --grad-purple: linear-gradient(135deg, #8b5cf6, #6d28d9);
-      --glow-green: 0 0 40px rgba(16, 185, 129, .18);
-      --glow-cyan: 0 0 40px rgba(6, 182, 212, .15);
-    }
 
-    
 
-    .lomad-help-content {
-      font-family: 'Sora', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
+  .lomad-help-content {
+    font-family: 'Sora', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100%;
+    overflow-x: hidden;
+  }
 
-    /* ─── NOISE TEXTURE OVERLAY ─── */
-    .lomad-help-content::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 0;
-      opacity: .6;
-    }
+  /* ─── NOISE TEXTURE OVERLAY ─── */
+  .lomad-help-content::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: .6;
+  }
 
-    /* ─── AMBIENT BLOBS ─── */
-    .lomad-help-content .blob {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(90px);
-      pointer-events: none;
-      z-index: 0;
-      animation: drift 12s ease-in-out infinite alternate;
-    }
+  /* ─── AMBIENT BLOBS ─── */
+  .lomad-help-content .blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+    z-index: 0;
+    animation: drift 12s ease-in-out infinite alternate;
+  }
 
-    .lomad-help-content .blob-1 {
-      width: 600px;
-      height: 600px;
-      background: rgba(16, 185, 129, .09);
-      top: -200px;
-      left: -150px;
-      animation-delay: 0s;
-    }
+  .lomad-help-content .blob-1 {
+    width: 600px;
+    height: 600px;
+    background: rgba(16, 185, 129, .09);
+    top: -200px;
+    left: -150px;
+    animation-delay: 0s;
+  }
 
-    .lomad-help-content .blob-2 {
-      width: 500px;
-      height: 500px;
-      background: rgba(6, 182, 212, .08);
-      bottom: -100px;
-      right: -100px;
-      animation-delay: -4s;
-    }
+  .lomad-help-content .blob-2 {
+    width: 500px;
+    height: 500px;
+    background: rgba(6, 182, 212, .08);
+    bottom: -100px;
+    right: -100px;
+    animation-delay: -4s;
+  }
 
-    .lomad-help-content .blob-3 {
-      width: 300px;
-      height: 300px;
-      background: rgba(139, 92, 246, .06);
-      top: 40%;
-      left: 60%;
-      animation-delay: -8s;
-    }
+  .lomad-help-content .blob-3 {
+    width: 300px;
+    height: 300px;
+    background: rgba(139, 92, 246, .06);
+    top: 40%;
+    left: 60%;
+    animation-delay: -8s;
+  }
 
-    @keyframes drift {
+  @keyframes drift {
     .lomad-help-content from {
-        transform: translate(0, 0) scale(1);
-      }
+      transform: translate(0, 0) scale(1);
+    }
 
     .lomad-help-content to {
-        transform: translate(30px, 20px) scale(1.08);
-      }
+      transform: translate(30px, 20px) scale(1.08);
     }
+  }
 
-    /* ─── LAYOUT ─── */
-    .lomad-help-content .page {
-      position: relative;
-      z-index: 1;
-    }
+  /* ─── LAYOUT ─── */
+  .lomad-help-content .page {
+    position: relative;
+    z-index: 1;
+  }
 
-    /* ─── NAV ─── */
-    .lomad-help-content nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      padding: 0 40px;
-      height: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(7, 12, 24, .8);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-    }
+  /* ─── NAV ─── */
+  .lomad-help-content nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 0 40px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(7, 12, 24, .8);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
 
-    .lomad-help-content .nav-logo {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -1px;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+  .lomad-help-content .nav-logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
 
-    .lomad-help-content .nav-logo-mark {
-      width: 32px;
-      height: 32px;
-      border-radius: 10px;
-      background: var(--grad);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-    }
+  .lomad-help-content .nav-logo-mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--grad);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
 
-    .lomad-help-content .nav-badge {
-      padding: 5px 14px;
-      border-radius: 999px;
-      background: rgba(16, 185, 129, .1);
-      border: 1px solid rgba(16, 185, 129, .2);
-      font-size: 11px;
-      font-weight: 700;
-      color: #34d399;
-      letter-spacing: .5px;
-    }
+  .lomad-help-content .nav-badge {
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, .1);
+    border: 1px solid rgba(16, 185, 129, .2);
+    font-size: 11px;
+    font-weight: 700;
+    color: #34d399;
+    letter-spacing: .5px;
+  }
 
-    /* ─── HERO ─── */
-    .lomad-help-content .hero {
-      padding: 140px 40px 80px;
-      text-align: center;
-      max-width: 860px;
-      margin: 0 auto;
-    }
+  /* ─── HERO ─── */
+  .lomad-help-content .hero {
+    padding: 140px 40px 80px;
+    text-align: center;
+    max-width: 860px;
+    margin: 0 auto;
+  }
 
-    .lomad-help-content .hero-kicker {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 16px;
-      border-radius: 999px;
-      background: rgba(16, 185, 129, .08);
-      border: 1px solid rgba(16, 185, 129, .18);
-      font-size: 12px;
-      font-weight: 700;
-      color: #34d399;
-      letter-spacing: .6px;
-      text-transform: uppercase;
-      margin-bottom: 28px;
-    }
+  .lomad-help-content .hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, .08);
+    border: 1px solid rgba(16, 185, 129, .18);
+    font-size: 12px;
+    font-weight: 700;
+    color: #34d399;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
 
-    .lomad-help-content .hero-kicker-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 99px;
-      background: #10b981;
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, .25);
-      animation: blink 2s ease-in-out infinite;
-    }
+  .lomad-help-content .hero-kicker-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 99px;
+    background: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, .25);
+    animation: blink 2s ease-in-out infinite;
+  }
 
-    @keyframes blink {
+  @keyframes blink {
 
     .lomad-help-content 0%,
     .lomad-help-content 100% {
-        opacity: 1;
-      }
+      opacity: 1;
+    }
 
     .lomad-help-content 50% {
-        opacity: .4;
-      }
+      opacity: .4;
     }
+  }
 
-    .lomad-help-content .hero h1 {
-      font-size: clamp(2.2rem, 5vw, 3.6rem);
-      font-weight: 800;
-      line-height: 1.08;
-      letter-spacing: -1.5px;
-      color: #fff;
-      margin-bottom: 20px;
-    }
+  .lomad-help-content .hero h1 {
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -1.5px;
+    color: #fff;
+    margin-bottom: 20px;
+  }
 
-    .lomad-help-content .hero h1 .grad-text {
-      background: var(--grad);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+  .lomad-help-content .hero h1 .grad-text {
+    background: var(--grad);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 
-    .lomad-help-content .hero-sub {
-      font-size: 16px;
-      color: var(--soft);
-      font-weight: 500;
-      line-height: 1.75;
-      max-width: 560px;
-      margin: 0 auto 40px;
-    }
+  .lomad-help-content .hero-sub {
+    font-size: 16px;
+    color: var(--soft);
+    font-weight: 500;
+    line-height: 1.75;
+    max-width: 560px;
+    margin: 0 auto 40px;
+  }
 
-    /* Time pill */
-    .lomad-help-content .time-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 18px;
-      border-radius: 999px;
-      border: 1px solid var(--border2);
-      background: rgba(255, 255, 255, .04);
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--soft);
-      margin-bottom: 64px;
-    }
+  /* Time pill */
+  .lomad-help-content .time-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--border2);
+    background: rgba(255, 255, 255, .04);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--soft);
+    margin-bottom: 64px;
+  }
 
-    .lomad-help-content .time-pill svg {
-      color: #10b981;
-    }
+  .lomad-help-content .time-pill svg {
+    color: #10b981;
+  }
 
-    /* ─── STEPS CONTAINER ─── */
-    .lomad-help-content .steps-container {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 24px 120px;
-    }
+  /* ─── STEPS CONTAINER ─── */
+  .lomad-help-content .steps-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 120px;
+  }
 
-    /* ─── STEP CARD ─── */
-    .lomad-help-content .step-card {
-      display: grid;
-      grid-template-columns: 1fr 1.2fr;
-      gap: 0;
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      border-radius: 28px;
-      overflow: hidden;
-      margin-bottom: 24px;
-      box-shadow: 0 32px 80px rgba(0, 0, 0, .35);
-      position: relative;
-      transition: transform .3s ease, box-shadow .3s ease;
-    }
+  /* ─── STEP CARD ─── */
+  .lomad-help-content .step-card {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 28px;
+    overflow: hidden;
+    margin-bottom: 24px;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, .35);
+    position: relative;
+    transition: transform .3s ease, box-shadow .3s ease;
+  }
 
-    .lomad-help-content .step-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 44px 100px rgba(0, 0, 0, .45);
-    }
+  .lomad-help-content .step-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 44px 100px rgba(0, 0, 0, .45);
+  }
 
-    /* Accent line */
-    .lomad-help-content .step-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-    }
+  /* Accent line */
+  .lomad-help-content .step-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
 
-    .lomad-help-content .step-card.step-1::before {
-      background: linear-gradient(90deg, #10b981, #06b6d4);
-    }
+  .lomad-help-content .step-card.step-1::before {
+    background: linear-gradient(90deg, #10b981, #06b6d4);
+  }
 
-    .lomad-help-content .step-card.step-2::before {
-      background: linear-gradient(90deg, #06b6d4, #3b82f6);
-    }
+  .lomad-help-content .step-card.step-2::before {
+    background: linear-gradient(90deg, #06b6d4, #3b82f6);
+  }
 
-    /* Info side */
-    .lomad-help-content .step-info {
-      padding: 48px 44px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      border-right: 1px solid var(--border);
-    }
+  /* Info side */
+  .lomad-help-content .step-info {
+    padding: 48px 44px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid var(--border);
+  }
 
-    .lomad-help-content .step-counter {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 28px;
-    }
+  .lomad-help-content .step-counter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
 
-    .lomad-help-content .step-num-badge {
-      width: 44px;
-      height: 44px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      font-weight: 800;
-      color: #fff;
-      flex: 0 0 auto;
-    }
+  .lomad-help-content .step-num-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    flex: 0 0 auto;
+  }
 
-    .lomad-help-content .step-1 .step-num-badge {
-      background: linear-gradient(135deg, #10b981, #059669);
-      box-shadow: 0 8px 20px rgba(16, 185, 129, .3);
-    }
+  .lomad-help-content .step-1 .step-num-badge {
+    background: linear-gradient(135deg, #10b981, #059669);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, .3);
+  }
 
-    .lomad-help-content .step-2 .step-num-badge {
-      background: linear-gradient(135deg, #06b6d4, #0891b2);
-      box-shadow: 0 8px 20px rgba(6, 182, 212, .3);
-    }
+  .lomad-help-content .step-2 .step-num-badge {
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    box-shadow: 0 8px 20px rgba(6, 182, 212, .3);
+  }
 
-    .lomad-help-content .step-label {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--muted);
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-    }
+  .lomad-help-content .step-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
 
-    .lomad-help-content .step-title {
-      font-size: 24px;
-      font-weight: 800;
-      color: #fff;
-      line-height: 1.2;
-      letter-spacing: -.4px;
-      margin-bottom: 14px;
-    }
+  .lomad-help-content .step-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.2;
+    letter-spacing: -.4px;
+    margin-bottom: 14px;
+  }
 
-    .lomad-help-content .step-desc {
-      font-size: 14px;
-      color: var(--soft);
-      line-height: 1.8;
-      font-weight: 500;
-      margin-bottom: 28px;
-    }
+  .lomad-help-content .step-desc {
+    font-size: 14px;
+    color: var(--soft);
+    line-height: 1.8;
+    font-weight: 500;
+    margin-bottom: 28px;
+  }
 
-    .lomad-help-content .step-desc strong {
-      color: #e2e8f0;
-      font-weight: 700;
-    }
+  .lomad-help-content .step-desc strong {
+    color: #e2e8f0;
+    font-weight: 700;
+  }
 
-    /* Checklist */
-    .lomad-help-content .checklist {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
+  /* Checklist */
+  .lomad-help-content .checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
 
-    .lomad-help-content .check-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      font-size: 13px;
-      font-weight: 600;
-      line-height: 1.6;
-    }
+  .lomad-help-content .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.6;
+  }
 
-    .lomad-help-content .check-icon {
-      width: 20px;
-      height: 20px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 10px;
-      flex: 0 0 auto;
-      margin-top: 1px;
-    }
+  .lomad-help-content .check-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
 
-    .lomad-help-content .check-icon.green {
-      background: rgba(16, 185, 129, .15);
-      color: #10b981;
-    }
+  .lomad-help-content .check-icon.green {
+    background: rgba(16, 185, 129, .15);
+    color: #10b981;
+  }
 
-    .lomad-help-content .check-icon.warn {
-      background: rgba(251, 191, 36, .15);
-      color: #fbbf24;
-    }
+  .lomad-help-content .check-icon.warn {
+    background: rgba(251, 191, 36, .15);
+    color: #fbbf24;
+  }
 
-    .lomad-help-content .check-icon.blue {
-      background: rgba(6, 182, 212, .15);
-      color: #06b6d4;
-    }
+  .lomad-help-content .check-icon.blue {
+    background: rgba(6, 182, 212, .15);
+    color: #06b6d4;
+  }
 
-    .lomad-help-content .check-text {
-      color: #94a3b8;
-    }
+  .lomad-help-content .check-text {
+    color: #94a3b8;
+  }
 
-    .lomad-help-content .check-text strong {
-      color: #e2e8f0;
-    }
+  .lomad-help-content .check-text strong {
+    color: #e2e8f0;
+  }
 
-    /* Image side */
-    .lomad-help-content .step-visual {
-      position: relative;
-      background: var(--surface2);
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 380px;
-    }
+  /* Image side */
+  .lomad-help-content .step-visual {
+    position: relative;
+    background: var(--surface2);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 380px;
+  }
 
-    /* Subtle grid bg on visual */
-    .lomad-help-content .step-visual::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-    .lomad-help-content linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px);
-      background-size: 32px 32px;
-      pointer-events: none;
-    }
+  /* Subtle grid bg on visual */
+  .lomad-help-content .step-visual::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      .lomad-help-content linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+  }
 
-    .lomad-help-content .step-img-wrap {
-      position: relative;
-      z-index: 1;
-      width: calc(100% - 32px);
-      margin: 16px;
-      border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, .1);
-      box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
-    }
+  .lomad-help-content .step-img-wrap {
+    position: relative;
+    z-index: 1;
+    width: calc(100% - 32px);
+    margin: 16px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+  }
 
-    .lomad-help-content .step-img-wrap img {
-      width: 100%;
-      display: block;
-    }
+  .lomad-help-content .step-img-wrap img {
+    width: 100%;
+    display: block;
+  }
 
-    /* Browser chrome top bar */
-    .lomad-help-content .browser-chrome {
-      background: #1e2d47;
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, .08);
-    }
+  /* Browser chrome top bar */
+  .lomad-help-content .browser-chrome {
+    background: #1e2d47;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+  }
 
-    .lomad-help-content .dots {
-      display: flex;
-      gap: 6px;
-    }
+  .lomad-help-content .dots {
+    display: flex;
+    gap: 6px;
+  }
 
-    .lomad-help-content .dots span {
-      width: 10px;
-      height: 10px;
-      border-radius: 99px;
-      display: block;
-    }
+  .lomad-help-content .dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 99px;
+    display: block;
+  }
 
-    .lomad-help-content .dots span:nth-child(1) {
-      background: #ff5f56;
-    }
+  .lomad-help-content .dots span:nth-child(1) {
+    background: #ff5f56;
+  }
 
-    .lomad-help-content .dots span:nth-child(2) {
-      background: #ffbd2e;
-    }
+  .lomad-help-content .dots span:nth-child(2) {
+    background: #ffbd2e;
+  }
 
-    .lomad-help-content .dots span:nth-child(3) {
-      background: #27c93f;
-    }
+  .lomad-help-content .dots span:nth-child(3) {
+    background: #27c93f;
+  }
 
-    .lomad-help-content .url-bar {
-      flex: 1;
-      background: rgba(255, 255, 255, .06);
-      border: 1px solid rgba(255, 255, 255, .08);
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 11px;
-      color: var(--muted);
-      font-family: monospace;
-    }
+  .lomad-help-content .url-bar {
+    flex: 1;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: monospace;
+  }
 
-    /* ─── CONNECTOR ─── */
-    .lomad-help-content .connector {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 24px;
-      margin: 0 auto;
-      position: relative;
-    }
+  /* ─── CONNECTOR ─── */
+  .lomad-help-content .connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    margin: 0 auto;
+    position: relative;
+  }
 
-    .lomad-help-content .connector-line {
-      width: 2px;
-      height: 100%;
-      background: linear-gradient(to bottom, rgba(16, 185, 129, .3), rgba(6, 182, 212, .3));
-    }
+  .lomad-help-content .connector-line {
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(16, 185, 129, .3), rgba(6, 182, 212, .3));
+  }
 
-    .lomad-help-content .connector-dot {
-      position: absolute;
-      width: 10px;
-      height: 10px;
-      border-radius: 99px;
-      background: var(--grad);
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      box-shadow: 0 0 12px rgba(16, 185, 129, .5);
-    }
+  .lomad-help-content .connector-dot {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 99px;
+    background: var(--grad);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 12px rgba(16, 185, 129, .5);
+  }
 
-    /* ─── PRO BANNER ─── */
-    .lomad-help-content .pro-banner {
-      max-width: 1100px;
-      margin: 0 auto 24px;
-      padding: 0 24px;
-    }
+  /* ─── PRO BANNER ─── */
+  .lomad-help-content .pro-banner {
+    max-width: 1100px;
+    margin: 0 auto 24px;
+    padding: 0 24px;
+  }
 
-    .lomad-help-content .pro-banner-inner {
-      background: linear-gradient(135deg, rgba(16, 185, 129, .07) 0%, rgba(6, 182, 212, .07) 100%);
-      border: 1px solid rgba(16, 185, 129, .2);
-      border-radius: 20px;
-      padding: 24px 32px;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
+  .lomad-help-content .pro-banner-inner {
+    background: linear-gradient(135deg, rgba(16, 185, 129, .07) 0%, rgba(6, 182, 212, .07) 100%);
+    border: 1px solid rgba(16, 185, 129, .2);
+    border-radius: 20px;
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
 
-    .lomad-help-content .pro-icon {
-      width: 52px;
-      height: 52px;
-      border-radius: 16px;
-      background: var(--grad);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      flex: 0 0 auto;
-      box-shadow: 0 10px 28px rgba(16, 185, 129, .25);
-    }
+  .lomad-help-content .pro-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: var(--grad);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex: 0 0 auto;
+    box-shadow: 0 10px 28px rgba(16, 185, 129, .25);
+  }
 
-    .lomad-help-content .pro-text h3 {
-      font-size: 16px;
-      font-weight: 800;
-      color: #fff;
-      margin-bottom: 4px;
-    }
+  .lomad-help-content .pro-text h3 {
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 4px;
+  }
 
-    .lomad-help-content .pro-text p {
-      font-size: 13px;
-      color: var(--soft);
-      font-weight: 500;
-      line-height: 1.6;
-    }
+  .lomad-help-content .pro-text p {
+    font-size: 13px;
+    color: var(--soft);
+    font-weight: 500;
+    line-height: 1.6;
+  }
 
-    .lomad-help-content .pro-text p strong {
-      color: #34d399;
-    }
+  .lomad-help-content .pro-text p strong {
+    color: #34d399;
+  }
 
-    .lomad-help-content .pro-cta {
-      margin-left: auto;
-      flex: 0 0 auto;
-      padding: 10px 20px;
-      border-radius: 10px;
-      background: var(--grad);
-      color: #fff;
-      font-family: 'Sora', sans-serif;
-      font-size: 13px;
-      font-weight: 700;
-      border: none;
-      cursor: pointer;
-      text-decoration: none;
-      white-space: nowrap;
-      box-shadow: 0 8px 20px rgba(16, 185, 129, .25);
-      transition: transform .2s, box-shadow .2s;
-      display: inline-block;
-    }
+  .lomad-help-content .pro-cta {
+    margin-left: auto;
+    flex: 0 0 auto;
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: var(--grad);
+    color: #fff;
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: 0 8px 20px rgba(16, 185, 129, .25);
+    transition: transform .2s, box-shadow .2s;
+    display: inline-block;
+  }
 
-    .lomad-help-content .pro-cta:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 14px 30px rgba(16, 185, 129, .35);
-    }
+  .lomad-help-content .pro-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(16, 185, 129, .35);
+  }
 
-    /* ─── FOOTER ─── */
-    .lomad-help-content footer {
-      border-top: 1px solid var(--border);
-      padding: 28px 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: relative;
-      z-index: 1;
-    }
+  /* ─── FOOTER ─── */
+  .lomad-help-content footer {
+    border-top: 1px solid var(--border);
+    padding: 28px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+  }
 
-    .lomad-help-content .footer-logo {
-      font-size: 15px;
-      font-weight: 800;
-      color: var(--muted);
-    }
+  .lomad-help-content .footer-logo {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--muted);
+  }
 
-    .lomad-help-content .footer-note {
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 500;
-    }
+  .lomad-help-content .footer-note {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
 
-    /* ─── SCROLL REVEAL ─── */
-    .lomad-help-content .reveal {
-      opacity: 1;
-      transform: translateY(0px);
-      transition: opacity .7s ease, transform .7s ease;
-    }
+  /* ─── SCROLL REVEAL ─── */
+  .lomad-help-content .reveal {
+    opacity: 1;
+    transform: translateY(0px);
+    transition: opacity .7s ease, transform .7s ease;
+  }
 
-    .lomad-help-content .reveal.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .lomad-help-content .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
 
-    /* ─── MOBILE ─── */
-    @media (max-width: 768px) {
+  /* ─── MOBILE ─── */
+  @media (max-width: 768px) {
     .lomad-help-content nav {
-        padding: 0 20px;
-      }
+      padding: 0 20px;
+    }
 
     .lomad-help-content .hero {
-        padding: 120px 24px 60px;
-      }
+      padding: 120px 24px 60px;
+    }
 
     .lomad-help-content .step-card {
-        grid-template-columns: 1fr;
-      }
+      grid-template-columns: 1fr;
+    }
 
     .lomad-help-content .step-info {
-        padding: 32px 24px;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-      }
+      padding: 32px 24px;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
 
     .lomad-help-content .step-visual {
-        min-height: 260px;
-      }
+      min-height: 260px;
+    }
 
     .lomad-help-content .pro-banner-inner {
-        flex-direction: column;
-        text-align: center;
-      }
+      flex-direction: column;
+      text-align: center;
+    }
 
     .lomad-help-content .pro-cta {
-        margin-left: 0;
-      }
+      margin-left: 0;
+    }
 
     .lomad-help-content footer {
-        flex-direction: column;
-        gap: 8px;
-        text-align: center;
-      }
+      flex-direction: column;
+      gap: 8px;
+      text-align: center;
     }
-  
+  }
 </style>
 
 
@@ -675,7 +673,7 @@
 
   <div class="page">
 
-    
+
 
     <!-- HERO -->
     <section class="hero">
@@ -843,4 +841,3 @@
   </script>
 
 </div>
-
