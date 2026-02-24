@@ -2577,70 +2577,72 @@ const App: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-                <div className="p-8 rounded-[2.5rem] bg-slate-800/50 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all">
-                  <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <svg className="w-24 h-24 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2 relative z-10">Agenda Inteligente</h3>
-                  <p className="text-slate-400 text-sm mb-6 relative z-10">Conecte suas agendas para o bot entrar automaticamente.</p>
-
-                  <div className="space-y-4 relative z-10">
-                    {/* Google Calendar */}
-                    <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-white/5">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white rounded-lg"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" className="w-6 h-6" alt="Google" /></div>
-                        <div>
-                          <p className="text-white font-bold text-sm">Google Calendar</p>
-                          <p className="text-xs text-slate-500">{user.googleCalendarConnected ? 'Sincronizado' : 'Não conectado'}</p>
-                        </div>
-                      </div>
-                      {user.googleCalendarConnected ? (
-                        <button
-                          onClick={() => handleCalendarDisconnect('google_calendar')}
-                          className="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition-colors"
-                        >
-                          Desconectar
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleCalendarConnect('google_calendar')}
-                          className="px-3 py-1.5 bg-white text-slate-900 text-xs font-bold rounded-lg uppercase hover:bg-slate-200 transition-colors"
-                        >
-                          Conectar
-                        </button>
-                      )}
+                {['PRO_PLUS', 'LOMAD_PLUS', 'MASTER'].includes(user?.role || '') && (
+                  <div className="p-8 rounded-[2.5rem] bg-slate-800/50 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all">
+                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <svg className="w-24 h-24 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                     </div>
+                    <h3 className="text-xl font-bold text-white mb-2 relative z-10">Agenda Inteligente</h3>
+                    <p className="text-slate-400 text-sm mb-6 relative z-10">Conecte suas agendas para o bot entrar automaticamente.</p>
 
-                    {/* Outlook Calendar */}
-                    <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-white/5">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-[#0078D4] rounded-lg"><svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M1 3h9v8H1V3zm0 10h9v8H1v-8zm10-10h12v8H11V3zm0 10h12v8H11v-8z" /></svg></div>
-                        <div>
-                          <p className="text-white font-bold text-sm">Outlook Calendar</p>
-                          <p className="text-xs text-slate-500">{user.outlookCalendarConnected ? 'Sincronizado' : 'Não conectado'}</p>
+                    <div className="space-y-4 relative z-10">
+                      {/* Google Calendar */}
+                      <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-white/5">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white rounded-lg"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" className="w-6 h-6" alt="Google" /></div>
+                          <div>
+                            <p className="text-white font-bold text-sm">Google Calendar</p>
+                            <p className="text-xs text-slate-500">{user.googleCalendarConnected ? 'Sincronizado' : 'Não conectado'}</p>
+                          </div>
                         </div>
+                        {user.googleCalendarConnected ? (
+                          <button
+                            onClick={() => handleCalendarDisconnect('google_calendar')}
+                            className="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition-colors"
+                          >
+                            Desconectar
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleCalendarConnect('google_calendar')}
+                            className="px-3 py-1.5 bg-white text-slate-900 text-xs font-bold rounded-lg uppercase hover:bg-slate-200 transition-colors"
+                          >
+                            Conectar
+                          </button>
+                        )}
                       </div>
-                      {user.outlookCalendarConnected ? (
-                        <button
-                          onClick={() => handleCalendarDisconnect('outlook_calendar')}
-                          className="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition-colors"
-                        >
-                          Desconectar
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleCalendarConnect('outlook_calendar')}
-                          className="px-3 py-1.5 bg-white text-slate-900 text-xs font-bold rounded-lg uppercase hover:bg-slate-200 transition-colors"
-                        >
-                          Conectar
-                        </button>
-                      )}
+
+                      {/* Outlook Calendar */}
+                      <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-white/5">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-[#0078D4] rounded-lg"><svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M1 3h9v8H1V3zm0 10h9v8H1v-8zm10-10h12v8H11V3zm0 10h12v8H11v-8z" /></svg></div>
+                          <div>
+                            <p className="text-white font-bold text-sm">Outlook Calendar</p>
+                            <p className="text-xs text-slate-500">{user.outlookCalendarConnected ? 'Sincronizado' : 'Não conectado'}</p>
+                          </div>
+                        </div>
+                        {user.outlookCalendarConnected ? (
+                          <button
+                            onClick={() => handleCalendarDisconnect('outlook_calendar')}
+                            className="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition-colors"
+                          >
+                            Desconectar
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleCalendarConnect('outlook_calendar')}
+                            className="px-3 py-1.5 bg-white text-slate-900 text-xs font-bold rounded-lg uppercase hover:bg-slate-200 transition-colors"
+                          >
+                            Conectar
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* --- UPCOMING MEETINGS --- */}
-                {(user.googleCalendarConnected || user.outlookCalendarConnected || user.calendarConnected) && (
+                {['PRO_PLUS', 'LOMAD_PLUS', 'MASTER'].includes(user?.role || '') && (user.googleCalendarConnected || user.outlookCalendarConnected || user.calendarConnected) && (
                   <div className="mt-6">
                     <h3 className="text-xl font-bold text-white mb-4">Próximas Reuniões</h3>
                     <UpcomingMeetings userId={user.id} onJoinMeeting={(url: string) => {
