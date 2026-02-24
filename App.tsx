@@ -2006,6 +2006,23 @@ const App: React.FC = () => {
                   <div className="flex items-center gap-2 mb-4">
                     <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                     <p className="text-xs font-bold text-cyan-400 uppercase tracking-wider">{new Date(m.timestamp).toLocaleDateString('pt-BR')}</p>
+
+                    <div className="flex items-center gap-1.5 ml-2">
+                      {m.video_url ? (
+                        <span className="px-2 py-0.5 bg-green-500 text-white text-[10px] font-black uppercase rounded-sm shadow-sm">Bot</span>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-orange-500 text-white text-[10px] font-black uppercase rounded-sm shadow-sm">Tela + Mic</span>
+                      )}
+                      {(() => {
+                        const daysPassed = Math.floor((Date.now() - m.timestamp) / (1000 * 60 * 60 * 24));
+                        const daysLeft = 30 - daysPassed;
+                        if (daysLeft <= 7 && daysLeft > 0) {
+                          return <span className="px-2 py-0.5 bg-red-600 text-white text-[10px] font-black uppercase rounded-sm shadow-sm animate-pulse">Exp em {daysLeft} dias</span>
+                        }
+                        return null;
+                      })()}
+                    </div>
+
                     {m.access_role !== 'owner' && (
                       <span className="ml-auto px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase border border-indigo-500/30">
                         Compartilhado
