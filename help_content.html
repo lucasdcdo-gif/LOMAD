@@ -1,21 +1,15 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LOMAD — Como iniciar uma transcrição</title>
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    *,
-    *::before,
-    *::after {
+
+    .lomad-help-content *,
+    .lomad-help-content *::before,
+    .lomad-help-content *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
 
-    :root {
+    .lomad-help-content {
       --bg: #070c18;
       --surface: #0d1526;
       --surface2: #121e35;
@@ -33,11 +27,9 @@
       --glow-cyan: 0 0 40px rgba(6, 182, 212, .15);
     }
 
-    html {
-      scroll-behavior: smooth;
-    }
+    
 
-    body {
+    .lomad-help-content {
       font-family: 'Sora', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
@@ -46,7 +38,7 @@
     }
 
     /* ─── NOISE TEXTURE OVERLAY ─── */
-    body::before {
+    .lomad-help-content::before {
       content: '';
       position: fixed;
       inset: 0;
@@ -57,7 +49,7 @@
     }
 
     /* ─── AMBIENT BLOBS ─── */
-    .blob {
+    .lomad-help-content .blob {
       position: fixed;
       border-radius: 50%;
       filter: blur(90px);
@@ -66,7 +58,7 @@
       animation: drift 12s ease-in-out infinite alternate;
     }
 
-    .blob-1 {
+    .lomad-help-content .blob-1 {
       width: 600px;
       height: 600px;
       background: rgba(16, 185, 129, .09);
@@ -75,7 +67,7 @@
       animation-delay: 0s;
     }
 
-    .blob-2 {
+    .lomad-help-content .blob-2 {
       width: 500px;
       height: 500px;
       background: rgba(6, 182, 212, .08);
@@ -84,7 +76,7 @@
       animation-delay: -4s;
     }
 
-    .blob-3 {
+    .lomad-help-content .blob-3 {
       width: 300px;
       height: 300px;
       background: rgba(139, 92, 246, .06);
@@ -94,23 +86,23 @@
     }
 
     @keyframes drift {
-      from {
+    .lomad-help-content from {
         transform: translate(0, 0) scale(1);
       }
 
-      to {
+    .lomad-help-content to {
         transform: translate(30px, 20px) scale(1.08);
       }
     }
 
     /* ─── LAYOUT ─── */
-    .page {
+    .lomad-help-content .page {
       position: relative;
       z-index: 1;
     }
 
     /* ─── NAV ─── */
-    nav {
+    .lomad-help-content nav {
       position: fixed;
       top: 0;
       left: 0;
@@ -126,7 +118,7 @@
       border-bottom: 1px solid var(--border);
     }
 
-    .nav-logo {
+    .lomad-help-content .nav-logo {
       font-size: 22px;
       font-weight: 800;
       letter-spacing: -1px;
@@ -136,7 +128,7 @@
       gap: 10px;
     }
 
-    .nav-logo-mark {
+    .lomad-help-content .nav-logo-mark {
       width: 32px;
       height: 32px;
       border-radius: 10px;
@@ -147,7 +139,7 @@
       font-size: 16px;
     }
 
-    .nav-badge {
+    .lomad-help-content .nav-badge {
       padding: 5px 14px;
       border-radius: 999px;
       background: rgba(16, 185, 129, .1);
@@ -159,14 +151,14 @@
     }
 
     /* ─── HERO ─── */
-    .hero {
+    .lomad-help-content .hero {
       padding: 140px 40px 80px;
       text-align: center;
       max-width: 860px;
       margin: 0 auto;
     }
 
-    .hero-kicker {
+    .lomad-help-content .hero-kicker {
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -182,7 +174,7 @@
       margin-bottom: 28px;
     }
 
-    .hero-kicker-dot {
+    .lomad-help-content .hero-kicker-dot {
       width: 6px;
       height: 6px;
       border-radius: 99px;
@@ -193,17 +185,17 @@
 
     @keyframes blink {
 
-      0%,
-      100% {
+    .lomad-help-content 0%,
+    .lomad-help-content 100% {
         opacity: 1;
       }
 
-      50% {
+    .lomad-help-content 50% {
         opacity: .4;
       }
     }
 
-    .hero h1 {
+    .lomad-help-content .hero h1 {
       font-size: clamp(2.2rem, 5vw, 3.6rem);
       font-weight: 800;
       line-height: 1.08;
@@ -212,14 +204,14 @@
       margin-bottom: 20px;
     }
 
-    .hero h1 .grad-text {
+    .lomad-help-content .hero h1 .grad-text {
       background: var(--grad);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
 
-    .hero-sub {
+    .lomad-help-content .hero-sub {
       font-size: 16px;
       color: var(--soft);
       font-weight: 500;
@@ -229,7 +221,7 @@
     }
 
     /* Time pill */
-    .time-pill {
+    .lomad-help-content .time-pill {
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -243,19 +235,19 @@
       margin-bottom: 64px;
     }
 
-    .time-pill svg {
+    .lomad-help-content .time-pill svg {
       color: #10b981;
     }
 
     /* ─── STEPS CONTAINER ─── */
-    .steps-container {
+    .lomad-help-content .steps-container {
       max-width: 1100px;
       margin: 0 auto;
       padding: 0 24px 120px;
     }
 
     /* ─── STEP CARD ─── */
-    .step-card {
+    .lomad-help-content .step-card {
       display: grid;
       grid-template-columns: 1fr 1.2fr;
       gap: 0;
@@ -269,13 +261,13 @@
       transition: transform .3s ease, box-shadow .3s ease;
     }
 
-    .step-card:hover {
+    .lomad-help-content .step-card:hover {
       transform: translateY(-4px);
       box-shadow: 0 44px 100px rgba(0, 0, 0, .45);
     }
 
     /* Accent line */
-    .step-card::before {
+    .lomad-help-content .step-card::before {
       content: '';
       position: absolute;
       top: 0;
@@ -284,16 +276,16 @@
       height: 3px;
     }
 
-    .step-card.step-1::before {
+    .lomad-help-content .step-card.step-1::before {
       background: linear-gradient(90deg, #10b981, #06b6d4);
     }
 
-    .step-card.step-2::before {
+    .lomad-help-content .step-card.step-2::before {
       background: linear-gradient(90deg, #06b6d4, #3b82f6);
     }
 
     /* Info side */
-    .step-info {
+    .lomad-help-content .step-info {
       padding: 48px 44px;
       display: flex;
       flex-direction: column;
@@ -301,14 +293,14 @@
       border-right: 1px solid var(--border);
     }
 
-    .step-counter {
+    .lomad-help-content .step-counter {
       display: flex;
       align-items: center;
       gap: 12px;
       margin-bottom: 28px;
     }
 
-    .step-num-badge {
+    .lomad-help-content .step-num-badge {
       width: 44px;
       height: 44px;
       border-radius: 14px;
@@ -321,17 +313,17 @@
       flex: 0 0 auto;
     }
 
-    .step-1 .step-num-badge {
+    .lomad-help-content .step-1 .step-num-badge {
       background: linear-gradient(135deg, #10b981, #059669);
       box-shadow: 0 8px 20px rgba(16, 185, 129, .3);
     }
 
-    .step-2 .step-num-badge {
+    .lomad-help-content .step-2 .step-num-badge {
       background: linear-gradient(135deg, #06b6d4, #0891b2);
       box-shadow: 0 8px 20px rgba(6, 182, 212, .3);
     }
 
-    .step-label {
+    .lomad-help-content .step-label {
       font-size: 11px;
       font-weight: 700;
       color: var(--muted);
@@ -339,7 +331,7 @@
       text-transform: uppercase;
     }
 
-    .step-title {
+    .lomad-help-content .step-title {
       font-size: 24px;
       font-weight: 800;
       color: #fff;
@@ -348,7 +340,7 @@
       margin-bottom: 14px;
     }
 
-    .step-desc {
+    .lomad-help-content .step-desc {
       font-size: 14px;
       color: var(--soft);
       line-height: 1.8;
@@ -356,19 +348,19 @@
       margin-bottom: 28px;
     }
 
-    .step-desc strong {
+    .lomad-help-content .step-desc strong {
       color: #e2e8f0;
       font-weight: 700;
     }
 
     /* Checklist */
-    .checklist {
+    .lomad-help-content .checklist {
       display: flex;
       flex-direction: column;
       gap: 10px;
     }
 
-    .check-item {
+    .lomad-help-content .check-item {
       display: flex;
       align-items: flex-start;
       gap: 10px;
@@ -377,7 +369,7 @@
       line-height: 1.6;
     }
 
-    .check-icon {
+    .lomad-help-content .check-icon {
       width: 20px;
       height: 20px;
       border-radius: 6px;
@@ -389,31 +381,31 @@
       margin-top: 1px;
     }
 
-    .check-icon.green {
+    .lomad-help-content .check-icon.green {
       background: rgba(16, 185, 129, .15);
       color: #10b981;
     }
 
-    .check-icon.warn {
+    .lomad-help-content .check-icon.warn {
       background: rgba(251, 191, 36, .15);
       color: #fbbf24;
     }
 
-    .check-icon.blue {
+    .lomad-help-content .check-icon.blue {
       background: rgba(6, 182, 212, .15);
       color: #06b6d4;
     }
 
-    .check-text {
+    .lomad-help-content .check-text {
       color: #94a3b8;
     }
 
-    .check-text strong {
+    .lomad-help-content .check-text strong {
       color: #e2e8f0;
     }
 
     /* Image side */
-    .step-visual {
+    .lomad-help-content .step-visual {
       position: relative;
       background: var(--surface2);
       overflow: hidden;
@@ -424,18 +416,18 @@
     }
 
     /* Subtle grid bg on visual */
-    .step-visual::before {
+    .lomad-help-content .step-visual::before {
       content: '';
       position: absolute;
       inset: 0;
       background-image:
-        linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px),
+    .lomad-help-content linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px);
       background-size: 32px 32px;
       pointer-events: none;
     }
 
-    .step-img-wrap {
+    .lomad-help-content .step-img-wrap {
       position: relative;
       z-index: 1;
       width: calc(100% - 32px);
@@ -446,13 +438,13 @@
       box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
     }
 
-    .step-img-wrap img {
+    .lomad-help-content .step-img-wrap img {
       width: 100%;
       display: block;
     }
 
     /* Browser chrome top bar */
-    .browser-chrome {
+    .lomad-help-content .browser-chrome {
       background: #1e2d47;
       padding: 10px 14px;
       display: flex;
@@ -461,31 +453,31 @@
       border-bottom: 1px solid rgba(255, 255, 255, .08);
     }
 
-    .dots {
+    .lomad-help-content .dots {
       display: flex;
       gap: 6px;
     }
 
-    .dots span {
+    .lomad-help-content .dots span {
       width: 10px;
       height: 10px;
       border-radius: 99px;
       display: block;
     }
 
-    .dots span:nth-child(1) {
+    .lomad-help-content .dots span:nth-child(1) {
       background: #ff5f56;
     }
 
-    .dots span:nth-child(2) {
+    .lomad-help-content .dots span:nth-child(2) {
       background: #ffbd2e;
     }
 
-    .dots span:nth-child(3) {
+    .lomad-help-content .dots span:nth-child(3) {
       background: #27c93f;
     }
 
-    .url-bar {
+    .lomad-help-content .url-bar {
       flex: 1;
       background: rgba(255, 255, 255, .06);
       border: 1px solid rgba(255, 255, 255, .08);
@@ -497,7 +489,7 @@
     }
 
     /* ─── CONNECTOR ─── */
-    .connector {
+    .lomad-help-content .connector {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -506,13 +498,13 @@
       position: relative;
     }
 
-    .connector-line {
+    .lomad-help-content .connector-line {
       width: 2px;
       height: 100%;
       background: linear-gradient(to bottom, rgba(16, 185, 129, .3), rgba(6, 182, 212, .3));
     }
 
-    .connector-dot {
+    .lomad-help-content .connector-dot {
       position: absolute;
       width: 10px;
       height: 10px;
@@ -525,13 +517,13 @@
     }
 
     /* ─── PRO BANNER ─── */
-    .pro-banner {
+    .lomad-help-content .pro-banner {
       max-width: 1100px;
       margin: 0 auto 24px;
       padding: 0 24px;
     }
 
-    .pro-banner-inner {
+    .lomad-help-content .pro-banner-inner {
       background: linear-gradient(135deg, rgba(16, 185, 129, .07) 0%, rgba(6, 182, 212, .07) 100%);
       border: 1px solid rgba(16, 185, 129, .2);
       border-radius: 20px;
@@ -541,7 +533,7 @@
       gap: 20px;
     }
 
-    .pro-icon {
+    .lomad-help-content .pro-icon {
       width: 52px;
       height: 52px;
       border-radius: 16px;
@@ -554,25 +546,25 @@
       box-shadow: 0 10px 28px rgba(16, 185, 129, .25);
     }
 
-    .pro-text h3 {
+    .lomad-help-content .pro-text h3 {
       font-size: 16px;
       font-weight: 800;
       color: #fff;
       margin-bottom: 4px;
     }
 
-    .pro-text p {
+    .lomad-help-content .pro-text p {
       font-size: 13px;
       color: var(--soft);
       font-weight: 500;
       line-height: 1.6;
     }
 
-    .pro-text p strong {
+    .lomad-help-content .pro-text p strong {
       color: #34d399;
     }
 
-    .pro-cta {
+    .lomad-help-content .pro-cta {
       margin-left: auto;
       flex: 0 0 auto;
       padding: 10px 20px;
@@ -591,13 +583,13 @@
       display: inline-block;
     }
 
-    .pro-cta:hover {
+    .lomad-help-content .pro-cta:hover {
       transform: translateY(-2px);
       box-shadow: 0 14px 30px rgba(16, 185, 129, .35);
     }
 
     /* ─── FOOTER ─── */
-    footer {
+    .lomad-help-content footer {
       border-top: 1px solid var(--border);
       padding: 28px 40px;
       display: flex;
@@ -607,73 +599,74 @@
       z-index: 1;
     }
 
-    .footer-logo {
+    .lomad-help-content .footer-logo {
       font-size: 15px;
       font-weight: 800;
       color: var(--muted);
     }
 
-    .footer-note {
+    .lomad-help-content .footer-note {
       font-size: 12px;
       color: var(--muted);
       font-weight: 500;
     }
 
     /* ─── SCROLL REVEAL ─── */
-    .reveal {
+    .lomad-help-content .reveal {
       opacity: 0;
       transform: translateY(30px);
       transition: opacity .7s ease, transform .7s ease;
     }
 
-    .reveal.visible {
+    .lomad-help-content .reveal.visible {
       opacity: 1;
       transform: translateY(0);
     }
 
     /* ─── MOBILE ─── */
     @media (max-width: 768px) {
-      nav {
+    .lomad-help-content nav {
         padding: 0 20px;
       }
 
-      .hero {
+    .lomad-help-content .hero {
         padding: 120px 24px 60px;
       }
 
-      .step-card {
+    .lomad-help-content .step-card {
         grid-template-columns: 1fr;
       }
 
-      .step-info {
+    .lomad-help-content .step-info {
         padding: 32px 24px;
         border-right: none;
         border-bottom: 1px solid var(--border);
       }
 
-      .step-visual {
+    .lomad-help-content .step-visual {
         min-height: 260px;
       }
 
-      .pro-banner-inner {
+    .lomad-help-content .pro-banner-inner {
         flex-direction: column;
         text-align: center;
       }
 
-      .pro-cta {
+    .lomad-help-content .pro-cta {
         margin-left: 0;
       }
 
-      footer {
+    .lomad-help-content footer {
         flex-direction: column;
         gap: 8px;
         text-align: center;
       }
     }
-  </style>
-</head>
+  
+</style>
 
-<body>
+
+<div id="lomad-help-content-root" class="lomad-help-content">
 
   <!-- Ambient -->
   <div class="blob blob-1"></div>
@@ -841,7 +834,7 @@
 
   <script>
     // Scroll reveal
-    const reveals = document.querySelectorAll('.reveal');
+    const reveals = document.querySelectorAll('#lomad-help-content-root .reveal');
     const io = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -856,6 +849,5 @@
     });
   </script>
 
-</body>
+</div>
 
-</html>
