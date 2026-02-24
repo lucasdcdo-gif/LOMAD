@@ -2273,10 +2273,10 @@ const App: React.FC = () => {
               </div>
 
               {/* AI Chat Section */}
-              <div className="glass p-4 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-cyan-500/20 bg-blue-900/5">
+              <div className="glass p-4 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-indigo-500/40 bg-indigo-950/40 relative before:absolute before:inset-0 before:-z-10 before:rounded-[2rem] md:before:rounded-[2.5rem] before:shadow-[0_0_40px_rgba(99,102,241,0.15)] overflow-hidden">
                 <div className="flex items-center gap-3 mb-4 md:mb-6">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-600 flex items-center justify-center text-white font-black italic">AI</div>
-                  <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-widest">Chat Inteligente</h3>
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black italic shadow-[0_0_15px_rgba(99,102,241,0.4)]">AI</div>
+                  <h3 className="text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-200 uppercase tracking-widest drop-shadow-sm">Chat Inteligente</h3>
                 </div>
 
                 <div className="bg-slate-950/50 rounded-2xl p-4 md:p-6 min-h-[350px] max-h-[500px] overflow-y-auto mb-4 md:mb-6 flex flex-col gap-4 border border-white/5 relative">
@@ -2381,15 +2381,15 @@ const App: React.FC = () => {
               </div>
 
               {/* Persistent Suggestions Footer */}
-              <div className="mb-6 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+              <div className="mb-6 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-indigo-700/50 scrollbar-track-transparent">
                 <div className="flex gap-2 min-w-max px-1">
-                  <button onClick={() => handleChatSubmit("Gere um resumo detalhado")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Resumo Detalhado</button>
-                  <button onClick={() => handleChatSubmit("Resumo em tópicos")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Resumo em Tópicos</button>
-                  <button onClick={() => handleChatSubmit("Principal assunto resumido")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Principal Assunto</button>
-                  <button onClick={() => handleChatSubmit("Resumo formal e gentil")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Formal & Gentil</button>
-                  <button onClick={() => handleChatSubmit("Resumo formal e direto")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Formal & Direto</button>
-                  <button onClick={() => handleChatSubmit("Crie um email de follow-up para os participantes")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Email Follow-up</button>
-                  <button onClick={() => handleChatSubmit("Liste as tarefas e responsáveis")} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-400 border border-white/5 hover:border-cyan-500/30 text-xs font-bold uppercase transition-all whitespace-nowrap">Tarefas</button>
+                  <button onClick={() => handleChatSubmit("Gere um resumo detalhado")} className="px-3 py-1.5 rounded-lg bg-fuchsia-500/10 hover:bg-fuchsia-500/30 text-fuchsia-300 hover:text-white border border-fuchsia-500/20 hover:border-fuchsia-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(217,70,239,0.05)]">Resumo Detalhado</button>
+                  <button onClick={() => handleChatSubmit("Resumo em tópicos")} className="px-3 py-1.5 rounded-lg bg-fuchsia-500/10 hover:bg-fuchsia-500/30 text-fuchsia-300 hover:text-white border border-fuchsia-500/20 hover:border-fuchsia-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(217,70,239,0.05)]">Resumo em Tópicos</button>
+                  <button onClick={() => handleChatSubmit("Principal assunto resumido")} className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/20 hover:border-indigo-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(99,102,241,0.05)]">Principal Assunto</button>
+                  <button onClick={() => handleChatSubmit("Resumo formal e gentil")} className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/20 hover:border-indigo-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(99,102,241,0.05)]">Formal & Gentil</button>
+                  <button onClick={() => handleChatSubmit("Resumo formal e direto")} className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/20 hover:border-indigo-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(99,102,241,0.05)]">Formal & Direto</button>
+                  <button onClick={() => handleChatSubmit("Crie um email de follow-up para os participantes")} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/30 text-emerald-300 hover:text-white border border-emerald-500/20 hover:border-emerald-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.05)]">Email Follow-up</button>
+                  <button onClick={() => handleChatSubmit("Liste as tarefas e responsáveis")} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/30 text-emerald-300 hover:text-white border border-emerald-500/20 hover:border-emerald-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.05)]">Tarefas</button>
                 </div>
               </div>
 
