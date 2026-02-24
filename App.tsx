@@ -2534,40 +2534,45 @@ const App: React.FC = () => {
                               )}
                             </label>
                             {editBotNameMode ? (
-                              <div className="flex gap-2 isolate">
-                                <input
-                                  type="text"
-                                  value={newBotNameProf}
-                                  onChange={(e) => setNewBotNameProf(e.target.value)}
-                                  maxLength={20}
-                                  className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-sm text-white min-w-0"
-                                  placeholder="Nome"
-                                  autoFocus
-                                />
-                                <button
-                                  onClick={async () => {
-                                    try {
-                                      const res = await fetch('/api/recall/config', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ userId: user.id, botName: newBotNameProf })
-                                      });
-                                      if (res.ok) {
-                                        const data = await res.json();
-                                        setUser(prev => prev ? { ...prev, botName: data.botName } : null);
-                                        setEditBotNameMode(false);
+                              <div className="flex flex-col gap-3 mt-1">
+                                <div className="relative w-full">
+                                  <input
+                                    type="text"
+                                    value={newBotNameProf}
+                                    onChange={(e) => setNewBotNameProf(e.target.value)}
+                                    maxLength={20}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-4 pr-20 md:pr-24 py-3 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-sm text-white transition-all shadow-inner"
+                                    placeholder="Nome do Bot"
+                                    autoFocus
+                                  />
+                                  <span className="absolute right-3 top-3.5 text-slate-500 text-[10px] md:text-xs font-medium select-none">.LOMAD.IA</span>
+                                </div>
+                                <div className="flex gap-2 justify-end">
+                                  <button onClick={() => setEditBotNameMode(false)} className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors border border-slate-700">
+                                    Cancelar
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        const res = await fetch('/api/recall/config', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ userId: user.id, botName: newBotNameProf })
+                                        });
+                                        if (res.ok) {
+                                          const data = await res.json();
+                                          setUser(prev => prev ? { ...prev, botName: data.botName } : null);
+                                          setEditBotNameMode(false);
+                                        }
+                                      } catch (e) {
+                                        console.error("Erro ao salvar bot nome", e);
                                       }
-                                    } catch (e) {
-                                      console.error("Erro ao salvar bot nome", e);
-                                    }
-                                  }}
-                                  className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition-colors"
-                                >
-                                  OK
-                                </button>
-                                <button onClick={() => setEditBotNameMode(false)} className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
-                                  X
-                                </button>
+                                    }}
+                                    className="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2 rounded-lg text-xs font-bold transition-colors shadow-lg shadow-cyan-900/20"
+                                  >
+                                    Salvar
+                                  </button>
+                                </div>
                               </div>
                             ) : (
                               <div className="text-white font-bold text-lg break-all">{user.botName || 'Não configurado'}</div>
