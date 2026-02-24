@@ -4376,7 +4376,8 @@ const App: React.FC = () => {
                 <button
                   onClick={() => {
                     setShowLimitAlert(false);
-                    setView('PRICING');
+                    setSelectedPlan('ADDON_10H');
+                    setPaymentModalOpen(true);
                   }}
                   className="w-full bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold py-3 rounded-lg hover:from-red-500 hover:to-orange-500 transition-all shadow-lg shadow-red-500/20"
                 >
