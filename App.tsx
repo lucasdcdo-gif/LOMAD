@@ -2376,10 +2376,21 @@ const App: React.FC = () => {
                           {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
                             <div className="text-left md:text-right bg-black/20 p-3 rounded-xl border border-white/5 w-full md:w-auto">
                               <p className="text-xs font-bold text-slate-500 uppercase">Uso de Gravação</p>
-                              <p className="text-xl font-black text-white">
+                              <p className="text-xl font-black text-white flex items-baseline gap-1 md:justify-end">
                                 {Math.floor((user.usageMinutes || 0) / 60)}h {(user.usageMinutes || 0) % 60}m
-                                <span className="text-sm text-slate-500 font-medium"> / {user.role === 'LOMAD_PLUS' ? 'ILIMITADO' : `${Math.floor((user.planLimitMinutes || 600) / 60)}h`}</span>
+                                <span className="text-sm text-slate-500 font-medium whitespace-nowrap">
+                                  {' / '}
+                                  {user.role === 'LOMAD_PLUS'
+                                    ? 'ILIMITADO'
+                                    : `${Math.floor((user.planLimitMinutes || 600) / 60)}h`}
+                                </span>
                               </p>
+                              {user.extraMinutes && user.extraMinutes > 0 ? (
+                                <p className="text-xs font-bold text-green-400 mt-1 flex items-center gap-1 md:justify-end">
+                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                  + {Math.floor(user.extraMinutes / 60)}h{user.extraMinutes % 60 > 0 ? ` ${user.extraMinutes % 60}m` : ''} Extras Disponíveis
+                                </p>
+                              ) : null}
                             </div>
                           )}
                         </div>
@@ -2428,25 +2439,40 @@ const App: React.FC = () => {
                         </div>
 
                         <div className="mt-8 bg-gradient-to-br from-blue-900/40 to-slate-900/40 p-5 rounded-2xl border border-blue-500/20 relative z-10 shadow-lg">
-                          <label className="text-xs font-black text-blue-400 uppercase mb-3 block flex items-center gap-2 tracking-wider">
-                            <div className="p-1 bg-blue-500/20 rounded text-blue-400"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
-                            Bot Instantâneo
+                          <label className="text-xs font-black text-blue-400 uppercase mb-3 block flex items-center justify-between tracking-wider">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1 bg-blue-500/20 rounded text-blue-400"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
+                              Bot Instantâneo
+                            </div>
+                            {(() => {
+                              const usage = user.usageMinutes || 0;
+                              const limit = (user.planLimitMinutes || 600) + (user.extraMinutes || 0);
+                              if (user.role !== 'LOMAD_PLUS' && usage >= limit) {
+                                return <span className="text-red-400 text-[10px] bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">LIMITE EXCEDIDO</span>;
+                              }
+                              return null;
+                            })()}
                           </label>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 relative">
                             <input
                               type="text"
                               placeholder="Cole o link da reunião aqui..."
                               value={quickMeetingUrl}
                               onChange={(e) => setQuickMeetingUrl(e.target.value)}
-                              className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 shadow-inner placeholder:text-slate-600 transition-all font-medium"
+                              disabled={user.role !== 'LOMAD_PLUS' && (user.usageMinutes || 0) >= ((user.planLimitMinutes || 600) + (user.extraMinutes || 0))}
+                              className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 shadow-inner placeholder:text-slate-600 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <button
                               onClick={handleQuickBotJoin}
-                              disabled={joiningBot || !quickMeetingUrl}
+                              disabled={joiningBot || !quickMeetingUrl || (user.role !== 'LOMAD_PLUS' && (user.usageMinutes || 0) >= ((user.planLimitMinutes || 600) + (user.extraMinutes || 0)))}
                               className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                             >
                               {joiningBot ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>}
                             </button>
+
+                            {user.role !== 'LOMAD_PLUS' && (user.usageMinutes || 0) >= ((user.planLimitMinutes || 600) + (user.extraMinutes || 0)) && (
+                              <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Limite de horas excedido."></div>
+                            )}
                           </div>
                         </div>
                       </div>
