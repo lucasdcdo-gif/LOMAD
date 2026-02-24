@@ -1171,6 +1171,13 @@ app.post('/api/save-meeting-external', async (req, res) => {
     let participantsText = '';
     let botInfo; // Declare outer scope
 
+    // Helper para gerar titulo com timezone correto (Brasil)
+    const getFallbackTitle = (st) => {
+      const recoDate = new Date(st || new Date().toISOString());
+      const dateOptions = { timeZone: 'America/Sao_Paulo' };
+      return `Reunião ${recoDate.toLocaleDateString('pt-BR', dateOptions)}, ${recoDate.toLocaleTimeString('pt-BR', dateOptions)}`;
+    };
+
     if (!transcript || !video_url) {
       try {
         logger.info(`[Webhook] Fetching full details for bot ${recall_id}...`);
@@ -1182,13 +1189,12 @@ app.post('/api/save-meeting-external', async (req, res) => {
         // Update variables with fetched data
         const tArr = botInfo.transcript || [];
         transcript = Array.isArray(tArr) ? tArr.map(t => t.text).join('\n') : '';
-        // Dynamic Fallback Title logic
-        const now = new Date();
-        const fallbackTitle = `Reunião ${now.toLocaleDateString('pt-BR')}, ${now.toLocaleTimeString('pt-BR')}`;
 
+        // Date Fix: Prioritize botInfo.start_time, fallback to metadata or current time BEFORE title generation
+        start_time = botInfo.start_time || botInfo.meeting_metadata?.start_time || start_time || new Date().toISOString();
+
+        let fallbackTitle = getFallbackTitle(start_time);
         title = title || botInfo.meeting_metadata?.title || fallbackTitle;
-        // Date Fix: Prioritize botInfo.start_time, fallback to metadata or current time
-        start_time = botInfo.start_time || botInfo.meeting_metadata?.start_time || new Date().toISOString();
 
         // Try extracting video from multiple possible locations
         // 1. Root level
@@ -1261,7 +1267,7 @@ app.post('/api/save-meeting-external', async (req, res) => {
           const { data: upsertData, error: upsertError } = await supabase.from('meetings').upsert({
             recall_id: recall_id,
             user_id: user.id,
-            title: title || `${fallbackTitle} (Processando...)`,
+            title: title || `${getFallbackTitle(start_time)} (Processando...)`,
             transcriptions: [{ role: 'model', text: '', timestamp: Date.now() }],
             summary: 'Processando...',
             timestamp: validTimestamp,
@@ -1432,7 +1438,7 @@ app.post('/api/save-meeting-external', async (req, res) => {
     const { data: upsertData, error: upsertError } = await supabase.from('meetings').upsert({
       recall_id: recall_id, // Unique Key
       user_id: user.id,
-      title: title || fallbackTitle,
+      title: title || getFallbackTitle(start_time),
       transcriptions: [{ role: 'model', text: transcript || '', timestamp: Date.now() }],
       summary: 'Processando...',
       timestamp: validTimestamp,
