@@ -1682,6 +1682,20 @@ const App: React.FC = () => {
                       <span className="text-xs font-bold text-cyan-400 uppercase">{user.role}</span>
                     </div>
                   </div>
+                  <div className="flex flex-col gap-2 mb-2">
+                    <button onClick={() => { setView('MAIN'); setIsMenuOpen(false); }} className="w-full px-5 py-3 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Iniciar Transcrição
+                    </button>
+                    {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
+                      <button onClick={() => { setView('FULL_AGENDA'); setIsMenuOpen(false); }} className="w-full px-5 py-3 bg-slate-800 border border-white/10 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2">
+                        <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        Agenda + BOT
+                      </button>
+                    )}
+                  </div>
                   <button onClick={() => { setView('MAIN'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Início</button>
                   <button onClick={() => { setView('PRICING'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Preços</button>
                   <button onClick={() => { setView('HISTORY'); setIsMenuOpen(false); }} className="p-4 text-left font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Histórico</button>
