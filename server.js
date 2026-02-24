@@ -955,6 +955,41 @@ app.post('/api/recall/calendar-disconnect', async (req, res) => {
   }
 });
 
+// ==========================================
+// HELP TUTORIAL API
+// ==========================================
+
+// 1. Get HTML Content
+app.get('/api/help-content', async (req, res) => {
+  try {
+    const helpPath = path.join(__dirname, 'help_content.html');
+    if (fs.existsSync(helpPath)) {
+      const content = fs.readFileSync(helpPath, 'utf8');
+      res.send(content);
+    } else {
+      res.status(404).json({ error: "Help content not found." });
+    }
+  } catch (err) {
+    logger.error("Help API Error: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. Mark Help as Seen
+app.post('/api/user/mark-help-seen', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: "User ID is required" });
+
+    const { error } = await supabase.from('profiles').update({ has_seen_help: true }).eq('id', userId);
+    if (error) throw error;
+
+    res.json({ success: true, message: "Help seen status updated." });
+  } catch (err) {
+    logger.error("Help Seen Error: " + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 // 2.5 Instant Bot Join (Manual Link)

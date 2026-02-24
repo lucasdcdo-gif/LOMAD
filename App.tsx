@@ -130,6 +130,10 @@ const App: React.FC = () => {
   const [showLimitAlert, setShowLimitAlert] = useState(false);
   const [hasShownAlertThisSession, setHasShownAlertThisSession] = useState(false);
 
+  // Help Modal State
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [helpContent, setHelpContent] = useState('');
+
   // Quick Bot Join State (Dashboard)
   const [quickMeetingUrl, setQuickMeetingUrl] = useState('');
   const [joiningBot, setJoiningBot] = useState(false);
@@ -558,25 +562,27 @@ const App: React.FC = () => {
           name: data.name || data.email.split('@')[0],
           role: data.role as UserRole || 'FREE',
           createdAt: new Date(data.created_at || Date.now()).getTime(),
-          isActive: data.is_active,
-          cardBrand: data.card_brand,
-          cardLast4: data.card_last4,
+          usageMinutes: data.usage_minutes || 0,
+          planLimitMinutes: data.plan_limit_minutes || 600,
+          extraMinutes: data.extra_minutes || 0,
+          hasSeenHelp: data.has_seen_help || false,
+          calendarConnected: !!data.calendar_connected,
+          googleCalendarConnected: !!data.google_calendar_connected,
+          outlookCalendarConnected: !!data.outlook_calendar_connected,
+          botName: data.bot_name || '',
+          phone: data.phone || '',
+          stripeCustomerId: data.stripe_customer_id,
           subscriptionStatus: data.subscription_status,
           subscriptionEnd: data.subscription_end,
+          cardLast4: data.card_last4,
+          cardBrand: data.card_brand,
+          isActive: data.is_active,
           cpf: data.cpf_cnpj,
-          phone: data.phone,
           postalCode: data.postal_code,
           addressNumber: data.address_number,
           addressComplement: data.address_complement,
           meetings_recorded: data.meetings_recorded || 0,
-          botName: data.bot_name,
-          recallId: data.recall_id,
-          calendarConnected: data.calendar_connected,
-          googleCalendarConnected: data.google_calendar_connected,
-          outlookCalendarConnected: data.outlook_calendar_connected,
-          planLimitMinutes: data.plan_limit_minutes,
-          usageMinutes: data.usage_minutes,
-          extraMinutes: data.extra_minutes
+          recallId: data.recall_id
         });
         setEditForm({
           phone: data.phone || '',
@@ -637,6 +643,41 @@ const App: React.FC = () => {
       }
     }
   }, [user]);
+
+  // Load Help Content and Check triggers
+  useEffect(() => {
+    // Only load if modal is requested or user is FREE and hasn't seen it
+    if (user && user.role === 'FREE' && user.hasSeenHelp === false && !showHelpModal) {
+      setShowHelpModal(true);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (showHelpModal && !helpContent) {
+      fetch('/api/help-content')
+        .then(res => res.text())
+        .then(html => setHelpContent(html))
+        .catch(err => console.error("Failed to load help html:", err));
+    }
+  }, [showHelpModal, helpContent]);
+
+  const handleCloseHelp = async () => {
+    setShowHelpModal(false);
+    if (user && user.role === 'FREE' && user.hasSeenHelp === false) {
+      // Mark as seen in backend
+      try {
+        await fetch('/api/user/mark-help-seen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id })
+        });
+        // Update local state to prevent re-opening during navigation
+        setUser(prev => prev ? { ...prev, hasSeenHelp: true } : null);
+      } catch (e) {
+        console.error("Failed to mark help as seen:", e);
+      }
+    }
+  };
 
   // Check for Calendar Connection Success
   // Check for Calendar Connection Success
@@ -1787,6 +1828,16 @@ const App: React.FC = () => {
                       </span>
                     </button>
                     <p className="mt-8 text-slate-400 text-sm font-semibold text-center leading-relaxed">Clique no botão e selecione a aba do navegador com sua reunião.<br />A transcrição iniciará automaticamente.</p>
+
+                    {user?.role === 'FREE' && (
+                      <button
+                        onClick={() => setShowHelpModal(true)}
+                        className="mt-6 flex items-center justify-center gap-2 px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-full text-sm font-black mx-auto border border-red-500/20 hover:border-red-500/40 transition-all uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Ajuda
+                      </button>
+                    )}
                   </>
                 ) : (
                   <>
@@ -4393,6 +4444,32 @@ const App: React.FC = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* HELP TUTORIAL MODAL */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[110] px-4 backdrop-blur-md">
+          <div className="bg-[#0f172a] border border-blue-500/30 rounded-3xl p-8 w-full max-w-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <button
+              onClick={() => setShowHelpModal(false)}
+              className="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors bg-slate-800/50 p-2 rounded-full"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+
+            <div
+              className="prose prose-invert prose-blue max-w-none prose-headings:font-black prose-p:text-slate-300 mb-8"
+              dangerouslySetInnerHTML={{ __html: helpContent || '<div class="flex justify-center p-8"><div class="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div></div>' }}
+            />
+
+            <button
+              onClick={handleCloseHelp}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black py-4 rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all shadow-lg shadow-blue-500/20 text-lg uppercase tracking-wider"
+            >
+              Entendi
+            </button>
           </div>
         </div>
       )}
