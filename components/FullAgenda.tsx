@@ -105,8 +105,8 @@ export const FullAgenda: React.FC<FullAgendaProps> = ({ user, setView }) => {
             const isToday = day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
 
             days.push(
-                <div key={day} className={`h-32 bg-slate-900/50 border border-white/5 p-2 transition-colors hover:bg-white/5 flex flex-col gap-1 ${isToday ? 'bg-blue-900/10 border-blue-500/30' : ''}`}>
-                    <span className={`text-sm font-bold block mb-1 ${isToday ? 'text-blue-400' : 'text-slate-400'}`}>
+                <div key={day} className={`h-24 md:h-32 bg-slate-900/50 border border-white/5 p-1 md:p-2 transition-colors hover:bg-white/5 flex flex-col gap-1 ${isToday ? 'bg-blue-900/10 border-blue-500/30' : ''}`}>
+                    <span className={`text-[10px] md:text-sm font-bold block mb-1 ${isToday ? 'text-blue-400' : 'text-slate-400'}`}>
                         {day} {isToday && '(Hoje)'}
                     </span>
                     <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">
@@ -125,13 +125,13 @@ export const FullAgenda: React.FC<FullAgendaProps> = ({ user, setView }) => {
     };
 
     return (
-        <div className="w-full max-w-6xl mx-auto py-12 px-6 animate-fade-in pb-32"> {/* Added pb-32 for footer clearance */}
-            <div className="flex justify-between items-center mb-10">
+        <div className="w-full max-w-6xl mx-auto py-8 md:py-12 px-4 md:px-6 animate-fade-in pb-32"> {/* Added pb-32 for footer clearance */}
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center mb-8 md:mb-10">
                 <div>
-                    <h1 className="text-4xl font-black text-white mb-2">Agenda Inteligente</h1>
-                    <p className="text-slate-400">Visão geral de suas reuniões e monitoramento do bot.</p>
+                    <h1 className="text-3xl md:text-4xl font-black text-white mb-2">Agenda Inteligente</h1>
+                    <p className="text-sm md:text-base text-slate-400">Visão geral de suas reuniões e monitoramento do bot.</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                     <button
                         onClick={() => setView('RECALL_CONFIG')}
                         className="px-4 py-2 glass rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-2 font-bold text-sm"
@@ -155,19 +155,19 @@ export const FullAgenda: React.FC<FullAgendaProps> = ({ user, setView }) => {
                     <p className="text-slate-400 text-sm">Cole o link de uma reunião (Meet, Zoom, Teams) para o bot entrar agora.</p>
                 </div>
                 <form onSubmit={handleInstantBot} className="flex-1 w-full max-w-lg">
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-3">
                         <input
                             type="url"
                             placeholder="Link da reunião..."
                             value={meetingUrl}
                             onChange={(e) => setMeetingUrl(e.target.value)}
                             required
-                            className="flex-1 bg-slate-950/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600 text-sm"
+                            className="flex-1 w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 sm:py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600 text-sm"
                         />
                         <button
                             type="submit"
                             disabled={loading}
-                            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap text-sm"
+                            className="w-full sm:w-auto px-6 py-3 sm:py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap text-sm"
                         >
                             {loading ? 'Enviando...' : 'Enviar Bot'}
                         </button>
@@ -185,9 +185,9 @@ export const FullAgenda: React.FC<FullAgendaProps> = ({ user, setView }) => {
             {/* Calendar Grid */}
             <div className="glass rounded-[2rem] border border-white/10 overflow-hidden">
                 {/* Calendar Header */}
-                <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+                <div className="p-4 md:p-6 border-b border-white/5 flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4 bg-white/5">
                     <div className="flex items-center gap-4">
-                        <h2 className="text-2xl font-black text-white capitalize">
+                        <h2 className="text-xl md:text-2xl font-black text-white capitalize">
                             {monthNames[currentDate.getMonth()]} <span className="text-slate-500">{currentDate.getFullYear()}</span>
                         </h2>
                         <div className="flex gap-1 bg-slate-800 rounded-lg p-1">
@@ -202,29 +202,31 @@ export const FullAgenda: React.FC<FullAgendaProps> = ({ user, setView }) => {
                 </div>
 
                 {!user.calendarConnected ? (
-                    <div className="p-20 text-center">
-                        <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <svg className="w-10 h-10 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <div className="p-10 md:p-20 text-center">
+                        <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg className="w-8 h-8 md:w-10 md:h-10 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                         </div>
-                        <h3 className="text-2xl font-bold text-white mb-2">Agenda Desconectada</h3>
-                        <p className="text-slate-400 mb-8 max-w-md mx-auto text-lg">Conecte seu Google Calendar ou Outlook para ver seus eventos aqui.</p>
-                        <button onClick={() => setView('RECALL_CONFIG')} className="px-8 py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition-colors shadow-lg">
+                        <h3 className="text-xl md:text-2xl font-bold text-white mb-2">Agenda Desconectada</h3>
+                        <p className="text-slate-400 mb-8 max-w-md mx-auto text-sm md:text-lg">Conecte seu Google Calendar ou Outlook para ver seus eventos aqui.</p>
+                        <button onClick={() => setView('RECALL_CONFIG')} className="px-6 py-3 w-full sm:w-auto bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition-colors shadow-lg">
                             Conectar Agenda Agora
                         </button>
                     </div>
                 ) : (
-                    <div className="bg-slate-950/30">
-                        {/* Week Days Header */}
-                        <div className="grid grid-cols-7 border-b border-white/5 bg-slate-900/50">
-                            {weekDays.map(day => (
-                                <div key={day} className="py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                    {day}
-                                </div>
-                            ))}
-                        </div>
-                        {/* Days Grid */}
-                        <div className="grid grid-cols-7 auto-rows-fr">
-                            {renderCalendarGrid()}
+                    <div className="bg-slate-950/30 overflow-x-auto custom-scrollbar">
+                        <div className="min-w-[600px]">
+                            {/* Week Days Header */}
+                            <div className="grid grid-cols-7 border-b border-white/5 bg-slate-900/50">
+                                {weekDays.map(day => (
+                                    <div key={day} className="py-2 text-center text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                        {day}
+                                    </div>
+                                ))}
+                            </div>
+                            {/* Days Grid */}
+                            <div className="grid grid-cols-7 auto-rows-fr">
+                                {renderCalendarGrid()}
+                            </div>
                         </div>
                     </div>
                 )}
