@@ -2670,7 +2670,7 @@ const App: React.FC = () => {
                       </div>
                       <div className="flex items-baseline gap-1 mb-6">
                         <span className="text-sm text-slate-400">R$</span>
-                        <span className="text-5xl font-black text-white">{publicPricing.monthly.toFixed(2).replace('.', ',')}</span>
+                        <span className="text-5xl font-black text-white">{(publicPricing.monthly?.price || 27.90).toFixed(2).replace('.', ',')}</span>
                         <span className="text-slate-400">/mês</span>
                       </div>
                       <ul className="space-y-3 mb-8">
@@ -2688,7 +2688,7 @@ const App: React.FC = () => {
                       </div>
                       <div className="flex items-baseline gap-1 mb-6">
                         <span className="text-sm text-slate-400">R$</span>
-                        <span className="text-5xl font-black text-white">{publicPricing.yearly.toFixed(2).replace('.', ',')}</span>
+                        <span className="text-5xl font-black text-white">{(publicPricing.yearly?.price || 279.00).toFixed(2).replace('.', ',')}</span>
                         <span className="text-slate-400">/ano</span>
                       </div>
                       <ul className="space-y-3 mb-8">
