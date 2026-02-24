@@ -1670,7 +1670,7 @@ const App: React.FC = () => {
 
           {/* Mobile Menu Overlay */}
           {isMenuOpen && (
-            <div className="absolute top-full left-0 right-0 mt-4 p-6 glass rounded-[2rem] border border-white/10 shadow-2xl flex flex-col gap-4 animate-fade-in md:hidden bg-slate-900/95 backdrop-blur-xl z-[60]">
+            <div className="absolute top-full left-0 right-0 mt-4 p-6 glass rounded-[2rem] border border-white/10 shadow-2xl flex flex-col gap-4 animate-fade-in md:hidden bg-slate-900/95 backdrop-blur-xl z-[60] max-h-[85vh] overflow-y-auto custom-scrollbar">
               {user ? (
                 <>
                   <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl mb-2">
