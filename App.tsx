@@ -4451,12 +4451,12 @@ const App: React.FC = () => {
       {/* HELP TUTORIAL MODAL */}
       {showHelpModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[110] px-4 backdrop-blur-md">
-          <div className="bg-[#0f172a] border border-blue-500/30 rounded-3xl p-8 w-full max-w-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="bg-slate-900 rounded-3xl p-0 w-full max-w-[95vw] lg:max-w-7xl max-h-[95vh] overflow-hidden flex flex-col relative border border-slate-800 shadow-2xl">
             <button
-              onClick={() => setShowHelpModal(false)}
-              className="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors bg-slate-800/50 p-2 rounded-full"
+              onClick={handleCloseHelp}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors z-[60] bg-slate-800/50 p-2 rounded-full"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              <X className="w-5 h-5" />
             </button>
 
             <div
