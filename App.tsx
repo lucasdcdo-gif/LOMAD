@@ -2534,7 +2534,7 @@ const App: React.FC = () => {
                               )}
                             </label>
                             {editBotNameMode ? (
-                              <div className="flex flex-col md:flex-row gap-2 mt-2">
+                              <div className="flex flex-col gap-2 mt-2">
                                 <input
                                   type="text"
                                   value={newBotNameProf}
