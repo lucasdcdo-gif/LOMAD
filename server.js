@@ -215,17 +215,42 @@ app.post('/api/checkout', async (req, res) => {
     const { data: userProfile, error: userError } = await supabase.from('profiles').select('*').eq('id', userId).single();
     if (userError || !userProfile) throw new Error("Usuário não encontrado.");
 
-    // Bloqueio de renovação antecipada (Regra de Negócio: apenas após vencimento)
-    // Isso evita sobreposição de assinaturas (ex: Monthly + Yearly)
+    // Sistema de Tiers para Controle de Upgrade e Downgrade
+    const TIERS = { 'FREE': 0, 'PRO': 1, 'PRO_PLUS': 2, 'LOMAD_PLUS': 3 };
+    const currentTier = TIERS[userProfile.role || 'FREE'] || 0;
+
+    let newRole = 'FREE';
+    if (plan === 'monthly' || plan === 'yearly') newRole = 'PRO';
+    else if (plan === 'PRO_PLUS') newRole = 'PRO_PLUS';
+    else if (plan === 'LOMAD_PLUS') newRole = 'LOMAD_PLUS';
+
+    const newTier = plan !== 'ADDON_10H' ? (TIERS[newRole] || 0) : null;
+
     const now = Date.now();
-    if (userProfile.subscription_end && userProfile.subscription_end > now) {
-      const endDate = new Date(userProfile.subscription_end);
-      // Permitimos uma margem de erro? O usuário pediu "1 dia após". Seremos estritos.
-      throw new Error(`Sua assinatura ainda é válida até ${endDate.toLocaleDateString('pt-BR')}. Por favor, aguarde o vencimento para realizar uma nova assinatura.`);
+    let isUpgrade = false;
+
+    // Bloqueio de renovação antecipada e downgrade, permitindo UPGRADE
+    if (plan !== 'ADDON_10H' && userProfile.subscription_end && userProfile.subscription_end > now) {
+      if (newTier <= currentTier) {
+        const endDate = new Date(userProfile.subscription_end);
+        throw new Error(`Para fazer downgrade ou alterar o ciclo do seu plano atual, por favor aguarde o vencimento em ${endDate.toLocaleDateString('pt-BR')} ou cancele sua assinatura ativa.`);
+      } else {
+        isUpgrade = true; // Flag ativada: o usuário está subindo de nível
+      }
     }
 
     // Integração Asaas
     const { AsaasService } = await import('./lib/asaas.js');
+
+    // Cancelar assinatura base antiga em caso de UPGRADE
+    if (isUpgrade && userProfile.subscription_id) {
+      console.log(`[Upgrade] Cancelando assinatura base anterior (${userProfile.subscription_id}) para o usuario ${userId}`);
+      try {
+        await AsaasService.cancelSubscription(userProfile.subscription_id);
+      } catch (cancelErr) {
+        console.warn(`[Upgrade] Erro ao tentar cancelar assinatura base, prosseguindo com upgrade: ${cancelErr.message}`);
+      }
+    }
 
     // Dados vêm do frontend agora
     const cpfCnpj = cardData.cpf.replace(/\D/g, '');
@@ -389,6 +414,7 @@ app.post('/api/checkout', async (req, res) => {
           subscription_id: subscription.id,
           subscription_status: 'ACTIVE',
           subscription_end: expiryDate,
+          refund_eligible: !isUpgrade, // Perde o direito ao estorno se for um upgrade
           // Set Limits
           plan_limit_minutes: plan === 'PRO_PLUS' ? 600 : (plan === 'LOMAD_PLUS' ? 999999 : null)
         } : {
@@ -421,8 +447,8 @@ app.post('/api/subscription/cancel', async (req, res) => {
   try {
     const { userId } = req.body;
 
-    // Buscar subscription_id do usuário
-    const { data: user, error: userError } = await supabase.from('profiles').select('subscription_id, subscription_end').eq('id', userId).single();
+    // Buscar subscription_id do usuário (incluindo refund_eligible)
+    const { data: user, error: userError } = await supabase.from('profiles').select('subscription_id, subscription_end, refund_eligible').eq('id', userId).single();
     if (userError || !user) throw new Error("Usuário não encontrado.");
 
     if (!user.subscription_id) throw new Error("Nenhuma assinatura ativa encontrada.");
@@ -448,11 +474,14 @@ app.post('/api/subscription/cancel', async (req, res) => {
       const paymentDate = new Date(lastPayment.paymentDate || lastPayment.dateCreated).getTime(); // Prefer paymentDate
       const diffDays = (now - paymentDate) / (1000 * 60 * 60 * 24);
 
-      if (diffDays <= 7) {
+      // Apenas estorna se diffDays <= 7 E se a assinatura for elegível (i.e. não foi fruto de um upgrade)
+      if (diffDays <= 7 && user.refund_eligible !== false) {
         logger.info(`[Refund] User ${userId} eligible for refund (Days: ${diffDays.toFixed(1)})`);
         // 2. Realizar estorno automático
         await AsaasService.refundPayment(lastPayment.id);
         refunded = true;
+      } else if (diffDays <= 7 && user.refund_eligible === false) {
+        logger.info(`[Refund] User ${userId} within 7 days but INELIGIBLE (Upgrade). No refund processed.`);
       }
     }
 
@@ -467,13 +496,18 @@ app.post('/api/subscription/cancel', async (req, res) => {
     const subDate = new Date(subscription.dateCreated).getTime();
     const subDiffDays = (now - subDate) / (1000 * 60 * 60 * 24);
 
-    // Se foi estornado OU se a assinatura tem menos de 7 dias (mesmo sem pagamento confirmado ainda - arrependimento)
-    if (refunded || subDiffDays <= 7) {
+    // Se foi estornado OU se a assinatura tem menos de 7 dias e É ELEGÍVEL (mesmo sem pagamento confirmado ainda - arrependimento)
+    if (refunded || (subDiffDays <= 7 && user.refund_eligible !== false)) {
       updatePayload.role = 'FREE';
       updatePayload.subscription_end = Date.now(); // Expira agora
       message = refunded
         ? "Assinatura cancelada e estornada. (Prazo de 7 dias - CDC)."
         : "Assinatura cancelada (Período de arrependimento).";
+    } else {
+      // Se não foi estornado e tem menos de 7 dias mas é UPGRADE (inelegível) -> acesso até o fim
+      if (subDiffDays <= 7 && user.refund_eligible === false) {
+        message = "Assinatura cancelada com sucesso. Por se tratar de um UPGRADE, o estorno de 7 dias não se aplica. Seu acesso continua até o fim do período contratado.";
+      }
     }
     // Se não foi estornado e tem mais de 7 dias, mantemos o role e o subscription_end original (acesso até o fim)
 

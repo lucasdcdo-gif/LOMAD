@@ -40,6 +40,16 @@ export const PaymentModal = ({
         addon_10h: { price: 129.00, active: true }
     };
 
+    const TIERS: Record<string, number> = { 'FREE': 0, 'PRO': 1, 'PRO_PLUS': 2, 'LOMAD_PLUS': 3 };
+    const currentTier = TIERS[userRole || 'FREE'] || 0;
+
+    const getPlanTier = (planKey: string) => {
+        if (planKey === 'monthly' || planKey === 'yearly') return 1; // PRO
+        if (planKey === 'PRO_PLUS') return 2;
+        if (planKey === 'LOMAD_PLUS') return 3;
+        return 0; // fallback or addon
+    };
+
     const getPlanInfo = (planKey: string) => {
         const p = (publicPricing as any)[planKey.toLowerCase()];
         if (!p) return { price: 0, active: false };
@@ -53,7 +63,23 @@ export const PaymentModal = ({
     };
 
     const isPlanActive = (plan: 'monthly' | 'yearly' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'ADDON_10H') => {
-        return getPlanInfo(plan).active;
+        const info = getPlanInfo(plan);
+        if (!info.active) return false;
+
+        if (plan !== 'ADDON_10H') {
+            // Block downgrades or same-tier switches
+            if (getPlanTier(plan) <= currentTier) return false;
+        }
+        return true;
+    };
+
+    const getDisabledReason = (plan: 'monthly' | 'yearly' | 'PRO_PLUS' | 'LOMAD_PLUS' | 'ADDON_10H') => {
+        const info = getPlanInfo(plan);
+        if (!info.active) return "Em Breve";
+        if (plan !== 'ADDON_10H' && getPlanTier(plan) <= currentTier) {
+            return getPlanTier(plan) === currentTier ? "Plano Atual" : "Bloqueado";
+        }
+        return "Em Breve"; // fallback though it should be active
     };
 
     const [couponInput, setCouponInput] = useState('');
@@ -135,7 +161,7 @@ export const PaymentModal = ({
                                 {isPlanActive('monthly') ? (
                                     <div className="text-cyan-400 font-black text-xl">R$ {getPlanPrice('monthly').toFixed(2).replace('.', ',')}<span className="text-xs text-slate-400 font-normal">/mês</span></div>
                                 ) : (
-                                    <div className="text-slate-500 font-bold text-lg uppercase">Em Breve</div>
+                                    <div className="text-slate-500 font-bold text-sm uppercase leading-tight pt-1">{getDisabledReason('monthly')}</div>
                                 )}
                             </button>
 
@@ -157,7 +183,7 @@ export const PaymentModal = ({
                                 {isPlanActive('yearly') ? (
                                     <div className="text-emerald-400 font-black text-xl">R$ {getPlanPrice('yearly').toFixed(2).replace('.', ',')}<span className="text-xs text-slate-400 font-normal">/ano</span></div>
                                 ) : (
-                                    <div className="text-slate-500 font-bold text-lg uppercase">Em Breve</div>
+                                    <div className="text-slate-500 font-bold text-sm uppercase leading-tight pt-1">{getDisabledReason('yearly')}</div>
                                 )}
                             </button>
                         </div>
@@ -181,7 +207,7 @@ export const PaymentModal = ({
                                 {isPlanActive('PRO_PLUS') ? (
                                     <div className="text-white font-black text-xl">R$ {getPlanPrice('PRO_PLUS').toFixed(2).replace('.', ',')}<span className="text-xs text-slate-400 font-normal">/mês</span></div>
                                 ) : (
-                                    <div className="text-slate-500 font-bold text-lg uppercase">Em Breve</div>
+                                    <div className="text-slate-500 font-bold text-sm uppercase leading-tight pt-1">{getDisabledReason('PRO_PLUS')}</div>
                                 )}
                                 <ul className="mt-2 text-xs text-slate-300 space-y-1">
                                     <li>• Bot em Reuniões</li>
@@ -206,7 +232,7 @@ export const PaymentModal = ({
                                 {isPlanActive('LOMAD_PLUS') ? (
                                     <div className="text-white font-black text-xl">R$ {getPlanPrice('LOMAD_PLUS').toFixed(2).replace('.', ',')}<span className="text-xs text-slate-400 font-normal">/mês</span></div>
                                 ) : (
-                                    <div className="text-slate-500 font-bold text-lg uppercase">Em Breve</div>
+                                    <div className="text-slate-500 font-bold text-sm uppercase leading-tight pt-1">{getDisabledReason('LOMAD_PLUS')}</div>
                                 )}
                                 <ul className="mt-2 text-xs text-slate-300 space-y-1">
                                     <li>• Horas ILIMITADAS</li>
@@ -460,9 +486,15 @@ export const PaymentModal = ({
                             )}
                         </button>
                     </div>
-                    <p className="mt-4 text-center text-[10px] text-slate-500 leading-tight">
-                        Em conformidade com o Art. 49 do CDC, você tem 7 dias para cancelamento e reembolso total em caso de arrependimento.
-                    </p>
+                    <div className="mt-4 text-center text-[10px] text-slate-500 leading-tight">
+                        {(!userRole || userRole === 'FREE') ? (
+                            <p>Em conformidade com o Art. 49 do CDC, você tem 7 dias para cancelamento e reembolso total em caso de arrependimento da compra.</p>
+                        ) : (
+                            <p className="text-amber-500/80 font-semibold uppercase">
+                                Aviso: Por se tratar de um UPGRADE de um plano pago, o arrependimento e estorno não se aplicam e a cobrança será integral.
+                            </p>
+                        )}
+                    </div>
                 </form>
             </div>
         </div>
