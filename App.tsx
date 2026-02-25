@@ -18,6 +18,7 @@ import { FullAgenda } from './components/FullAgenda.tsx';
 import { PrivacyPage } from './components/PrivacyPage.tsx';
 import { TermsPage } from './components/TermsPage.tsx';
 import { UpcomingMeetings } from './components/UpcomingMeetings.tsx';
+import { HelpGuide } from './components/NewHelpGuide.tsx';
 
 const MODEL_NAME = import.meta.env.VITE_GEMINI_LIVE_MODEL || 'gemini-2.0-flash-exp';
 
@@ -653,15 +654,6 @@ const App: React.FC = () => {
       setShowHelpModal(true);
     }
   }, [user]);
-
-  useEffect(() => {
-    if (showHelpModal && !helpContent) {
-      fetch('/api/help-content')
-        .then(res => res.text())
-        .then(html => setHelpContent(html))
-        .catch(err => console.error("Failed to load help html:", err));
-    }
-  }, [showHelpModal, helpContent]);
 
   const handleCloseHelp = async () => {
     setShowHelpModal(false);
@@ -4575,32 +4567,7 @@ const App: React.FC = () => {
       )}
 
       {/* HELP TUTORIAL MODAL */}
-      {showHelpModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[110] px-4 backdrop-blur-md">
-          <div className="bg-slate-900 rounded-3xl p-0 w-full max-w-[95vw] lg:max-w-7xl max-h-[95vh] overflow-hidden flex flex-col relative border border-slate-800 shadow-2xl">
-            <button
-              onClick={handleCloseHelp}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors z-[60] bg-slate-800/50 p-2 rounded-full"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-
-            <div
-              className="prose prose-invert prose-blue max-w-none prose-headings:font-black prose-p:text-slate-300 flex-1 overflow-y-auto"
-              dangerouslySetInnerHTML={{ __html: helpContent || '<div class="flex justify-center p-8"><div class="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div></div>' }}
-            />
-
-            <div className="p-4 shrink-0 border-t border-slate-800">
-              <button
-                onClick={handleCloseHelp}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black py-4 rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all shadow-lg shadow-blue-500/20 text-lg uppercase tracking-wider"
-              >
-                Entendi
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {showHelpModal && <HelpGuide onClose={handleCloseHelp} />}
 
       {
         view !== 'MEETING_DETAILS' && view !== 'PRIVACY_PAGE' && view !== 'TERMS_PAGE' && (
