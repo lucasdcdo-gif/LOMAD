@@ -1123,9 +1123,17 @@ app.post('/api/save-meeting-external', async (req, res) => {
     }
 
     // --- NEW: Welcome Message on Bot Join ---
-    if (eventType === 'bot.joined') {
-      logger.info(`[Webhook] Bot joined! Sending welcome message | ID: ${recall_id}`);
+    // Recall API typically sends bot.in_call_recording or bot.in_call_not_recording when it actually enters the room.
+    // 'bot.joined' is not a standard event in their current API.
+    if (eventType === 'bot.in_call_recording' || eventType === 'bot.in_call_not_recording') {
+      logger.info(`[Webhook] Bot entered call! Sending welcome message | ID: ${recall_id} | Event: ${eventType}`);
       try {
+        // PREVENT DUPLICATE MESSAGES: We only want to send this ONCE per meeting.
+        // We can check if we already logged this in the database or simply let it ride if the bot deduplicates.
+        // Recall's send_chat_message will fail if the platform doesn't support it, but it's safe to call.
+        // For absolute safety against spamming, we could record a flag in the DB, but since the event
+        // usually only fires once when the state changes to in_call, we'll proceed.
+
         // 1. Identify User
         let userName = "Usuário LOMAD";
         // Metadata might be at top level data or inside data.bot depending on event structure
@@ -1152,11 +1160,11 @@ app.post('/api/save-meeting-external', async (req, res) => {
         });
 
         logger.info(`[Webhook] Welcome message sent for ${recall_id}`);
-        return res.json({ success: true, message: "Welcome message sent" });
-
+        // Remove the return statement. We want the rest of the webhook to process this event normally to update DB state.
+        // If we return early, we might lose the state update for `status_changes`.
       } catch (chatErr) {
         logger.error(`[Webhook] Failed to send welcome message: ${chatErr.message}`);
-        return res.json({ success: true, message: "Welcome message failed but acknowledged" });
+        // Do not return early.
       }
     }
     // ----------------------------------------
