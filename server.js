@@ -1090,6 +1090,9 @@ app.post('/api/recall/bot-join', async (req, res) => {
   }
 });
 
+// Track sent welcome messages to avoid duplicates from multiple bot events
+const sentWelcomeMessages = new Set();
+
 // 3. Webhook from Recall (Meeting Recorded)
 app.post('/api/save-meeting-external', async (req, res) => {
   // This endpoint receives data from our Bot (Recall) when a meeting ends
@@ -1126,45 +1129,49 @@ app.post('/api/save-meeting-external', async (req, res) => {
     // Recall API typically sends bot.in_call_recording or bot.in_call_not_recording when it actually enters the room.
     // 'bot.joined' is not a standard event in their current API.
     if (eventType === 'bot.in_call_recording' || eventType === 'bot.in_call_not_recording') {
-      logger.info(`[Webhook] Bot entered call! Sending welcome message | ID: ${recall_id} | Event: ${eventType}`);
-      try {
-        // PREVENT DUPLICATE MESSAGES: We only want to send this ONCE per meeting.
-        // We can check if we already logged this in the database or simply let it ride if the bot deduplicates.
-        // Recall's send_chat_message will fail if the platform doesn't support it, but it's safe to call.
-        // For absolute safety against spamming, we could record a flag in the DB, but since the event
-        // usually only fires once when the state changes to in_call, we'll proceed.
+      if (!sentWelcomeMessages.has(recall_id)) {
+        logger.info(`[Webhook] Bot entered call! Sending welcome message | ID: ${recall_id} | Event: ${eventType}`);
+        try {
+          // PREVENT DUPLICATE MESSAGES: Mark as sent immediately to prevent race conditions
+          sentWelcomeMessages.add(recall_id);
+          // Cleanup memory after 2 hours (meetings rarely last longer)
+          setTimeout(() => sentWelcomeMessages.delete(recall_id), 2 * 60 * 60 * 1000);
 
-        // 1. Identify User
-        let userName = "Usuário LOMAD";
-        // Metadata might be at top level data or inside data.bot depending on event structure
-        let userId = data.metadata?.user_id || data.bot?.metadata?.user_id;
+          // 1. Identify User
+          let userName = "Usuário LOMAD";
+          // Metadata might be at top level data or inside data.bot depending on event structure
+          let userId = data.metadata?.user_id || data.bot?.metadata?.user_id;
 
-        if (userId) {
-          const { data: u } = await supabase.from('profiles').select('name').eq('id', userId).single();
-          if (u?.name) userName = u.name;
-        } else {
-          // Fallback: look up by recall_id in profiles
-          const { data: u } = await supabase.from('profiles').select('name').eq('recall_id', recall_id).single();
-          if (u?.name) userName = u.name;
+          if (userId) {
+            const { data: u } = await supabase.from('profiles').select('name').eq('id', userId).single();
+            if (u?.name) userName = u.name;
+          } else {
+            // Fallback: look up by recall_id in profiles
+            const { data: u } = await supabase.from('profiles').select('name').eq('recall_id', recall_id).single();
+            if (u?.name) userName = u.name;
+          }
+
+          // 2. Compose Message
+          const botName = data.bot_name || data.name || "LOMAD.IA";
+          const message = `Olá! Sou o assistente virtual de transcrição ${botName} e estou gravando esta reunião para gerar sua ata automática. 🤖📝\n\nA responsabilidade pelo uso desta gravação é de ${userName}.\nConheça a LOMAD: https://lomad.com.br/IA`;
+
+          // 3. Send to Chat
+          await axios.post(`${RECALL_BASE_URL}/bot/${recall_id}/send_chat_message`, {
+            message: message
+          }, {
+            headers: { Authorization: `Token ${process.env.RECALL_API_KEY}` }
+          });
+
+          logger.info(`[Webhook] Welcome message sent for ${recall_id}`);
+          // Remove the return statement. We want the rest of the webhook to process this event normally to update DB state.
+          // If we return early, we might lose the state update for `status_changes`.
+        } catch (chatErr) {
+          logger.error(`[Webhook] Failed to send welcome message: ${chatErr.message}`);
+          // Re-allow retry on hard error by dropping the lock, or maybe we just ignore. 
+          // Ignoring is safer than spamming 4 messages on error loops.
         }
-
-        // 2. Compose Message
-        const botName = data.bot_name || data.name || "LOMAD.IA";
-        const message = `Olá! Sou o assistente virtual de transcrição ${botName} e estou gravando esta reunião para gerar sua ata automática. 🤖📝\n\nA responsabilidade pelo uso desta gravação é de ${userName}.\nConheça a LOMAD: https://lomad.com.br/IA`;
-
-        // 3. Send to Chat
-        await axios.post(`${RECALL_BASE_URL}/bot/${recall_id}/send_chat_message`, {
-          message: message
-        }, {
-          headers: { Authorization: `Token ${process.env.RECALL_API_KEY}` }
-        });
-
-        logger.info(`[Webhook] Welcome message sent for ${recall_id}`);
-        // Remove the return statement. We want the rest of the webhook to process this event normally to update DB state.
-        // If we return early, we might lose the state update for `status_changes`.
-      } catch (chatErr) {
-        logger.error(`[Webhook] Failed to send welcome message: ${chatErr.message}`);
-        // Do not return early.
+      } else {
+        logger.info(`[Webhook] Welcome message already sent for ${recall_id}. Skipping duplicate.`);
       }
     }
     // ----------------------------------------
