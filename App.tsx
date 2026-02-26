@@ -1434,8 +1434,11 @@ const App: React.FC = () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) console.error("Supabase signOut error:", error);
+      // Automatically redirect to original URL upon logout
+      window.location.href = 'https://lomad.com.br/';
     } catch (e) {
       console.error("Logout exception:", e);
+      window.location.href = 'https://lomad.com.br/';
     }
   };
 
