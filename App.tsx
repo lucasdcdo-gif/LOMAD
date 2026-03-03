@@ -19,6 +19,14 @@ import { PrivacyPage } from './components/PrivacyPage.tsx';
 import { TermsPage } from './components/TermsPage.tsx';
 import { UpcomingMeetings } from './components/UpcomingMeetings.tsx';
 import { HelpGuide } from './components/NewHelpGuide.tsx';
+import {
+  HighlightPill,
+  WordRotator,
+  SimpleTranscriptLine,
+  ScrollStep,
+  MeetingSimulator,
+  EcosystemSection
+} from './components/LandingComponents.tsx';
 
 const MODEL_NAME = import.meta.env.VITE_GEMINI_LIVE_MODEL || 'gemini-2.0-flash-exp';
 
@@ -140,6 +148,7 @@ const App: React.FC = () => {
   // Quick Bot Join State (Dashboard)
   const [quickMeetingUrl, setQuickMeetingUrl] = useState('');
   const [joiningBot, setJoiningBot] = useState(false);
+  const [scrollyStep, setScrollyStep] = useState(0); // Tracking Landing Page V2 Scroll Actions
 
   const handleQuickBotJoin = async () => {
     if (!quickMeetingUrl || !user) return;
@@ -1718,172 +1727,253 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      <main className="w-full max-w-7xl flex flex-col items-center px-6 pb-24">
+      <main className="w-full flex flex-col items-center pb-24">
         {view === 'MAIN' && (
-          <div className="w-full max-w-4xl flex flex-col items-center text-center space-y-20 py-16 md:py-28">
-            <div className="space-y-12 animate-fade-in">
-              <div className="flex flex-col items-center gap-8">
-                <div className="flex items-center gap-3">
-                  <div className="h-1 w-12 bg-gradient-to-r from-transparent via-cyan-500 to-transparent rounded-full"></div>
-                  <span className="text-cyan-400 text-sm font-bold uppercase tracking-widest">Powered by Gemini AI</span>
-                  <div className="h-1 w-12 bg-gradient-to-r from-transparent via-cyan-500 to-transparent rounded-full"></div>
-                </div>
-
-                <div className="flex flex-col items-center gap-6">
-                  <LomadLogo size={140} withText={true} className="opacity-90" />
-                  <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight text-white text-center">
-                    TRANSCRITOR <span className="bg-gradient-to-r from-cyan-500 via-emerald-500 to-emerald-600 bg-clip-text text-transparent italic block md:inline">UNIVERSAL</span>
-                  </h1>
-                </div>
-              </div>
-
-              <p className="text-slate-300 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">Grave reuniões e obtenha transcrições precisas com inteligência artificial.</p>
-              <div className="flex items-center justify-center gap-6 pt-4">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                  <span className="text-sm font-medium">Transcrição Inteligente</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-400">
-                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                  <span className="text-sm font-medium">Chat Inteligente</span>
-                </div>
-              </div>
-            </div>
-
-            {status === SessionStatus.IDLE && (
-              <div className="w-full bg-gradient-to-br from-slate-900/50 via-slate-950/50 to-slate-900/50 p-6 md:p-14 rounded-[2rem] md:rounded-[3rem] border border-white/10 glass shadow-2xl backdrop-blur-xl">
-                {user ? (
-                  <>
-                    {user.role === 'FREE' && (
-                      <div className="mb-8 flex justify-center animate-fade-in">
-                        <div className={`px-6 py-3 rounded-2xl border flex items-center gap-3 ${((user.meetings_recorded || 0) >= 5) ? 'bg-red-500/10 text-red-400 border-red-500/20 shadow-lg shadow-red-500/10' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'}`}>
-                          <div className={`p-2 rounded-lg ${((user.meetings_recorded || 0) >= 5) ? 'bg-red-500/20' : 'bg-cyan-500/20'}`}>
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-xs uppercase font-bold tracking-wider opacity-80">Uso do Plano Gratuito</span>
-                            <span className="text-lg font-black">{Math.min(user.meetings_recorded || 0, 5)} / 5 <span className="text-sm font-medium opacity-60">gravações</span></span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {/* Checkbox de Consentimento LGPD */}
-                    {/* Recall.ai Intelligent Calendar Widget for PRO+/LOMAD+ */}
-                    {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
-                      <div className="w-full max-w-4xl mx-auto mb-8 animate-fade-in relative z-10">
-                        <div className="glass p-6 rounded-2xl border border-blue-500/30 bg-blue-500/5 relative overflow-hidden group">
-                          {/* Decoration */}
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/30 transition-all"></div>
-
-                          <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-                            <div className="flex items-center gap-4">
-                              <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400">
-                                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                              </div>
-                              <div className="text-left">
-                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                  Agenda Inteligente
-                                  {user.calendarConnected && <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/20 text-green-400 border border-green-500/30">ATIVO</span>}
-                                </h3>
-                                <p className="text-slate-400 text-sm">
-                                  {user.calendarConnected
-                                    ? "Seu bot está pronto para entrar nas próximas reuniões."
-                                    : "Conecte sua agenda para ativar o Assistente de Reuniões."}
-                                </p>
-                              </div>
-                            </div>
-
-                            {user.calendarConnected ? (
-                              <div className="flex flex-col items-end gap-1">
-                                {nextMeeting ? (
-                                  <div className="px-4 py-2 bg-slate-900/50 rounded-lg border border-white/10 text-sm text-slate-300">
-                                    <span className="text-xs text-blue-400 block uppercase font-bold mb-0.5">Próxima Reunião</span>
-                                    <strong className="text-white block truncate max-w-[180px]">{nextMeeting.title}</strong>
-                                    <span className="opacity-80">
-                                      {new Date(nextMeeting.start_time).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} • {new Date(nextMeeting.start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <div className="px-4 py-2 bg-slate-900/50 rounded-lg border border-white/10 text-sm text-slate-500 italic">
-                                    Nenhuma reunião agendada
-                                  </div>
-                                )}
-                                <button onClick={() => setView('RECALL_CONFIG')} className="text-xs text-blue-400 hover:text-white transition-colors mt-1">Gerenciar Bot & Agenda</button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => setView('RECALL_CONFIG')}
-                                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 flex items-center gap-2 whitespace-nowrap"
-                              >
-                                Conectar Agora
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-start gap-3 bg-slate-800/50 p-4 rounded-xl border border-white/5 max-w-md mx-auto mb-6">
-                      <div className="relative flex items-center">
-                        <input
-                          id="consent-checkbox"
-                          type="checkbox"
-                          checked={consentGiven}
-                          onChange={(e) => setConsentGiven(e.target.checked)}
-                          className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-slate-500 bg-slate-900 transition-all checked:border-cyan-500 checked:bg-cyan-500 hover:border-cyan-400"
-                        />
-                        <svg className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-0 peer-checked:opacity-100 text-white transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                      </div>
-                      <label htmlFor="consent-checkbox" className="text-sm text-slate-300 cursor-pointer select-none text-left">
-                        Declaro que informei todos os participantes sobre a gravação desta reunião e obtive o consentimento necessário, conforme os <button onClick={() => setView('TERMS')} className="text-cyan-400 hover:underline">Termos de Uso</button>.
-                      </label>
+          <div className="w-full flex flex-col items-center">
+            {/* HERÓI PRINCIPAL QUANDO DESLOGADO - NOVO VISUAL V2 */}
+            {!user && status === SessionStatus.IDLE && (
+              <div className="w-full">
+                <header className="relative pt-36 md:pt-44 pb-16 md:pb-20 px-6 hero-gradient flex justify-center items-center">
+                  <div className="max-w-5xl mx-auto text-center space-y-6 md:space-y-8 w-full flex flex-col justify-center items-center">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-[10px] md:text-xs font-bold uppercase tracking-widest">
+                      <span>✨ Powered by Gemini</span>
                     </div>
-
-                    <button
-                      onClick={handleInitiate}
-                      disabled={!consentGiven}
-                      className={`group relative w-full py-10 md:py-12 rounded-[2rem] font-black text-3xl md:text-4xl text-white shadow-2xl transition-all overflow-hidden ${consentGiven ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:shadow-cyan-500/30 hover:scale-[1.02] cursor-pointer' : 'bg-slate-700 opacity-50 cursor-not-allowed'}`}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                      <span className="relative flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 text-center leading-none">
-                        <svg className="w-8 h-8 md:w-10 md:h-10 mb-2 md:mb-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <span className="flex flex-col md:block">
-                          <span>INICIAR</span>
-                          <span className="md:ml-2">TRANSCRIÇÃO</span>
-                        </span>
+                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight text-white flex flex-col items-center justify-center gap-3 md:gap-4 w-full">
+                      <span>Inteligência Real para</span>
+                      <span className="flex flex-wrap items-center justify-center gap-x-3 gap-y-3 w-full">
+                        <span>suas</span>
+                        <HighlightPill theme="dark"><WordRotator /></HighlightPill>
                       </span>
-                    </button>
-                    <p className="mt-8 text-slate-400 text-sm font-semibold text-center leading-relaxed">Clique no botão e selecione a aba do navegador com sua reunião.<br />A transcrição iniciará automaticamente.</p>
-                    <button
-                      onClick={() => setShowHelpModal(true)}
-                      className="mt-6 flex items-center justify-center gap-2 px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-full text-sm font-black mx-auto border border-red-500/20 hover:border-red-500/40 transition-all uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]"
-                    >
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      Ajuda
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex flex-col items-center gap-6">
-                      <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <svg className="w-8 h-8 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
+                    </h1>
+                    <p className="text-slate-400 text-base md:text-xl max-w-2xl mx-auto leading-relaxed mt-4 font-medium">Capture cada detalhe das suas reuniões e chamadas. O LOMAD grava interativamente, transcreve e gera resumos com tarefas automáticas para você focar na conversa.</p>
+                    <button onClick={() => setView('LOGIN')} className="px-8 md:px-10 py-3 md:py-4 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-2xl font-bold text-base md:text-lg shadow-xl shadow-cyan-500/20 hover:scale-105 transition-all mt-4">Começar agora</button>
+                  </div>
+                </header>
+
+                <section className="bg-slate-50 relative w-full pt-20 md:pt-32 pb-24 md:pb-32 -mt-10 rounded-t-[3rem] md:rounded-t-[4rem] z-20 light-section-shadow">
+                  <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col lg:flex-row items-center justify-center lg:justify-between gap-16 lg:gap-8 w-full">
+                    <div className="w-full lg:w-1/2 max-w-2xl z-10 text-center lg:text-left mx-auto lg:mx-0">
+                      <h2 className="text-4xl md:text-5xl lg:text-[3.5rem] font-black tracking-tight text-slate-900 flex flex-col items-center lg:items-start gap-4 md:gap-5 w-full">
+                        <span>Transcrições ao vivo</span>
+                        <span className="flex flex-wrap items-center justify-center lg:justify-start gap-x-2 gap-y-3 w-full">
+                          <HighlightPill theme="light" pullLeft={true}>sem nenhum bot</HighlightPill>
+                          <span>na sua sala.</span>
+                        </span>
+                      </h2>
+                      <div className="flex justify-center lg:justify-start mt-6 text-slate-600">
+                        <ul className="space-y-4 pt-4 inline-block text-left">
+                          <li className="flex items-center gap-3 text-base md:text-lg font-medium"><div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center shrink-0"><svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg></div>Grave diretamente da aba do seu navegador sem interrupções</li>
+                          <li className="flex items-center gap-3 text-base md:text-lg font-medium"><div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center shrink-0"><svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg></div>100% de privacidade e sigilo nas suas pautas importantes</li>
+                        </ul>
                       </div>
-                      <div className="text-center space-y-3">
-                        <h3 className="text-2xl font-black text-white">Login Necessário</h3>
-                        <p className="text-slate-400 text-base max-w-md">Para utilizar o recurso de transcrição, você precisa estar autenticado na plataforma.</p>
-                      </div>
-                      <button
-                        onClick={() => setView('LOGIN')}
-                        className="px-10 py-4 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white rounded-xl font-bold text-lg hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 transition-all"
-                      >
-                        Fazer Login
-                      </button>
                     </div>
-                  </>
-                )}
+                    <div className="w-full lg:w-1/2 relative flex justify-center lg:justify-end mt-12 lg:mt-0 mx-auto lg:mx-0">
+                      <div className="relative w-full max-w-[420px] lg:max-w-[480px] lg:mr-10">
+                        <img src="/Gemini_Generated_Image_iyiicfiyiicfiyii.png" className="w-full h-auto object-cover rounded-2xl shadow-sm" alt="Doodle" />
+                        <div className="absolute top-1/2 -translate-y-1/2 -right-4 lg:-right-14 w-[280px] sm:w-[320px] bg-white rounded-2xl floating-widget-shadow z-20 flex flex-col h-[300px] md:h-[340px]">
+                          <div className="flex items-center justify-between p-3 md:p-4 border-b border-slate-100 bg-white rounded-t-2xl">
+                            <div className="flex items-center gap-2 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-700">
+                              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
+                              <span className="text-[10px] md:text-xs font-bold uppercase tracking-wide">Live Transcript</span>
+                            </div>
+                            <button className="text-[10px] md:text-xs font-bold text-cyan-600">✨ LOMAD</button>
+                          </div>
+                          <div className="p-5 flex-1 overflow-y-auto chat-scrollbar bg-white rounded-b-2xl text-xs md:text-sm text-slate-600 leading-relaxed font-medium">
+                            <SimpleTranscriptLine delay={500} text="Ouvindo a conversa ativamente..." />
+                            <SimpleTranscriptLine delay={3000} text="Convertendo áudio em texto e identificando falantes..." />
+                            <SimpleTranscriptLine delay={5500} text="Sintetizando as pautas abordadas pela equipe..." />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="bg-dark-950 relative w-full py-32 border-t border-slate-800 flex justify-center mt-[-40px]">
+                  <div className="max-w-7xl mx-auto px-6 w-full flex flex-col items-center">
+                    <div className="text-center mb-10">
+                      <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">Transcrição utilizando BOT diretamente em suas reuniões</h2>
+                      <p className="text-slate-400 text-base md:text-lg max-w-2xl mx-auto">Automatize a captura de áudio com o nosso Bot inteligente, que participa das suas chamadas e documenta tudo para você não perder nenhum detalhe.</p>
+                    </div>
+                    <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 items-start justify-center w-full">
+                      <div className="flex-1 lg:max-w-xl space-y-8 pb-16">
+                        <ScrollStep onStepEnter={setScrollyStep} stepIndex={0}>
+                          <h3 className="text-2xl font-bold text-white mb-2">1. Sincronização e Setup</h3>
+                          <p className="text-slate-400 mb-4">Conecte sua agenda e centralize todos os compromissos em um único painel seguro e intuitivo, sem precisar enviar links manualmente.</p>
+                          <ul className="space-y-3 text-sm text-slate-500 font-medium border-l border-slate-800 pl-4 py-1">
+                            <li className="flex items-start gap-3"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></div><span>Integração oficial homologada com <strong>Google Calendar</strong> e <strong>Microsoft Outlook</strong>.</span></li>
+                            <li className="flex items-start gap-3"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></div><span>Sincronização em tempo real de novas reuniões criadas, adiamentos ou cancelamentos.</span></li>
+                            <li className="flex items-start gap-3"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></div><span>Controle total do organizador: escolha quais eventos deseja que o Bot participe e grave.</span></li>
+                          </ul>
+                        </ScrollStep>
+                        <ScrollStep onStepEnter={setScrollyStep} stepIndex={1}>
+                          <h3 className="text-2xl font-bold text-white mb-2">2. Participação do Bot</h3>
+                          <p className="text-slate-400 mb-4">No horário marcado, o Bot entra na sala pontualmente e atua como seu assistente de documentação silencioso.</p>
+                          <ul className="space-y-3 text-sm text-slate-500 font-medium border-l border-slate-800 pl-4 py-1">
+                            <li className="flex items-start gap-3"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></div><span>Compatibilidade abrangente com as maiores plataformas (Meet, Teams, Zoom, etc).</span></li>
+                            <li className="flex items-start gap-3"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></div><span>Ingresso inteligente na sala de espera ou entrada direta se o provedor permitir.</span></li>
+                            <li className="flex items-start gap-3"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></div><span>Aviso transparente e legal em forma de mensagem para garantir a ciência de todos.</span></li>
+                          </ul>
+                        </ScrollStep>
+                        <ScrollStep onStepEnter={setScrollyStep} stepIndex={2}>
+                          <h3 className="text-2xl font-bold text-white mb-2">3. Inteligência em Tempo Real</h3>
+                          <p className="text-slate-400 mb-4">O LOMAD capta e processa o áudio multicanal estruturando os debates, garantindo qualidade para não perder detalhes da sua negociação.</p>
+                          <ul className="space-y-3 text-sm text-slate-500 font-medium border-l border-slate-800 pl-4 py-1">
+                            <li className="flex items-start gap-3"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></div><span>Diarização de locutores avançada: a IA separa perfeitamente "Quem disse O quê?".</span></li>
+                            <li className="flex items-start gap-3"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></div><span>Captação nítida adaptável mesmo com pequenos ruídos ao fundo durante a conferência.</span></li>
+                            <li className="flex items-start gap-3"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></div><span>Tratamento seguro e criptografado dos dados de ponta a ponta enquanto a reunião ocorre.</span></li>
+                          </ul>
+                        </ScrollStep>
+                        <ScrollStep onStepEnter={setScrollyStep} stepIndex={3}>
+                          <h3 className="text-2xl font-bold text-cyan-400 mb-2">4. Resultados e Entregáveis</h3>
+                          <p className="text-slate-300 mb-4">Assim que a gravação é encerrada, a suíte do LOMAD disponibiliza o material trabalhado no seu dashboard.</p>
+                          <ul className="space-y-3 text-sm text-cyan-200/60 font-medium border-l border-cyan-500/30 pl-4 py-1">
+                            <li className="flex items-start gap-3 text-cyan-500"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div><span>Resumo executivo impecável separando os principais tópicos abordados.</span></li>
+                            <li className="flex items-start gap-3 text-cyan-500"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div><span>Mapeamento assertivo de pendências e tarefas (Action Items).</span></li>
+                            <li className="flex items-start gap-3 text-cyan-500"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div><span>Transcrição em abas com pesquisa e opções para exportação.</span></li>
+                            <li className="flex items-start gap-3 text-cyan-500"><div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div><span>Disparos de E-mail consolidados direto para a sua caixa de entrada.</span></li>
+                          </ul>
+                        </ScrollStep>
+                      </div>
+                      <div className="flex-1 sticky top-24 lg:top-[25vh] z-20 flex justify-center max-w-xl mx-auto lg:mx-0"><MeetingSimulator activeStep={scrollyStep} /></div>
+                    </div>
+                  </div>
+                </section>
+
+                <EcosystemSection />
+              </div>
+            )}
+
+            {/* DASHBOARD PRINCIPAL QUANDO LOGADO - MANTER COMO ESTAVA */}
+            {user && status === SessionStatus.IDLE && (
+              <div className="w-full max-w-4xl flex flex-col items-center text-center space-y-20 py-16 md:py-28 px-6">
+                <div className="space-y-12 animate-fade-in">
+                  <div className="flex flex-col items-center gap-8">
+                    <div className="flex flex-col items-center gap-6">
+                      <LomadLogo size={140} withText={true} className="opacity-90" />
+                      <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight text-white text-center">
+                        TRANSCRITOR <span className="bg-gradient-to-r from-cyan-500 via-emerald-500 to-emerald-600 bg-clip-text text-transparent italic block md:inline">UNIVERSAL</span>
+                      </h1>
+                    </div>
+                  </div>
+                  <p className="text-slate-300 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">Grave reuniões e obtenha transcrições precisas com inteligência artificial.</p>
+                </div>
+
+                <div className="w-full bg-gradient-to-br from-slate-900/50 via-slate-950/50 to-slate-900/50 p-6 md:p-14 rounded-[2rem] md:rounded-[3rem] border border-white/10 glass shadow-2xl backdrop-blur-xl">
+
+                  {user ? (
+                    <>
+                      {user.role === 'FREE' && (
+                        <div className="mb-8 flex justify-center animate-fade-in">
+                          <div className={`px-6 py-3 rounded-2xl border flex items-center gap-3 ${((user.meetings_recorded || 0) >= 5) ? 'bg-red-500/10 text-red-400 border-red-500/20 shadow-lg shadow-red-500/10' : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'}`}>
+                            <div className={`p-2 rounded-lg ${((user.meetings_recorded || 0) >= 5) ? 'bg-red-500/20' : 'bg-cyan-500/20'}`}>
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs uppercase font-bold tracking-wider opacity-80">Uso do Plano Gratuito</span>
+                              <span className="text-lg font-black">{Math.min(user.meetings_recorded || 0, 5)} / 5 <span className="text-sm font-medium opacity-60">gravações</span></span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {/* Checkbox de Consentimento LGPD */}
+                      {/* Recall.ai Intelligent Calendar Widget for PRO+/LOMAD+ */}
+                      {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
+                        <div className="w-full max-w-4xl mx-auto mb-8 animate-fade-in relative z-10">
+                          <div className="glass p-6 rounded-2xl border border-blue-500/30 bg-blue-500/5 relative overflow-hidden group">
+                            {/* Decoration */}
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/30 transition-all"></div>
+
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                              <div className="flex items-center gap-4">
+                                <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400">
+                                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                </div>
+                                <div className="text-left">
+                                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    Agenda Inteligente
+                                    {user.calendarConnected && <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/20 text-green-400 border border-green-500/30">ATIVO</span>}
+                                  </h3>
+                                  <p className="text-slate-400 text-sm">
+                                    {user.calendarConnected
+                                      ? "Seu bot está pronto para entrar nas próximas reuniões."
+                                      : "Conecte sua agenda para ativar o Assistente de Reuniões."}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {user.calendarConnected ? (
+                                <div className="flex flex-col items-end gap-1">
+                                  {nextMeeting ? (
+                                    <div className="px-4 py-2 bg-slate-900/50 rounded-lg border border-white/10 text-sm text-slate-300">
+                                      <span className="text-xs text-blue-400 block uppercase font-bold mb-0.5">Próxima Reunião</span>
+                                      <strong className="text-white block truncate max-w-[180px]">{nextMeeting.title}</strong>
+                                      <span className="opacity-80">
+                                        {new Date(nextMeeting.start_time).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} • {new Date(nextMeeting.start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="px-4 py-2 bg-slate-900/50 rounded-lg border border-white/10 text-sm text-slate-500 italic">
+                                      Nenhuma reunião agendada
+                                    </div>
+                                  )}
+                                  <button onClick={() => setView('RECALL_CONFIG')} className="text-xs text-blue-400 hover:text-white transition-colors mt-1">Gerenciar Bot & Agenda</button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setView('RECALL_CONFIG')}
+                                  className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 flex items-center gap-2 whitespace-nowrap"
+                                >
+                                  Conectar Agora
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-start gap-3 bg-slate-800/50 p-4 rounded-xl border border-white/5 max-w-md mx-auto mb-6">
+                        <div className="relative flex items-center">
+                          <input
+                            id="consent-checkbox"
+                            type="checkbox"
+                            checked={consentGiven}
+                            onChange={(e) => setConsentGiven(e.target.checked)}
+                            className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-slate-500 bg-slate-900 transition-all checked:border-cyan-500 checked:bg-cyan-500 hover:border-cyan-400"
+                          />
+                          <svg className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-0 peer-checked:opacity-100 text-white transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                        <label htmlFor="consent-checkbox" className="text-sm text-slate-300 cursor-pointer select-none text-left">
+                          Declaro que informei todos os participantes sobre a gravação desta reunião e obtive o consentimento necessário, conforme os <button onClick={() => setView('TERMS')} className="text-cyan-400 hover:underline">Termos de Uso</button>.
+                        </label>
+                      </div>
+
+                      <button
+                        onClick={handleInitiate}
+                        disabled={!consentGiven}
+                        className={`group relative w-full py-10 md:py-12 rounded-[2rem] font-black text-3xl md:text-4xl text-white shadow-2xl transition-all overflow-hidden ${consentGiven ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:shadow-cyan-500/30 hover:scale-[1.02] cursor-pointer' : 'bg-slate-700 opacity-50 cursor-not-allowed'}`}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                        <span className="relative flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 text-center leading-none">
+                          <svg className="w-8 h-8 md:w-10 md:h-10 mb-2 md:mb-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          <span className="flex flex-col md:block">
+                            <span>INICIAR</span>
+                            <span className="md:ml-2">TRANSCRIÇÃO</span>
+                          </span>
+                        </span>
+                      </button>
+                      <p className="mt-8 text-slate-400 text-sm font-semibold text-center leading-relaxed">Clique no botão e selecione a aba do navegador com sua reunião.<br />A transcrição iniciará automaticamente.</p>
+                      <button
+                        onClick={() => setShowHelpModal(true)}
+                        className="mt-6 flex items-center justify-center gap-2 px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-full text-sm font-black mx-auto border border-red-500/20 hover:border-red-500/40 transition-all uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Ajuda
+                      </button>
+                    </>
+                  ) : null}
+                </div>
               </div>
             )}
 
@@ -1930,425 +2020,387 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
-            )}
+            )
+            }
 
-            {(status === SessionStatus.CONNECTING || status === SessionStatus.PERMISSIONS || status === SessionStatus.SAVING) && (
-              <div className="py-24 flex flex-col items-center gap-8 animate-fade-in">
-                <div className="relative">
-                  <div className="w-20 h-20 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-                  <div className="absolute inset-0 w-20 h-20 border-4 border-blue-400/30 rounded-full animate-pulse" />
+            {
+              (status === SessionStatus.CONNECTING || status === SessionStatus.PERMISSIONS || status === SessionStatus.SAVING) && (
+                <div className="py-24 flex flex-col items-center gap-8 animate-fade-in">
+                  <div className="relative">
+                    <div className="w-20 h-20 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="absolute inset-0 w-20 h-20 border-4 border-blue-400/30 rounded-full animate-pulse" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <p className="font-black text-2xl text-white tracking-tight">
+                      {status === SessionStatus.PERMISSIONS && 'Aguardando Permissões'}
+                      {status === SessionStatus.CONNECTING && 'Conectando à IA'}
+                      {status === SessionStatus.SAVING && 'Salvando Reunião...'}
+                    </p>
+                    <p className="text-slate-400 text-sm font-medium">
+                      {status === SessionStatus.PERMISSIONS && 'Aceite as permissões no navegador'}
+                      {status === SessionStatus.CONNECTING && 'Estabelecendo conexão segura...'}
+                      {status === SessionStatus.SAVING && 'Processando e armazenando dados...'}
+                    </p>
+                  </div>
+                  <button onClick={() => { setStatus(SessionStatus.IDLE); window.location.reload(); }} className="px-8 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition-all hover:scale-105">
+                    Cancelar
+                  </button>
                 </div>
-                <div className="text-center space-y-2">
-                  <p className="font-black text-2xl text-white tracking-tight">
-                    {status === SessionStatus.PERMISSIONS && 'Aguardando Permissões'}
-                    {status === SessionStatus.CONNECTING && 'Conectando à IA'}
-                    {status === SessionStatus.SAVING && 'Salvando Reunião...'}
-                  </p>
-                  <p className="text-slate-400 text-sm font-medium">
-                    {status === SessionStatus.PERMISSIONS && 'Aceite as permissões no navegador'}
-                    {status === SessionStatus.CONNECTING && 'Estabelecendo conexão segura...'}
-                    {status === SessionStatus.SAVING && 'Processando e armazenando dados...'}
-                  </p>
-                </div>
-                <button onClick={() => { setStatus(SessionStatus.IDLE); window.location.reload(); }} className="px-8 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition-all hover:scale-105">
-                  Cancelar
-                </button>
-              </div>
-            )}
-          </div>
+              )
+            }
+          </div >
         )}
 
-        {view === 'HISTORY' && (
-          <div className="w-full max-w-6xl py-16 text-left">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 md:mb-16 pb-6 md:pb-8 border-b border-white/10">
-              <div className="w-full">
-                <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight mb-3 break-words">Histórico de Reuniões</h1>
-                <p className="text-slate-400 text-base md:text-lg">Acesse suas transcrições e conversas anteriores</p>
+        {
+          view === 'HISTORY' && (
+            <div className="w-full max-w-6xl py-16 text-left">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 md:mb-16 pb-6 md:pb-8 border-b border-white/10">
+                <div className="w-full">
+                  <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight mb-3 break-words">Histórico de Reuniões</h1>
+                  <p className="text-slate-400 text-base md:text-lg">Acesse suas transcrições e conversas anteriores</p>
+                </div>
+                <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                  <button
+                    onClick={() => user?.id && loadMeetings(user.id)}
+                    className="flex-1 md:flex-none px-6 py-3 glass rounded-xl text-cyan-400 font-bold text-sm hover:bg-cyan-500/10 transition-all hover:scale-105 flex items-center justify-center gap-2 whitespace-nowrap"
+                    title="Recarregar lista de reuniões"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    Atualizar
+                  </button>
+                  <button onClick={() => setView('MAIN')} className="flex-1 md:flex-none px-6 py-3 glass rounded-xl text-white font-bold text-sm hover:bg-white/10 transition-all hover:scale-105 whitespace-nowrap">Voltar</button>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-3 w-full md:w-auto">
-                <button
-                  onClick={() => user?.id && loadMeetings(user.id)}
-                  className="flex-1 md:flex-none px-6 py-3 glass rounded-xl text-cyan-400 font-bold text-sm hover:bg-cyan-500/10 transition-all hover:scale-105 flex items-center justify-center gap-2 whitespace-nowrap"
-                  title="Recarregar lista de reuniões"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                  Atualizar
+
+              {/* Search Bar */}
+              <div className="mb-10 relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar reuniões por título ou resumo..."
+                  className="w-full bg-slate-950/50 border border-white/10 rounded-2xl pl-14 pr-6 py-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition-all text-lg"
+                />
+                <svg className="w-6 h-6 text-slate-500 absolute left-6 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {meetings.filter(m => {
+                  const term = searchTerm.toLowerCase();
+                  const inTitle = m.title.toLowerCase().includes(term);
+                  const inSummary = (m.summary || '').toLowerCase().includes(term);
+                  const inTranscription = Array.isArray(m.transcriptions)
+                    ? m.transcriptions.some(t => (t.text || '').toLowerCase().includes(term))
+                    : JSON.stringify(m.transcriptions || '').toLowerCase().includes(term);
+                  return inTitle || inSummary || inTranscription;
+                }).length === 0 && (
+                    <div className="col-span-full flex flex-col items-center justify-center py-24 gap-4">
+                      <svg className="w-20 h-20 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                      <p className="text-slate-500 font-semibold text-lg">Nenhuma reunião encontrada</p>
+                      <p className="text-slate-600 text-sm">{searchTerm ? 'Tente buscar com outros termos' : 'Suas transcrições aparecerão aqui'}</p>
+                    </div>
+                  )}
+                {meetings.filter(m => {
+                  const term = searchTerm.toLowerCase();
+                  const inTitle = m.title.toLowerCase().includes(term);
+                  const inSummary = (m.summary || '').toLowerCase().includes(term);
+                  const inTranscription = Array.isArray(m.transcriptions)
+                    ? m.transcriptions.some(t => (t.text || '').toLowerCase().includes(term))
+                    : JSON.stringify(m.transcriptions || '').toLowerCase().includes(term);
+                  return inTitle || inSummary || inTranscription;
+                }).map(m => (
+                  <div
+                    key={m.id}
+                    className="group glass p-8 rounded-[2rem] border border-white/10 hover:border-cyan-500/40 transition-all cursor-pointer hover:scale-[1.02] hover:shadow-xl hover:shadow-cyan-500/10"
+                    onClick={() => {
+                      setSelectedMeeting(m);
+                      setChatMessages([]);
+                      setMeetingNotes(m.notes || '');
+                      setTranscriptionExpanded(false);
+                      setEditTitle(m.title); // Initialize edit title
+                      setIsEditingTitle(false);
+                      setView('MEETING_DETAIL');
+                    }}
+                  >
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <p className="text-xs font-bold text-cyan-400 uppercase tracking-wider">{new Date(m.timestamp).toLocaleDateString('pt-BR')}</p>
+
+                      <div className="flex flex-wrap items-center gap-1.5 ml-0 md:ml-2">
+                        {m.video_url ? (
+                          <span className="px-2 py-0.5 bg-green-500 text-white text-[10px] font-black uppercase rounded-sm shadow-sm">Bot</span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-orange-500 text-white text-[10px] font-black uppercase rounded-sm shadow-sm whitespace-nowrap">Tela + Mic</span>
+                        )}
+                        {(() => {
+                          const daysPassed = Math.floor((Date.now() - m.timestamp) / (1000 * 60 * 60 * 24));
+                          const daysLeft = 30 - daysPassed;
+                          if (daysLeft <= 7 && daysLeft > 0) {
+                            return <span className="px-2 py-0.5 bg-red-600 text-white text-[10px] font-black uppercase rounded-sm shadow-sm animate-pulse">Exp em {daysLeft} dias</span>
+                          }
+                          return null;
+                        })()}
+                      </div>
+
+                      {m.access_role !== 'owner' && (
+                        <span className="ml-auto px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase border border-indigo-500/30">
+                          Compartilhado
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-xl font-black text-white mb-3 group-hover:text-cyan-400 transition-colors line-clamp-2">{m.title}</h3>
+                    {m.owner_email && m.access_role !== 'owner' && (
+                      <p className="text-xs text-slate-500 mb-2">De: {m.owner_email}</p>
+                    )}
+                    <p className="text-slate-400 text-sm line-clamp-3 leading-relaxed">{m.summary || "Nenhum resumo disponível"}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        }
+
+        {
+          view === 'MEETING_DETAIL' && selectedMeeting && (
+            <div className="w-full max-w-5xl py-6 md:py-16 text-left animate-fade-in">
+              <div className="mb-8 md:mb-12">
+                <button onClick={() => setView('HISTORY')} className="mb-6 text-sm font-bold text-cyan-400 hover:text-white transition-colors flex items-center gap-2 group">
+                  <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                  Voltar ao Histórico
                 </button>
-                <button onClick={() => setView('MAIN')} className="flex-1 md:flex-none px-6 py-3 glass rounded-xl text-white font-bold text-sm hover:bg-white/10 transition-all hover:scale-105 whitespace-nowrap">Voltar</button>
+                <div className="flex flex-col md:flex-row items-start justify-between gap-4">
+                  <div className="flex-1">
+                    {isEditingTitle ? (
+                      <div className="flex items-center gap-2 mb-4">
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          className="bg-slate-800 text-3xl md:text-4xl font-black text-white px-3 py-1 rounded-lg border border-cyan-500 focus:outline-none w-full max-w-2xl"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleUpdateTitle();
+                            if (e.key === 'Escape') setIsEditingTitle(false);
+                          }}
+                        />
+                        <button onClick={handleUpdateTitle} className="p-2 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg transition-colors">
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        </button>
+                        <button onClick={() => setIsEditingTitle(false)} className="p-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition-colors">
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 mb-2 md:mb-4 group">
+                        <h1 className="text-2xl md:text-5xl font-black text-white tracking-tight leading-tight">{selectedMeeting.title}</h1>
+                        {selectedMeeting.access_role === 'owner' && (
+                          <button
+                            onClick={() => { setEditTitle(selectedMeeting.title); setIsEditingTitle(true); }}
+                            className="opacity-0 group-hover:opacity-100 p-2 text-slate-500 hover:text-cyan-400 transition-all rounded-lg hover:bg-white/5"
+                            title="Renomear Reunião"
+                          >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 text-slate-400">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      <p className="font-semibold text-sm">{new Date(selectedMeeting.timestamp).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })} às {new Date(selectedMeeting.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                    <button
+                      onClick={() => {
+                        if (!selectedMeeting) return;
+                        const hasTranscriptions = Array.isArray(selectedMeeting.transcriptions) && selectedMeeting.transcriptions.length > 0;
+
+                        let content = `TÍTULO: ${selectedMeeting.title}\n`;
+                        content += `DATA: ${new Date(selectedMeeting.timestamp).toLocaleDateString('pt-BR')} ${new Date(selectedMeeting.timestamp).toLocaleTimeString('pt-BR')}\n`;
+                        content += `\n--- RESUMO ---\n${selectedMeeting.summary || "Sem resumo disponível."}\n`;
+                        content += `\n--- TRANSCRIÇÃO ---\n`;
+
+                        if (hasTranscriptions) {
+                          (selectedMeeting.transcriptions as TranscriptionEntry[]).forEach(t => {
+                            content += `[${new Date(t.timestamp).toLocaleTimeString()}] ${t.role === 'model' ? 'AI' : 'Você'}: ${t.text}\n`;
+                          });
+                        } else {
+                          content += "Nenhuma transcrição disponível.";
+                        }
+
+                        content += `\n--- NOTAS ---\n${meetingNotes || ""}\n`;
+
+                        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `meeting_${selectedMeeting.id}.txt`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                      className="flex-1 md:flex-none justify-center px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                      Baixar TXT
+                    </button>
+
+                    {/* VIDEO DOWNLOAD BUTTON (PRO+ / LOMAD+ ONLY) */}
+                    {selectedMeeting.video_url && (['PRO_PLUS', 'LOMAD_PLUS', 'MASTER'].includes(user?.role || 'FREE')) && (
+                      <a
+                        href={selectedMeeting.video_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 md:flex-none justify-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors text-sm font-bold shadow-lg shadow-blue-600/20 flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        Baixar Vídeo
+                      </a>
+                    )}
+
+                    {selectedMeeting.access_role === 'owner' && (
+                      <button
+                        onClick={() => handleDeleteMeeting(selectedMeeting.id)}
+                        className="flex-1 md:flex-none justify-center px-4 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        Excluir
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Search Bar */}
-            <div className="mb-10 relative">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar reuniões por título ou resumo..."
-                className="w-full bg-slate-950/50 border border-white/10 rounded-2xl pl-14 pr-6 py-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition-all text-lg"
-              />
-              <svg className="w-6 h-6 text-slate-500 absolute left-6 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
+              <div className="flex flex-col gap-10">
+                {/* Notes Section */}
+                <div className="glass p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-indigo-950/20 to-transparent">
+                  <div className="flex items-center gap-3 mb-4">
+                    <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    <h3 className="text-xl font-black text-white uppercase tracking-wide">Notas & Comentários</h3>
+                  </div>
+                  <textarea
+                    value={meetingNotes}
+                    onChange={(e) => setMeetingNotes(e.target.value)}
+                    onBlur={() => selectedMeeting.access_role === 'owner' && handleUpdateNotes(selectedMeeting.id, meetingNotes)}
+                    disabled={selectedMeeting.access_role !== 'owner'}
+                    placeholder={selectedMeeting.access_role === 'owner' ? "Adicione suas anotações sobre esta reunião..." : "Anotações (Somente leitura para compartilhamento)"}
+                    className="w-full min-h-[120px] bg-slate-950/50 border border-white/10 rounded-xl px-5 py-4 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-y"
+                  />
+                  <div className="flex items-center justify-between mt-4">
+                    <p className="text-xs text-slate-500 italic">As notas são salvas automaticamente ao sair do campo, ou use o botão ao lado:</p>
+                    <div className="flex items-center gap-3">
+                      {notesSavedSuccess && (
+                        <span className="text-emerald-400 text-sm font-bold animate-fade-in flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          Salvo com sucesso!
+                        </span>
+                      )}
+                      <button
+                        onClick={() => handleUpdateNotes(selectedMeeting.id, meetingNotes)}
+                        disabled={notesSaving}
+                        className="px-6 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/30 rounded-lg font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {notesSaving ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                            Salvar Notas
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {meetings.filter(m => {
-                const term = searchTerm.toLowerCase();
-                const inTitle = m.title.toLowerCase().includes(term);
-                const inSummary = (m.summary || '').toLowerCase().includes(term);
-                const inTranscription = Array.isArray(m.transcriptions)
-                  ? m.transcriptions.some(t => (t.text || '').toLowerCase().includes(term))
-                  : JSON.stringify(m.transcriptions || '').toLowerCase().includes(term);
-                return inTitle || inSummary || inTranscription;
-              }).length === 0 && (
-                  <div className="col-span-full flex flex-col items-center justify-center py-24 gap-4">
-                    <svg className="w-20 h-20 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    <p className="text-slate-500 font-semibold text-lg">Nenhuma reunião encontrada</p>
-                    <p className="text-slate-600 text-sm">{searchTerm ? 'Tente buscar com outros termos' : 'Suas transcrições aparecerão aqui'}</p>
+                {/* Participants Section (PRO+ / LOMAD+ / MASTER ONLY) */}
+                {((user?.role === 'PRO_PLUS' || user?.role === 'LOMAD_PLUS' || user?.role === 'MASTER') && selectedMeeting) && (
+                  <div className="glass p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-indigo-950/10 to-transparent">
+                    <div className="flex items-center gap-3 mb-4">
+                      <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                      <h3 className="text-xl font-black text-white uppercase tracking-wide">Participantes</h3>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {selectedMeeting.participants && selectedMeeting.participants.length > 0 ? (
+                        selectedMeeting.participants.map((p, idx) => (
+                          <div key={p.id || idx} className="px-4 py-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between">
+                            <span className="font-semibold text-slate-200">{p.name || `Participante ${idx + 1}`}</span>
+                            {p.email && <span className="text-sm text-slate-400">{p.email}</span>}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 bg-white/5 rounded-xl border border-white/5 flex flex-col gap-2">
+                          <span className="font-semibold text-slate-200">Participante 1</span>
+                          <span className="font-semibold text-slate-200">Participante 2</span>
+                          <span className="text-sm text-slate-500 italic mt-1">A lista exata de participantes da reunião será apresentada em instantes...</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
-              {meetings.filter(m => {
-                const term = searchTerm.toLowerCase();
-                const inTitle = m.title.toLowerCase().includes(term);
-                const inSummary = (m.summary || '').toLowerCase().includes(term);
-                const inTranscription = Array.isArray(m.transcriptions)
-                  ? m.transcriptions.some(t => (t.text || '').toLowerCase().includes(term))
-                  : JSON.stringify(m.transcriptions || '').toLowerCase().includes(term);
-                return inTitle || inSummary || inTranscription;
-              }).map(m => (
-                <div
-                  key={m.id}
-                  className="group glass p-8 rounded-[2rem] border border-white/10 hover:border-cyan-500/40 transition-all cursor-pointer hover:scale-[1.02] hover:shadow-xl hover:shadow-cyan-500/10"
-                  onClick={() => {
-                    setSelectedMeeting(m);
-                    setChatMessages([]);
-                    setMeetingNotes(m.notes || '');
-                    setTranscriptionExpanded(false);
-                    setEditTitle(m.title); // Initialize edit title
-                    setIsEditingTitle(false);
-                    setView('MEETING_DETAIL');
-                  }}
-                >
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                    <p className="text-xs font-bold text-cyan-400 uppercase tracking-wider">{new Date(m.timestamp).toLocaleDateString('pt-BR')}</p>
 
-                    <div className="flex flex-wrap items-center gap-1.5 ml-0 md:ml-2">
-                      {m.video_url ? (
-                        <span className="px-2 py-0.5 bg-green-500 text-white text-[10px] font-black uppercase rounded-sm shadow-sm">Bot</span>
-                      ) : (
-                        <span className="px-2 py-0.5 bg-orange-500 text-white text-[10px] font-black uppercase rounded-sm shadow-sm whitespace-nowrap">Tela + Mic</span>
-                      )}
-                      {(() => {
-                        const daysPassed = Math.floor((Date.now() - m.timestamp) / (1000 * 60 * 60 * 24));
-                        const daysLeft = 30 - daysPassed;
-                        if (daysLeft <= 7 && daysLeft > 0) {
-                          return <span className="px-2 py-0.5 bg-red-600 text-white text-[10px] font-black uppercase rounded-sm shadow-sm animate-pulse">Exp em {daysLeft} dias</span>
-                        }
-                        return null;
-                      })()}
-                    </div>
-
-                    {m.access_role !== 'owner' && (
-                      <span className="ml-auto px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase border border-indigo-500/30">
-                        Compartilhado
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-xl font-black text-white mb-3 group-hover:text-cyan-400 transition-colors line-clamp-2">{m.title}</h3>
-                  {m.owner_email && m.access_role !== 'owner' && (
-                    <p className="text-xs text-slate-500 mb-2">De: {m.owner_email}</p>
-                  )}
-                  <p className="text-slate-400 text-sm line-clamp-3 leading-relaxed">{m.summary || "Nenhum resumo disponível"}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {view === 'MEETING_DETAIL' && selectedMeeting && (
-          <div className="w-full max-w-5xl py-6 md:py-16 text-left animate-fade-in">
-            <div className="mb-8 md:mb-12">
-              <button onClick={() => setView('HISTORY')} className="mb-6 text-sm font-bold text-cyan-400 hover:text-white transition-colors flex items-center gap-2 group">
-                <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                Voltar ao Histórico
-              </button>
-              <div className="flex flex-col md:flex-row items-start justify-between gap-4">
-                <div className="flex-1">
-                  {isEditingTitle ? (
-                    <div className="flex items-center gap-2 mb-4">
-                      <input
-                        type="text"
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        className="bg-slate-800 text-3xl md:text-4xl font-black text-white px-3 py-1 rounded-lg border border-cyan-500 focus:outline-none w-full max-w-2xl"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleUpdateTitle();
-                          if (e.key === 'Escape') setIsEditingTitle(false);
-                        }}
-                      />
-                      <button onClick={handleUpdateTitle} className="p-2 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg transition-colors">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      </button>
-                      <button onClick={() => setIsEditingTitle(false)} className="p-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition-colors">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 mb-2 md:mb-4 group">
-                      <h1 className="text-2xl md:text-5xl font-black text-white tracking-tight leading-tight">{selectedMeeting.title}</h1>
-                      {selectedMeeting.access_role === 'owner' && (
-                        <button
-                          onClick={() => { setEditTitle(selectedMeeting.title); setIsEditingTitle(true); }}
-                          className="opacity-0 group-hover:opacity-100 p-2 text-slate-500 hover:text-cyan-400 transition-all rounded-lg hover:bg-white/5"
-                          title="Renomear Reunião"
-                        >
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 text-slate-400">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    <p className="font-semibold text-sm">{new Date(selectedMeeting.timestamp).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })} às {new Date(selectedMeeting.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                {/* Transcriptions Section - Collapsible */}
+                <div className="glass p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/5">
                   <button
-                    onClick={() => {
-                      if (!selectedMeeting) return;
-                      const hasTranscriptions = Array.isArray(selectedMeeting.transcriptions) && selectedMeeting.transcriptions.length > 0;
-
-                      let content = `TÍTULO: ${selectedMeeting.title}\n`;
-                      content += `DATA: ${new Date(selectedMeeting.timestamp).toLocaleDateString('pt-BR')} ${new Date(selectedMeeting.timestamp).toLocaleTimeString('pt-BR')}\n`;
-                      content += `\n--- RESUMO ---\n${selectedMeeting.summary || "Sem resumo disponível."}\n`;
-                      content += `\n--- TRANSCRIÇÃO ---\n`;
-
-                      if (hasTranscriptions) {
-                        (selectedMeeting.transcriptions as TranscriptionEntry[]).forEach(t => {
-                          content += `[${new Date(t.timestamp).toLocaleTimeString()}] ${t.role === 'model' ? 'AI' : 'Você'}: ${t.text}\n`;
-                        });
-                      } else {
-                        content += "Nenhuma transcrição disponível.";
-                      }
-
-                      content += `\n--- NOTAS ---\n${meetingNotes || ""}\n`;
-
-                      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-                      const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = `meeting_${selectedMeeting.id}.txt`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
-                    className="flex-1 md:flex-none justify-center px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
+                    onClick={() => setTranscriptionExpanded(!transcriptionExpanded)}
+                    className="w-full flex items-center justify-between mb-6 hover:opacity-80 transition-opacity"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    Baixar TXT
-                  </button>
-
-                  {/* VIDEO DOWNLOAD BUTTON (PRO+ / LOMAD+ ONLY) */}
-                  {selectedMeeting.video_url && (['PRO_PLUS', 'LOMAD_PLUS', 'MASTER'].includes(user?.role || 'FREE')) && (
-                    <a
-                      href={selectedMeeting.video_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 md:flex-none justify-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors text-sm font-bold shadow-lg shadow-blue-600/20 flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                      Baixar Vídeo
-                    </a>
-                  )}
-
-                  {selectedMeeting.access_role === 'owner' && (
-                    <button
-                      onClick={() => handleDeleteMeeting(selectedMeeting.id)}
-                      className="flex-1 md:flex-none justify-center px-4 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl font-bold text-sm transition-all hover:scale-105 flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      Excluir
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-10">
-              {/* Notes Section */}
-              <div className="glass p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-indigo-950/20 to-transparent">
-                <div className="flex items-center gap-3 mb-4">
-                  <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                  <h3 className="text-xl font-black text-white uppercase tracking-wide">Notas & Comentários</h3>
-                </div>
-                <textarea
-                  value={meetingNotes}
-                  onChange={(e) => setMeetingNotes(e.target.value)}
-                  onBlur={() => selectedMeeting.access_role === 'owner' && handleUpdateNotes(selectedMeeting.id, meetingNotes)}
-                  disabled={selectedMeeting.access_role !== 'owner'}
-                  placeholder={selectedMeeting.access_role === 'owner' ? "Adicione suas anotações sobre esta reunião..." : "Anotações (Somente leitura para compartilhamento)"}
-                  className="w-full min-h-[120px] bg-slate-950/50 border border-white/10 rounded-xl px-5 py-4 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-y"
-                />
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-xs text-slate-500 italic">As notas são salvas automaticamente ao sair do campo, ou use o botão ao lado:</p>
-                  <div className="flex items-center gap-3">
-                    {notesSavedSuccess && (
-                      <span className="text-emerald-400 text-sm font-bold animate-fade-in flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        Salvo com sucesso!
-                      </span>
-                    )}
-                    <button
-                      onClick={() => handleUpdateNotes(selectedMeeting.id, meetingNotes)}
-                      disabled={notesSaving}
-                      className="px-6 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/30 rounded-lg font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {notesSaving ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Salvando...
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
-                          Salvar Notas
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Participants Section (PRO+ / LOMAD+ / MASTER ONLY) */}
-              {((user?.role === 'PRO_PLUS' || user?.role === 'LOMAD_PLUS' || user?.role === 'MASTER') && selectedMeeting) && (
-                <div className="glass p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-indigo-950/10 to-transparent">
-                  <div className="flex items-center gap-3 mb-4">
-                    <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    <h3 className="text-xl font-black text-white uppercase tracking-widest">Transcrição Completa</h3>
+                    <svg className={`w-6 h-6 text-white transition-transform ${transcriptionExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
-                    <h3 className="text-xl font-black text-white uppercase tracking-wide">Participantes</h3>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {selectedMeeting.participants && selectedMeeting.participants.length > 0 ? (
-                      selectedMeeting.participants.map((p, idx) => (
-                        <div key={p.id || idx} className="px-4 py-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between">
-                          <span className="font-semibold text-slate-200">{p.name || `Participante ${idx + 1}`}</span>
-                          {p.email && <span className="text-sm text-slate-400">{p.email}</span>}
+                  </button>
+                  <div className={`flex flex-col gap-4 ${transcriptionExpanded ? '' : 'max-h-[500px]'} overflow-y-auto`}>
+                    {Array.isArray(selectedMeeting.transcriptions) ? (
+                      selectedMeeting.transcriptions.map((t, idx) => (
+                        <div key={t.id || idx} className={`p-4 rounded-xl border ${t.role === 'model' ? 'bg-blue-900/10 border-cyan-500/10 ml-8' : 'bg-white/5 border-white/5 mr-8'}`}>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${t.role === 'model' ? 'text-cyan-400' : 'text-slate-400'}`}>
+                              {t.role === 'model' ? 'AI Assistant' : 'Você'}
+                            </span>
+                            <span className="text-[10px] text-slate-600">{new Date(t.timestamp).toLocaleTimeString()}</span>
+                          </div>
+                          <p className="text-slate-200">{t.text}</p>
                         </div>
                       ))
                     ) : (
-                      <div className="px-4 py-3 bg-white/5 rounded-xl border border-white/5 flex flex-col gap-2">
-                        <span className="font-semibold text-slate-200">Participante 1</span>
-                        <span className="font-semibold text-slate-200">Participante 2</span>
-                        <span className="text-sm text-slate-500 italic mt-1">A lista exata de participantes da reunião será apresentada em instantes...</span>
+                      // Fallback for simple text format (if legacy data exists)
+                      <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+                        <p className="text-slate-200 whitespace-pre-wrap">{JSON.stringify(selectedMeeting.transcriptions)}</p>
                       </div>
                     )}
                   </div>
                 </div>
-              )}
 
-              {/* Transcriptions Section - Collapsible */}
-              <div className="glass p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/5">
-                <button
-                  onClick={() => setTranscriptionExpanded(!transcriptionExpanded)}
-                  className="w-full flex items-center justify-between mb-6 hover:opacity-80 transition-opacity"
-                >
-                  <h3 className="text-xl font-black text-white uppercase tracking-widest">Transcrição Completa</h3>
-                  <svg className={`w-6 h-6 text-white transition-transform ${transcriptionExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div className={`flex flex-col gap-4 ${transcriptionExpanded ? '' : 'max-h-[500px]'} overflow-y-auto`}>
-                  {Array.isArray(selectedMeeting.transcriptions) ? (
-                    selectedMeeting.transcriptions.map((t, idx) => (
-                      <div key={t.id || idx} className={`p-4 rounded-xl border ${t.role === 'model' ? 'bg-blue-900/10 border-cyan-500/10 ml-8' : 'bg-white/5 border-white/5 mr-8'}`}>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className={`text-[10px] font-black uppercase tracking-widest ${t.role === 'model' ? 'text-cyan-400' : 'text-slate-400'}`}>
-                            {t.role === 'model' ? 'AI Assistant' : 'Você'}
-                          </span>
-                          <span className="text-[10px] text-slate-600">{new Date(t.timestamp).toLocaleTimeString()}</span>
-                        </div>
-                        <p className="text-slate-200">{t.text}</p>
-                      </div>
-                    ))
-                  ) : (
-                    // Fallback for simple text format (if legacy data exists)
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-                      <p className="text-slate-200 whitespace-pre-wrap">{JSON.stringify(selectedMeeting.transcriptions)}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+                {/* AI Chat Section */}
+                <div className="glass p-4 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-indigo-500/40 bg-indigo-950/40 relative before:absolute before:inset-0 before:-z-10 before:rounded-[2rem] md:before:rounded-[2.5rem] before:shadow-[0_0_40px_rgba(99,102,241,0.15)] overflow-hidden">
+                  <div className="flex items-center gap-3 mb-4 md:mb-6">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black italic shadow-[0_0_15px_rgba(99,102,241,0.4)]">AI</div>
+                    <h3 className="text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-200 uppercase tracking-widest drop-shadow-sm">Chat Inteligente</h3>
+                  </div>
 
-              {/* AI Chat Section */}
-              <div className="glass p-4 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-indigo-500/40 bg-indigo-950/40 relative before:absolute before:inset-0 before:-z-10 before:rounded-[2rem] md:before:rounded-[2.5rem] before:shadow-[0_0_40px_rgba(99,102,241,0.15)] overflow-hidden">
-                <div className="flex items-center gap-3 mb-4 md:mb-6">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black italic shadow-[0_0_15px_rgba(99,102,241,0.4)]">AI</div>
-                  <h3 className="text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-200 uppercase tracking-widest drop-shadow-sm">Chat Inteligente</h3>
-                </div>
-
-                <div className="bg-slate-950/50 rounded-2xl p-4 md:p-6 min-h-[350px] max-h-[500px] overflow-y-auto mb-4 md:mb-6 flex flex-col gap-4 border border-white/5 relative">
-                  {selectedMeeting.pinned_response && (
-                    <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 relative group">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 text-amber-500">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
-                          <span className="text-xs font-bold uppercase tracking-wider">Resposta Fixada</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => navigator.clipboard.writeText(selectedMeeting.pinned_response || "")}
-                            className="text-amber-500/50 hover:text-amber-500 transition-colors"
-                            title="Copiar resposta fixada"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                          </button>
-                          <button
-                            onClick={async () => {
-                              try {
-                                await fetch(`/api/meetings/${selectedMeeting.id}/pin`, {
-                                  method: 'PATCH',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ pinnedResponse: null })
-                                });
-                                // Update both selected and list state
-                                const updated = { ...selectedMeeting, pinned_response: undefined };
-                                setSelectedMeeting(updated);
-                                setMeetings(prev => prev.map(m => m.id === updated.id ? updated : m));
-                              } catch (e) { console.error("Erro ao desafixar:", e); }
-                            }}
-                            className="text-amber-500/50 hover:text-amber-500 transition-colors"
-                            title="Desafixar"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-sm text-slate-200 whitespace-pre-wrap">{selectedMeeting.pinned_response}</p>
-                    </div>
-                  )}
-
-                  {chatMessages.length === 0 && !selectedMeeting.pinned_response && (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-4">
-                      <p className="font-medium">Pergunte algo sobre a reunião...</p>
-                    </div>
-                  )}
-                  {chatMessages.map((msg, idx) => (
-                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`p-4 rounded-2xl max-w-[80%] group relative ${msg.role === 'user' ? 'bg-cyan-500 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none'}`}>
-                        <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
-                        {msg.role === 'model' && (
-                          <div className="absolute -bottom-8 left-0 hidden group-hover:flex gap-2">
+                  <div className="bg-slate-950/50 rounded-2xl p-4 md:p-6 min-h-[350px] max-h-[500px] overflow-y-auto mb-4 md:mb-6 flex flex-col gap-4 border border-white/5 relative">
+                    {selectedMeeting.pinned_response && (
+                      <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 relative group">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2 text-amber-500">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
+                            <span className="text-xs font-bold uppercase tracking-wider">Resposta Fixada</span>
+                          </div>
+                          <div className="flex items-center gap-2">
                             <button
-                              onClick={() => navigator.clipboard.writeText(msg.text)}
-                              className="px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all border border-white/10 hover:border-white/30"
-                              title="Copiar texto"
+                              onClick={() => navigator.clipboard.writeText(selectedMeeting.pinned_response || "")}
+                              className="text-amber-500/50 hover:text-amber-500 transition-colors"
+                              title="Copiar resposta fixada"
                             >
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 01-2-2V5" /></svg>
-                              Copiar
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                             </button>
                             <button
                               onClick={async () => {
@@ -2356,545 +2408,592 @@ const App: React.FC = () => {
                                   await fetch(`/api/meetings/${selectedMeeting.id}/pin`, {
                                     method: 'PATCH',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ pinnedResponse: msg.text })
+                                    body: JSON.stringify({ pinnedResponse: null })
                                   });
                                   // Update both selected and list state
-                                  const updated = { ...selectedMeeting, pinned_response: msg.text };
+                                  const updated = { ...selectedMeeting, pinned_response: undefined };
                                   setSelectedMeeting(updated);
                                   setMeetings(prev => prev.map(m => m.id === updated.id ? updated : m));
-                                } catch (e) {
-                                  console.error("Erro ao fixar:", e);
-                                }
+                                } catch (e) { console.error("Erro ao desafixar:", e); }
                               }}
-                              className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all border border-amber-500/20 hover:border-amber-500/50"
-                              title="Fixar esta resposta"
+                              className="text-amber-500/50 hover:text-amber-500 transition-colors"
+                              title="Desafixar"
                             >
-                              <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
-                              </svg>
-                              Fixar
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                           </div>
-                        )}
+                        </div>
+                        <p className="text-sm text-slate-200 whitespace-pre-wrap">{selectedMeeting.pinned_response}</p>
                       </div>
-                    </div>
-                  ))}
-                  {chatLoading && (
-                    <div className="flex justify-start">
-                      <div className="p-4 rounded-2xl bg-slate-800 rounded-bl-none flex gap-2 items-center">
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-100" />
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-200" />
+                    )}
+
+                    {chatMessages.length === 0 && !selectedMeeting.pinned_response && (
+                      <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-4">
+                        <p className="font-medium">Pergunte algo sobre a reunião...</p>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Persistent Suggestions Footer */}
-              <div className="mb-6 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-indigo-700/50 scrollbar-track-transparent">
-                <div className="flex gap-2 min-w-max px-1">
-                  <button onClick={() => handleChatSubmit("Gere um resumo detalhado")} className="px-3 py-1.5 rounded-lg bg-fuchsia-500/10 hover:bg-fuchsia-500/30 text-fuchsia-300 hover:text-white border border-fuchsia-500/20 hover:border-fuchsia-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(217,70,239,0.05)]">Resumo Detalhado</button>
-                  <button onClick={() => handleChatSubmit("Resumo em tópicos")} className="px-3 py-1.5 rounded-lg bg-fuchsia-500/10 hover:bg-fuchsia-500/30 text-fuchsia-300 hover:text-white border border-fuchsia-500/20 hover:border-fuchsia-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(217,70,239,0.05)]">Resumo em Tópicos</button>
-                  <button onClick={() => handleChatSubmit("Principal assunto resumido")} className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/20 hover:border-indigo-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(99,102,241,0.05)]">Principal Assunto</button>
-                  <button onClick={() => handleChatSubmit("Resumo formal e gentil")} className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/20 hover:border-indigo-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(99,102,241,0.05)]">Formal & Gentil</button>
-                  <button onClick={() => handleChatSubmit("Resumo formal e direto")} className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/20 hover:border-indigo-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(99,102,241,0.05)]">Formal & Direto</button>
-                  <button onClick={() => handleChatSubmit("Crie um email de follow-up para os participantes")} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/30 text-emerald-300 hover:text-white border border-emerald-500/20 hover:border-emerald-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.05)]">Email Follow-up</button>
-                  <button onClick={() => handleChatSubmit("Liste as tarefas e responsáveis")} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/30 text-emerald-300 hover:text-white border border-emerald-500/20 hover:border-emerald-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.05)]">Tarefas</button>
-                </div>
-              </div>
-
-              <div className="flex gap-2 md:gap-4">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
-                  placeholder="Digite sua pergunta..."
-                  className="flex-1 bg-slate-950/50 border border-white/10 rounded-xl px-4 md:px-5 py-3 md:py-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all text-sm md:text-base"
-                />
-                <button
-                  onClick={() => handleChatSubmit()}
-                  disabled={chatLoading}
-                  className="px-4 md:px-6 bg-cyan-500 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {view === 'PROFILE' && (
-          authLoading ? (
-            <div className="w-full h-[60vh] flex flex-col items-center justify-center animate-fade-in">
-              <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-slate-400 font-bold">Carregando perfil...</p>
-            </div>
-          ) : user ? (
-            <div className="w-full max-w-4xl py-16 animate-fade-in">
-              <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-8">Meu Perfil</h1>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                <div className="glass p-8 rounded-[2rem] border border-white/10">
-                  <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider">Dados Pessoais</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase">Nome</label>
-                      <p className="text-lg text-white font-medium">{user.name}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase">Email</label>
-                      <p className="text-lg text-white font-medium">{user.email}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase">Plano Atual</label>
-                      <div className={`mt-2 inline-flex px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider ${['PRO', 'PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black' : 'bg-slate-700 text-white'}`}>
-                        {user.role.replace('_', ' ')}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {['PRO', 'PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) ? (
-                  <div className="space-y-6">
-                    {/* Active Subscription Card */}
-                    <div className="glass p-8 rounded-[2rem] border border-yellow-500/20 bg-yellow-500/5">
-                      <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider text-yellow-500">Assinatura Ativa</h3>
-                      <div className="flex flex-col gap-4">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                          <div>
-                            <p className="text-white font-bold text-lg">{user.role.replace('_', ' ')}</p>
-                            <p className="text-slate-400 text-sm">Renova em {new Date(user.subscriptionEnd || Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
-                          </div>
-                          {/* Usage Bar for Minutes based plans */}
-                          {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
-                            <div className="text-left md:text-right bg-black/20 p-3 rounded-xl border border-white/5 w-full md:w-auto">
-                              <p className="text-xs font-bold text-slate-500 uppercase">Uso de Gravação</p>
-                              <p className="text-xl font-black text-white flex items-baseline gap-1 md:justify-end">
-                                {Math.floor((user.usageMinutes || 0) / 60)}h {(user.usageMinutes || 0) % 60}m
-                                <span className="text-sm text-slate-500 font-medium whitespace-nowrap">
-                                  {' / '}
-                                  {user.role === 'LOMAD_PLUS'
-                                    ? 'ILIMITADO'
-                                    : `${Math.floor((user.planLimitMinutes || 600) / 60)}h`}
-                                </span>
-                              </p>
-                              {user.extraMinutes && user.extraMinutes > 0 ? (
-                                <p className="text-xs font-bold text-green-400 mt-1 flex items-center gap-1 md:justify-end">
-                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                  + {Math.floor(user.extraMinutes / 60)}h{user.extraMinutes % 60 > 0 ? ` ${user.extraMinutes % 60}m` : ''} Extras Disponíveis
-                                </p>
-                              ) : null}
+                    )}
+                    {chatMessages.map((msg, idx) => (
+                      <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`p-4 rounded-2xl max-w-[80%] group relative ${msg.role === 'user' ? 'bg-cyan-500 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none'}`}>
+                          <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                          {msg.role === 'model' && (
+                            <div className="absolute -bottom-8 left-0 hidden group-hover:flex gap-2">
+                              <button
+                                onClick={() => navigator.clipboard.writeText(msg.text)}
+                                className="px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all border border-white/10 hover:border-white/30"
+                                title="Copiar texto"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 01-2-2V5" /></svg>
+                                Copiar
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await fetch(`/api/meetings/${selectedMeeting.id}/pin`, {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ pinnedResponse: msg.text })
+                                    });
+                                    // Update both selected and list state
+                                    const updated = { ...selectedMeeting, pinned_response: msg.text };
+                                    setSelectedMeeting(updated);
+                                    setMeetings(prev => prev.map(m => m.id === updated.id ? updated : m));
+                                  } catch (e) {
+                                    console.error("Erro ao fixar:", e);
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all border border-amber-500/20 hover:border-amber-500/50"
+                                title="Fixar esta resposta"
+                              >
+                                <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                  <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
+                                </svg>
+                                Fixar
+                              </button>
                             </div>
                           )}
                         </div>
-
-                        {user.cardLast4 && (
-                          <div className="flex items-center gap-3 p-4 bg-black/20 rounded-xl border border-white/5 mt-2">
-                            <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                            <div>
-                              <p className="text-sm text-white font-bold">{user.cardBrand} •••• {user.cardLast4}</p>
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="flex gap-4 mt-2">
-                          <button onClick={() => setPaymentModalOpen(true)} className="text-xs font-bold text-cyan-400 hover:text-white transition-colors uppercase">Alterar Plano</button>
-                          {user.subscriptionStatus !== 'CANCELED' && (
-                            <button onClick={() => setCancelSubscriptionModalOpen(true)} className="text-xs font-bold text-red-400 hover:text-white transition-colors uppercase">Cancelar</button>
-                          )}
-                        </div>
                       </div>
-                    </div>
-
-                    {/* AI & Automation Card for PLUS users */}
-                    {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
-                      <div className="glass p-4 md:p-8 rounded-[2rem] border border-blue-500/20 bg-blue-500/5 relative overflow-hidden transition-all hover:border-blue-500/40">
-                        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                          <svg className="w-40 h-40 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                        </div>
-                        <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                          Integração & Inteligência
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-                          <div className="bg-slate-950/50 p-4 rounded-xl border border-white/10 flex flex-col justify-center">
-                            <label className="text-xs font-bold text-slate-500 uppercase mb-2 block flex items-center justify-between">
-                              Nome do Bot
-                              {!editBotNameMode && (
-                                <button onClick={() => { setEditBotNameMode(true); setNewBotNameProf(user.botName?.replace('.LOMAD.IA', '') || ''); }} className="text-cyan-400 hover:text-cyan-300 transition-colors p-1" title="Editar Nome">
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                                </button>
-                              )}
-                            </label>
-                            {editBotNameMode ? (
-                              <div className="flex flex-col gap-2 mt-2">
-                                <input
-                                  type="text"
-                                  value={newBotNameProf}
-                                  onChange={(e) => setNewBotNameProf(e.target.value)}
-                                  maxLength={20}
-                                  className="w-full min-w-[150px] bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-sm text-white transition-all shadow-inner placeholder:text-slate-500"
-                                  placeholder="Digite novo nome..."
-                                  autoFocus
-                                  onKeyDown={async (e) => {
-                                    if (e.key === 'Escape') setEditBotNameMode(false);
-                                    if (e.key === 'Enter') {
-                                      try {
-                                        const res = await fetch('/api/recall/config', {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ userId: user.id, botName: newBotNameProf })
-                                        });
-                                        if (res.ok) {
-                                          const data = await res.json();
-                                          setUser(prev => prev ? { ...prev, botName: data.botName } : null);
-                                          setEditBotNameMode(false);
-                                        }
-                                      } catch (e) {
-                                        console.error("Erro ao salvar bot nome", e);
-                                      }
-                                    }
-                                  }}
-                                />
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={async () => {
-                                      try {
-                                        const res = await fetch('/api/recall/config', {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ userId: user.id, botName: newBotNameProf })
-                                        });
-                                        if (res.ok) {
-                                          const data = await res.json();
-                                          setUser(prev => prev ? { ...prev, botName: data.botName } : null);
-                                          setEditBotNameMode(false);
-                                        }
-                                      } catch (e) {
-                                        console.error("Erro ao salvar bot nome", e);
-                                      }
-                                    }}
-                                    className="flex-1 md:flex-none bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-cyan-900/20 flex items-center justify-center whitespace-nowrap"
-                                  >
-                                    Salvar
-                                  </button>
-                                  <button onClick={() => setEditBotNameMode(false)} className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-3 py-2.5 rounded-xl transition-colors border border-slate-700 flex items-center justify-center" aria-label="Cancelar">
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="text-white font-bold text-lg break-all">{user.botName || 'Não configurado'}</div>
-                            )}
-                          </div>
-                          <div className="bg-slate-950/50 p-4 rounded-xl border border-white/10">
-                            <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Status da Agenda</label>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded-full ${user.calendarConnected ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-slate-600'}`}></div>
-                              <span className="text-white font-bold">{user.calendarConnected ? 'Conectado' : 'Desconectado'}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="mt-8 bg-gradient-to-br from-blue-900/40 to-slate-900/40 p-4 md:p-5 rounded-2xl border border-blue-500/20 relative z-10 shadow-lg">
-                          <label className="text-xs font-black text-blue-400 uppercase mb-3 flex items-center justify-between tracking-wider">
-                            <div className="flex items-center gap-2">
-                              <div className="p-1 bg-blue-500/20 rounded text-blue-400"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
-                              Bot Instantâneo
-                            </div>
-                            {(() => {
-                              const usage = user.usageMinutes || 0;
-                              const limit = (user.planLimitMinutes || 600) + (user.extraMinutes || 0);
-                              if (user.role !== 'LOMAD_PLUS' && usage >= limit) {
-                                return <span className="text-red-400 text-[10px] bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">LIMITE EXCEDIDO</span>;
-                              }
-                              return null;
-                            })()}
-                          </label>
-                          <div className="flex gap-2 relative">
-                            <input
-                              type="text"
-                              placeholder="Cole o link da reunião aqui..."
-                              value={quickMeetingUrl}
-                              onChange={(e) => setQuickMeetingUrl(e.target.value)}
-                              disabled={user.role !== 'LOMAD_PLUS' && (user.usageMinutes || 0) >= ((user.planLimitMinutes || 600) + (user.extraMinutes || 0))}
-                              className="flex-1 min-w-0 bg-slate-950 border border-white/10 rounded-xl px-3 md:px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 shadow-inner placeholder:text-slate-600 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
-                            <button
-                              onClick={handleQuickBotJoin}
-                              disabled={joiningBot || !quickMeetingUrl || (user.role !== 'LOMAD_PLUS' && (user.usageMinutes || 0) >= ((user.planLimitMinutes || 600) + (user.extraMinutes || 0)))}
-                              className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                            >
-                              {joiningBot ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>}
-                            </button>
-
-                            {user.role !== 'LOMAD_PLUS' && (user.usageMinutes || 0) >= ((user.planLimitMinutes || 600) + (user.extraMinutes || 0)) && (
-                              <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Limite de horas excedido."></div>
-                            )}
-                          </div>
+                    ))}
+                    {chatLoading && (
+                      <div className="flex justify-start">
+                        <div className="p-4 rounded-2xl bg-slate-800 rounded-bl-none flex gap-2 items-center">
+                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
+                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-100" />
+                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-200" />
                         </div>
                       </div>
                     )}
                   </div>
-                ) : (
-                  <div className="space-y-6">
-                    {/* --- UPGRADE BANNER FOR FREE USERS --- */}
-                    <div className="glass p-8 rounded-[2rem] border border-cyan-500/20 bg-cyan-500/5 relative overflow-hidden group hover:border-cyan-500/40 transition-all cursor-pointer" onClick={() => setPaymentModalOpen(true)}>
-                      <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <svg className="w-32 h-32 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                      </div>
-                      <h3 className="text-xl font-bold text-white mb-4 relative z-10 text-cyan-400">Upgrade para PRO</h3>
-                      <p className="text-slate-300 text-sm mb-6 relative z-10 max-w-sm">Desbloqueie transcrições ilimitadas e recursos de IA avançados.</p>
-                      <button className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-white rounded-xl font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all relative z-10">Ver Planos</button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-                {['PRO_PLUS', 'LOMAD_PLUS', 'MASTER'].includes(user?.role || '') && (
-                  <div className="p-8 rounded-[2.5rem] bg-slate-800/50 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all">
-                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                      <svg className="w-24 h-24 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-2 relative z-10">Agenda Inteligente</h3>
-                    <p className="text-slate-400 text-sm mb-6 relative z-10">Conecte suas agendas para o bot entrar automaticamente.</p>
-
-                    <div className="space-y-4 relative z-10">
-                      {/* Google Calendar */}
-                      <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-white/5">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-white rounded-lg"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" className="w-6 h-6" alt="Google" /></div>
-                          <div>
-                            <p className="text-white font-bold text-sm">Google Calendar</p>
-                            <p className="text-xs text-slate-500">{user.googleCalendarConnected ? 'Sincronizado' : 'Não conectado'}</p>
-                          </div>
-                        </div>
-                        {user.googleCalendarConnected ? (
-                          <button
-                            onClick={() => handleCalendarDisconnect('google_calendar')}
-                            className="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition-colors"
-                          >
-                            Desconectar
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleCalendarConnect('google_calendar')}
-                            className="px-3 py-1.5 bg-white text-slate-900 text-xs font-bold rounded-lg uppercase hover:bg-slate-200 transition-colors"
-                          >
-                            Conectar
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Outlook Calendar */}
-                      <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-white/5">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-[#0078D4] rounded-lg"><svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M1 3h9v8H1V3zm0 10h9v8H1v-8zm10-10h12v8H11V3zm0 10h12v8H11v-8z" /></svg></div>
-                          <div>
-                            <p className="text-white font-bold text-sm">Outlook Calendar</p>
-                            <p className="text-xs text-slate-500">{user.outlookCalendarConnected ? 'Sincronizado' : 'Não conectado'}</p>
-                          </div>
-                        </div>
-                        {user.outlookCalendarConnected ? (
-                          <button
-                            onClick={() => handleCalendarDisconnect('outlook_calendar')}
-                            className="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition-colors"
-                          >
-                            Desconectar
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleCalendarConnect('outlook_calendar')}
-                            className="px-3 py-1.5 bg-white text-slate-900 text-xs font-bold rounded-lg uppercase hover:bg-slate-200 transition-colors"
-                          >
-                            Conectar
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* --- UPCOMING MEETINGS --- */}
-                {['PRO_PLUS', 'LOMAD_PLUS', 'MASTER'].includes(user?.role || '') && (user.googleCalendarConnected || user.outlookCalendarConnected || user.calendarConnected) && (
-                  <div className="mt-6">
-                    <h3 className="text-xl font-bold text-white mb-4">Próximas Reuniões</h3>
-                    <UpcomingMeetings userId={user.id} onJoinMeeting={(url: string) => {
-                      setQuickMeetingUrl(url);
-                      if (window.confirm(`Deseja enviar o bot para esta reunião agora?\n${url}`)) {
-                        handleQuickBotJoin();
-                      }
-                    }} />
-                  </div>
-                )}
-
-                {/* --- USAGE STATS CARD --- */}
-                <div className="p-8 rounded-[2.5rem] bg-slate-800/50 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all">
-                  <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <svg className="w-24 h-24 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2 relative z-10">Uso Mensal</h3>
-                  <p className="text-slate-400 text-sm mb-6 relative z-10">Gravações realizadas este mês.</p>
-
-                  <div className="flex items-end gap-2 mb-2 relative z-10">
-                    <span className="text-4xl font-black text-white">{user.meetings_recorded || 0}</span>
-                    <span className="text-slate-500 font-bold mb-1">/ {user.first_name === 'Admin' || user.role === 'PRO' || user.role === 'MASTER' ? 'Ilimitado' : '5'}</span>
-                  </div>
-                  <div className="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden relative z-10">
-                    <div
-                      className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-1000"
-                      style={{ width: `${Math.min(((user.meetings_recorded || 0) / (user.role === 'PRO' || user.role === 'MASTER' ? 100 : 5)) * 100, 100)}%` }}
-                    ></div>
+                {/* Persistent Suggestions Footer */}
+                <div className="mb-6 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-indigo-700/50 scrollbar-track-transparent">
+                  <div className="flex gap-2 min-w-max px-1">
+                    <button onClick={() => handleChatSubmit("Gere um resumo detalhado")} className="px-3 py-1.5 rounded-lg bg-fuchsia-500/10 hover:bg-fuchsia-500/30 text-fuchsia-300 hover:text-white border border-fuchsia-500/20 hover:border-fuchsia-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(217,70,239,0.05)]">Resumo Detalhado</button>
+                    <button onClick={() => handleChatSubmit("Resumo em tópicos")} className="px-3 py-1.5 rounded-lg bg-fuchsia-500/10 hover:bg-fuchsia-500/30 text-fuchsia-300 hover:text-white border border-fuchsia-500/20 hover:border-fuchsia-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(217,70,239,0.05)]">Resumo em Tópicos</button>
+                    <button onClick={() => handleChatSubmit("Principal assunto resumido")} className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/20 hover:border-indigo-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(99,102,241,0.05)]">Principal Assunto</button>
+                    <button onClick={() => handleChatSubmit("Resumo formal e gentil")} className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/20 hover:border-indigo-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(99,102,241,0.05)]">Formal & Gentil</button>
+                    <button onClick={() => handleChatSubmit("Resumo formal e direto")} className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/20 hover:border-indigo-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(99,102,241,0.05)]">Formal & Direto</button>
+                    <button onClick={() => handleChatSubmit("Crie um email de follow-up para os participantes")} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/30 text-emerald-300 hover:text-white border border-emerald-500/20 hover:border-emerald-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.05)]">Email Follow-up</button>
+                    <button onClick={() => handleChatSubmit("Liste as tarefas e responsáveis")} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/30 text-emerald-300 hover:text-white border border-emerald-500/20 hover:border-emerald-500/50 text-xs font-bold uppercase transition-all whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.05)]">Tarefas</button>
                   </div>
                 </div>
-              </div>
 
-              {/* --- PERSONAL INFO FORM --- */}
-              <div className="space-y-6 mb-12">
-                <h3 className="text-2xl font-bold text-white mb-6">Dados Pessoais</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Telefone / WhatsApp</label>
-                    <input
-                      type="text"
-                      value={editForm.phone}
-                      onChange={(e) => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })}
-                      className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
-                      placeholder="(00) 00000-0000"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">CEP</label>
-                    <input
-                      type="text"
-                      value={editForm.postalCode}
-                      onChange={(e) => {
-                        const val = formatCEP(e.target.value);
-                        setEditForm({ ...editForm, postalCode: val });
-                        if (val.length === 9) fetchAddressFromCEP(val);
-                      }}
-                      className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
-                      placeholder="00000-000"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Número</label>
-                    <input
-                      type="text"
-                      value={editForm.addressNumber}
-                      onChange={(e) => setEditForm({ ...editForm, addressNumber: e.target.value })}
-                      className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
-                      placeholder="123"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Complemento</label>
-                    <input
-                      type="text"
-                      value={editForm.addressComplement || ''}
-                      onChange={(e) => setEditForm({ ...editForm, addressComplement: e.target.value })}
-                      className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
-                      placeholder="Apto 101, Bloco B"
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end">
+                <div className="flex gap-2 md:gap-4">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
+                    placeholder="Digite sua pergunta..."
+                    className="flex-1 bg-slate-950/50 border border-white/10 rounded-xl px-4 md:px-5 py-3 md:py-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition-all text-sm md:text-base"
+                  />
                   <button
-                    onClick={handleSaveProfile}
-                    disabled={saveLoading}
-                    className="px-8 py-3 bg-white text-slate-900 font-bold rounded-xl uppercase tracking-wide hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    onClick={() => handleChatSubmit()}
+                    disabled={chatLoading}
+                    className="px-4 md:px-6 bg-cyan-500 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                   >
-                    {saveLoading && <svg className="animate-spin h-5 w-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                    Salvar Alterações
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
                 </div>
               </div>
-
-              {/* --- PLAN UPGRADE SECTION (Only for FREE users) --- */}
-              {user.role === 'FREE' && (
-                <div className="border-t border-white/10 pt-12">
-                  <div className="text-center mb-12">
-                    <h3 className="text-3xl font-black text-white mb-4">Faça Upgrade para PRO</h3>
-                    <p className="text-slate-400 max-w-xl mx-auto">Desbloqueie transcrições ilimitadas e recursos avançados para levar suas reuniões para o próximo nível.</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                    {/* Monthly Plan */}
-                    <div className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlan === 'monthly' ? 'bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border-cyan-500 shadow-2xl shadow-cyan-500/10 scale-[1.02]' : 'glass border-white/10 hover:border-white/20'}`} onClick={() => setSelectedPlan('monthly')}>
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xl font-bold text-white">Mensal</h3>
-                        {selectedPlan === 'monthly' && <div className="w-4 h-4 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]"></div>}
-                      </div>
-                      <div className="flex items-baseline gap-1 mb-6">
-                        <span className="text-sm text-slate-400">R$</span>
-                        <span className="text-5xl font-black text-white">{(publicPricing.monthly?.price || 27.90).toFixed(2).replace('.', ',')}</span>
-                        <span className="text-slate-400">/mês</span>
-                      </div>
-                      <ul className="space-y-3 mb-8">
-                        <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Transcrições Ilimitadas</li>
-                        <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Chat com IA Avançado</li>
-                      </ul>
-                    </div>
-
-                    {/* Yearly Plan */}
-                    <div className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlan === 'yearly' ? 'bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border-indigo-500 shadow-2xl shadow-indigo-500/10 scale-[1.02]' : 'glass border-white/10 hover:border-white/20'}`} onClick={() => setSelectedPlan('yearly')}>
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xl font-bold text-white">Anual</h3>
-                        <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-bold uppercase">Economize 15%</span>
-                        {selectedPlan === 'yearly' && <div className="w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]"></div>}
-                      </div>
-                      <div className="flex items-baseline gap-1 mb-6">
-                        <span className="text-sm text-slate-400">R$</span>
-                        <span className="text-5xl font-black text-white">{(publicPricing.yearly?.price || 279.00).toFixed(2).replace('.', ',')}</span>
-                        <span className="text-slate-400">/ano</span>
-                      </div>
-                      <ul className="space-y-3 mb-8">
-                        <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Tudo do plano mensal</li>
-                        <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Prioridade no suporte</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setPaymentModalOpen(true)}
-                    className="w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xl uppercase tracking-widest shadow-xl transition-all hover:scale-[1.01]"
-                  >
-                    Assinar Agora
-                  </button>
-                </div>
-              )}
-
-            </div>
-          ) : (
-            <div className="w-full h-[60vh] flex flex-col items-center justify-center animate-fade-in gap-4">
-              {/* Show loading if auth is still initializing OR if we have the connected param (waiting for sync) */}
-              {(authLoading || window.location.search.includes('calendar_connected')) ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-                  <p className="text-slate-400 font-medium text-center max-w-md animate-pulse">
-                    {window.location.search.includes('calendar_connected')
-                      ? "Aguarde alguns segundos, estamos conectando seu calendário ao seu novo assistente..."
-                      : "Sincronizando perfil..."}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                  </div>
-                  <h3 className="text-xl font-bold text-white">Perfil não encontrado</h3>
-                  <p className="text-slate-400">Não foi possível carregar seus dados.</p>
-                  <button onClick={() => window.location.reload()} className="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold transition-all">
-                    Recarregar Página
-                  </button>
-                </>
-              )}
             </div>
           )
-        )}
+        }
+        {
+          view === 'PROFILE' && (
+            authLoading ? (
+              <div className="w-full h-[60vh] flex flex-col items-center justify-center animate-fade-in">
+                <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-400 font-bold">Carregando perfil...</p>
+              </div>
+            ) : user ? (
+              <div className="w-full max-w-4xl py-16 animate-fade-in">
+                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-8">Meu Perfil</h1>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                  <div className="glass p-8 rounded-[2rem] border border-white/10">
+                    <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider">Dados Pessoais</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase">Nome</label>
+                        <p className="text-lg text-white font-medium">{user.name}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase">Email</label>
+                        <p className="text-lg text-white font-medium">{user.email}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase">Plano Atual</label>
+                        <div className={`mt-2 inline-flex px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider ${['PRO', 'PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black' : 'bg-slate-700 text-white'}`}>
+                          {user.role.replace('_', ' ')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {['PRO', 'PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) ? (
+                    <div className="space-y-6">
+                      {/* Active Subscription Card */}
+                      <div className="glass p-8 rounded-[2rem] border border-yellow-500/20 bg-yellow-500/5">
+                        <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider text-yellow-500">Assinatura Ativa</h3>
+                        <div className="flex flex-col gap-4">
+                          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                              <p className="text-white font-bold text-lg">{user.role.replace('_', ' ')}</p>
+                              <p className="text-slate-400 text-sm">Renova em {new Date(user.subscriptionEnd || Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                            </div>
+                            {/* Usage Bar for Minutes based plans */}
+                            {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
+                              <div className="text-left md:text-right bg-black/20 p-3 rounded-xl border border-white/5 w-full md:w-auto">
+                                <p className="text-xs font-bold text-slate-500 uppercase">Uso de Gravação</p>
+                                <p className="text-xl font-black text-white flex items-baseline gap-1 md:justify-end">
+                                  {Math.floor((user.usageMinutes || 0) / 60)}h {(user.usageMinutes || 0) % 60}m
+                                  <span className="text-sm text-slate-500 font-medium whitespace-nowrap">
+                                    {' / '}
+                                    {user.role === 'LOMAD_PLUS'
+                                      ? 'ILIMITADO'
+                                      : `${Math.floor((user.planLimitMinutes || 600) / 60)}h`}
+                                  </span>
+                                </p>
+                                {user.extraMinutes && user.extraMinutes > 0 ? (
+                                  <p className="text-xs font-bold text-green-400 mt-1 flex items-center gap-1 md:justify-end">
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    + {Math.floor(user.extraMinutes / 60)}h{user.extraMinutes % 60 > 0 ? ` ${user.extraMinutes % 60}m` : ''} Extras Disponíveis
+                                  </p>
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
+
+                          {user.cardLast4 && (
+                            <div className="flex items-center gap-3 p-4 bg-black/20 rounded-xl border border-white/5 mt-2">
+                              <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                              <div>
+                                <p className="text-sm text-white font-bold">{user.cardBrand} •••• {user.cardLast4}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex gap-4 mt-2">
+                            <button onClick={() => setPaymentModalOpen(true)} className="text-xs font-bold text-cyan-400 hover:text-white transition-colors uppercase">Alterar Plano</button>
+                            {user.subscriptionStatus !== 'CANCELED' && (
+                              <button onClick={() => setCancelSubscriptionModalOpen(true)} className="text-xs font-bold text-red-400 hover:text-white transition-colors uppercase">Cancelar</button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* AI & Automation Card for PLUS users */}
+                      {['PRO_PLUS', 'LOMAD_PLUS'].includes(user.role) && (
+                        <div className="glass p-4 md:p-8 rounded-[2rem] border border-blue-500/20 bg-blue-500/5 relative overflow-hidden transition-all hover:border-blue-500/40">
+                          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                            <svg className="w-40 h-40 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                          </div>
+                          <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            Integração & Inteligência
+                          </h3>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                            <div className="bg-slate-950/50 p-4 rounded-xl border border-white/10 flex flex-col justify-center">
+                              <label className="text-xs font-bold text-slate-500 uppercase mb-2 block flex items-center justify-between">
+                                Nome do Bot
+                                {!editBotNameMode && (
+                                  <button onClick={() => { setEditBotNameMode(true); setNewBotNameProf(user.botName?.replace('.LOMAD.IA', '') || ''); }} className="text-cyan-400 hover:text-cyan-300 transition-colors p-1" title="Editar Nome">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                  </button>
+                                )}
+                              </label>
+                              {editBotNameMode ? (
+                                <div className="flex flex-col gap-2 mt-2">
+                                  <input
+                                    type="text"
+                                    value={newBotNameProf}
+                                    onChange={(e) => setNewBotNameProf(e.target.value)}
+                                    maxLength={20}
+                                    className="w-full min-w-[150px] bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none text-sm text-white transition-all shadow-inner placeholder:text-slate-500"
+                                    placeholder="Digite novo nome..."
+                                    autoFocus
+                                    onKeyDown={async (e) => {
+                                      if (e.key === 'Escape') setEditBotNameMode(false);
+                                      if (e.key === 'Enter') {
+                                        try {
+                                          const res = await fetch('/api/recall/config', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ userId: user.id, botName: newBotNameProf })
+                                          });
+                                          if (res.ok) {
+                                            const data = await res.json();
+                                            setUser(prev => prev ? { ...prev, botName: data.botName } : null);
+                                            setEditBotNameMode(false);
+                                          }
+                                        } catch (e) {
+                                          console.error("Erro ao salvar bot nome", e);
+                                        }
+                                      }
+                                    }}
+                                  />
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          const res = await fetch('/api/recall/config', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ userId: user.id, botName: newBotNameProf })
+                                          });
+                                          if (res.ok) {
+                                            const data = await res.json();
+                                            setUser(prev => prev ? { ...prev, botName: data.botName } : null);
+                                            setEditBotNameMode(false);
+                                          }
+                                        } catch (e) {
+                                          console.error("Erro ao salvar bot nome", e);
+                                        }
+                                      }}
+                                      className="flex-1 md:flex-none bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-cyan-900/20 flex items-center justify-center whitespace-nowrap"
+                                    >
+                                      Salvar
+                                    </button>
+                                    <button onClick={() => setEditBotNameMode(false)} className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-3 py-2.5 rounded-xl transition-colors border border-slate-700 flex items-center justify-center" aria-label="Cancelar">
+                                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-white font-bold text-lg break-all">{user.botName || 'Não configurado'}</div>
+                              )}
+                            </div>
+                            <div className="bg-slate-950/50 p-4 rounded-xl border border-white/10">
+                              <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Status da Agenda</label>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${user.calendarConnected ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-slate-600'}`}></div>
+                                <span className="text-white font-bold">{user.calendarConnected ? 'Conectado' : 'Desconectado'}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-8 bg-gradient-to-br from-blue-900/40 to-slate-900/40 p-4 md:p-5 rounded-2xl border border-blue-500/20 relative z-10 shadow-lg">
+                            <label className="text-xs font-black text-blue-400 uppercase mb-3 flex items-center justify-between tracking-wider">
+                              <div className="flex items-center gap-2">
+                                <div className="p-1 bg-blue-500/20 rounded text-blue-400"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
+                                Bot Instantâneo
+                              </div>
+                              {(() => {
+                                const usage = user.usageMinutes || 0;
+                                const limit = (user.planLimitMinutes || 600) + (user.extraMinutes || 0);
+                                if (user.role !== 'LOMAD_PLUS' && usage >= limit) {
+                                  return <span className="text-red-400 text-[10px] bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">LIMITE EXCEDIDO</span>;
+                                }
+                                return null;
+                              })()}
+                            </label>
+                            <div className="flex gap-2 relative">
+                              <input
+                                type="text"
+                                placeholder="Cole o link da reunião aqui..."
+                                value={quickMeetingUrl}
+                                onChange={(e) => setQuickMeetingUrl(e.target.value)}
+                                disabled={user.role !== 'LOMAD_PLUS' && (user.usageMinutes || 0) >= ((user.planLimitMinutes || 600) + (user.extraMinutes || 0))}
+                                className="flex-1 min-w-0 bg-slate-950 border border-white/10 rounded-xl px-3 md:px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 shadow-inner placeholder:text-slate-600 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              />
+                              <button
+                                onClick={handleQuickBotJoin}
+                                disabled={joiningBot || !quickMeetingUrl || (user.role !== 'LOMAD_PLUS' && (user.usageMinutes || 0) >= ((user.planLimitMinutes || 600) + (user.extraMinutes || 0)))}
+                                className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                              >
+                                {joiningBot ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>}
+                              </button>
+
+                              {user.role !== 'LOMAD_PLUS' && (user.usageMinutes || 0) >= ((user.planLimitMinutes || 600) + (user.extraMinutes || 0)) && (
+                                <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Limite de horas excedido."></div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* --- UPGRADE BANNER FOR FREE USERS --- */}
+                      <div className="glass p-8 rounded-[2rem] border border-cyan-500/20 bg-cyan-500/5 relative overflow-hidden group hover:border-cyan-500/40 transition-all cursor-pointer" onClick={() => setPaymentModalOpen(true)}>
+                        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                          <svg className="w-32 h-32 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-4 relative z-10 text-cyan-400">Upgrade para PRO</h3>
+                        <p className="text-slate-300 text-sm mb-6 relative z-10 max-w-sm">Desbloqueie transcrições ilimitadas e recursos de IA avançados.</p>
+                        <button className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-white rounded-xl font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all relative z-10">Ver Planos</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                  {['PRO_PLUS', 'LOMAD_PLUS', 'MASTER'].includes(user?.role || '') && (
+                    <div className="p-8 rounded-[2.5rem] bg-slate-800/50 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all">
+                      <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg className="w-24 h-24 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2 relative z-10">Agenda Inteligente</h3>
+                      <p className="text-slate-400 text-sm mb-6 relative z-10">Conecte suas agendas para o bot entrar automaticamente.</p>
+
+                      <div className="space-y-4 relative z-10">
+                        {/* Google Calendar */}
+                        <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-white/5">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white rounded-lg"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" className="w-6 h-6" alt="Google" /></div>
+                            <div>
+                              <p className="text-white font-bold text-sm">Google Calendar</p>
+                              <p className="text-xs text-slate-500">{user.googleCalendarConnected ? 'Sincronizado' : 'Não conectado'}</p>
+                            </div>
+                          </div>
+                          {user.googleCalendarConnected ? (
+                            <button
+                              onClick={() => handleCalendarDisconnect('google_calendar')}
+                              className="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition-colors"
+                            >
+                              Desconectar
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleCalendarConnect('google_calendar')}
+                              className="px-3 py-1.5 bg-white text-slate-900 text-xs font-bold rounded-lg uppercase hover:bg-slate-200 transition-colors"
+                            >
+                              Conectar
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Outlook Calendar */}
+                        <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-white/5">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-[#0078D4] rounded-lg"><svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M1 3h9v8H1V3zm0 10h9v8H1v-8zm10-10h12v8H11V3zm0 10h12v8H11v-8z" /></svg></div>
+                            <div>
+                              <p className="text-white font-bold text-sm">Outlook Calendar</p>
+                              <p className="text-xs text-slate-500">{user.outlookCalendarConnected ? 'Sincronizado' : 'Não conectado'}</p>
+                            </div>
+                          </div>
+                          {user.outlookCalendarConnected ? (
+                            <button
+                              onClick={() => handleCalendarDisconnect('outlook_calendar')}
+                              className="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition-colors"
+                            >
+                              Desconectar
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleCalendarConnect('outlook_calendar')}
+                              className="px-3 py-1.5 bg-white text-slate-900 text-xs font-bold rounded-lg uppercase hover:bg-slate-200 transition-colors"
+                            >
+                              Conectar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* --- UPCOMING MEETINGS --- */}
+                  {['PRO_PLUS', 'LOMAD_PLUS', 'MASTER'].includes(user?.role || '') && (user.googleCalendarConnected || user.outlookCalendarConnected || user.calendarConnected) && (
+                    <div className="mt-6">
+                      <h3 className="text-xl font-bold text-white mb-4">Próximas Reuniões</h3>
+                      <UpcomingMeetings userId={user.id} onJoinMeeting={(url: string) => {
+                        setQuickMeetingUrl(url);
+                        if (window.confirm(`Deseja enviar o bot para esta reunião agora?\n${url}`)) {
+                          handleQuickBotJoin();
+                        }
+                      }} />
+                    </div>
+                  )}
+
+                  {/* --- USAGE STATS CARD --- */}
+                  <div className="p-8 rounded-[2.5rem] bg-slate-800/50 border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all">
+                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <svg className="w-24 h-24 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2 relative z-10">Uso Mensal</h3>
+                    <p className="text-slate-400 text-sm mb-6 relative z-10">Gravações realizadas este mês.</p>
+
+                    <div className="flex items-end gap-2 mb-2 relative z-10">
+                      <span className="text-4xl font-black text-white">{user.meetings_recorded || 0}</span>
+                      <span className="text-slate-500 font-bold mb-1">/ {user.first_name === 'Admin' || user.role === 'PRO' || user.role === 'MASTER' ? 'Ilimitado' : '5'}</span>
+                    </div>
+                    <div className="h-2 w-full bg-slate-700/50 rounded-full overflow-hidden relative z-10">
+                      <div
+                        className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-1000"
+                        style={{ width: `${Math.min(((user.meetings_recorded || 0) / (user.role === 'PRO' || user.role === 'MASTER' ? 100 : 5)) * 100, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* --- PERSONAL INFO FORM --- */}
+                <div className="space-y-6 mb-12">
+                  <h3 className="text-2xl font-bold text-white mb-6">Dados Pessoais</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Telefone / WhatsApp</label>
+                      <input
+                        type="text"
+                        value={editForm.phone}
+                        onChange={(e) => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })}
+                        className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">CEP</label>
+                      <input
+                        type="text"
+                        value={editForm.postalCode}
+                        onChange={(e) => {
+                          const val = formatCEP(e.target.value);
+                          setEditForm({ ...editForm, postalCode: val });
+                          if (val.length === 9) fetchAddressFromCEP(val);
+                        }}
+                        className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
+                        placeholder="00000-000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Número</label>
+                      <input
+                        type="text"
+                        value={editForm.addressNumber}
+                        onChange={(e) => setEditForm({ ...editForm, addressNumber: e.target.value })}
+                        className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
+                        placeholder="123"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Complemento</label>
+                      <input
+                        type="text"
+                        value={editForm.addressComplement || ''}
+                        onChange={(e) => setEditForm({ ...editForm, addressComplement: e.target.value })}
+                        className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
+                        placeholder="Apto 101, Bloco B"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={saveLoading}
+                      className="px-8 py-3 bg-white text-slate-900 font-bold rounded-xl uppercase tracking-wide hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {saveLoading && <svg className="animate-spin h-5 w-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                      Salvar Alterações
+                    </button>
+                  </div>
+                </div>
+
+                {/* --- PLAN UPGRADE SECTION (Only for FREE users) --- */}
+                {user.role === 'FREE' && (
+                  <div className="border-t border-white/10 pt-12">
+                    <div className="text-center mb-12">
+                      <h3 className="text-3xl font-black text-white mb-4">Faça Upgrade para PRO</h3>
+                      <p className="text-slate-400 max-w-xl mx-auto">Desbloqueie transcrições ilimitadas e recursos avançados para levar suas reuniões para o próximo nível.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                      {/* Monthly Plan */}
+                      <div className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlan === 'monthly' ? 'bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border-cyan-500 shadow-2xl shadow-cyan-500/10 scale-[1.02]' : 'glass border-white/10 hover:border-white/20'}`} onClick={() => setSelectedPlan('monthly')}>
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-xl font-bold text-white">Mensal</h3>
+                          {selectedPlan === 'monthly' && <div className="w-4 h-4 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]"></div>}
+                        </div>
+                        <div className="flex items-baseline gap-1 mb-6">
+                          <span className="text-sm text-slate-400">R$</span>
+                          <span className="text-5xl font-black text-white">{(publicPricing.monthly?.price || 27.90).toFixed(2).replace('.', ',')}</span>
+                          <span className="text-slate-400">/mês</span>
+                        </div>
+                        <ul className="space-y-3 mb-8">
+                          <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Transcrições Ilimitadas</li>
+                          <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Chat com IA Avançado</li>
+                        </ul>
+                      </div>
+
+                      {/* Yearly Plan */}
+                      <div className={`p-8 rounded-[2.5rem] border transition-all cursor-pointer ${selectedPlan === 'yearly' ? 'bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border-indigo-500 shadow-2xl shadow-indigo-500/10 scale-[1.02]' : 'glass border-white/10 hover:border-white/20'}`} onClick={() => setSelectedPlan('yearly')}>
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-xl font-bold text-white">Anual</h3>
+                          <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-bold uppercase">Economize 15%</span>
+                          {selectedPlan === 'yearly' && <div className="w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]"></div>}
+                        </div>
+                        <div className="flex items-baseline gap-1 mb-6">
+                          <span className="text-sm text-slate-400">R$</span>
+                          <span className="text-5xl font-black text-white">{(publicPricing.yearly?.price || 279.00).toFixed(2).replace('.', ',')}</span>
+                          <span className="text-slate-400">/ano</span>
+                        </div>
+                        <ul className="space-y-3 mb-8">
+                          <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Tudo do plano mensal</li>
+                          <li className="flex items-center gap-3 text-slate-300 text-sm"><svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Prioridade no suporte</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setPaymentModalOpen(true)}
+                      className="w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xl uppercase tracking-widest shadow-xl transition-all hover:scale-[1.01]"
+                    >
+                      Assinar Agora
+                    </button>
+                  </div>
+                )}
+
+              </div>
+            ) : (
+              <div className="w-full h-[60vh] flex flex-col items-center justify-center animate-fade-in gap-4">
+                {/* Show loading if auth is still initializing OR if we have the connected param (waiting for sync) */}
+                {(authLoading || window.location.search.includes('calendar_connected')) ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-slate-400 font-medium text-center max-w-md animate-pulse">
+                      {window.location.search.includes('calendar_connected')
+                        ? "Aguarde alguns segundos, estamos conectando seu calendário ao seu novo assistente..."
+                        : "Sincronizando perfil..."}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-white">Perfil não encontrado</h3>
+                    <p className="text-slate-400">Não foi possível carregar seus dados.</p>
+                    <button onClick={() => window.location.reload()} className="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold transition-all">
+                      Recarregar Página
+                    </button>
+                  </>
+                )}
+              </div>
+            )
+          )
+        }
 
         {/* Dead code removed: Unused inline payment modal */}
 
@@ -4259,39 +4358,41 @@ const App: React.FC = () => {
       />
 
       {/* Disconnect Confirmation Modal */}
-      {disconnectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 animate-fade-in">
-          <div className="bg-slate-900 border border-slate-700 text-white rounded-3xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center gap-6 animate-bounce-in">
-            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
-              <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <div className="text-center space-y-2">
-              <h3 className="text-xl font-black text-white">Desconectar Agenda?</h3>
-              <p className="font-medium text-slate-400">
-                Tem certeza que deseja desconectar o <span className="text-white font-bold">{calendarToDisconnect === 'google_calendar' ? 'Google Calendar' : 'Outlook'}</span>?
-                <br /><br />
-                O bot <b className="text-red-400">não entrará mais</b> nas reuniões desta agenda automaticamente.
-              </p>
-            </div>
-            <div className="flex gap-4 w-full">
-              <button
-                onClick={() => setDisconnectModalOpen(false)}
-                className="flex-1 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors uppercase"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmDisconnect}
-                className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors uppercase shadow-lg shadow-red-500/20"
-              >
-                Desconectar
-              </button>
+      {
+        disconnectModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 animate-fade-in">
+            <div className="bg-slate-900 border border-slate-700 text-white rounded-3xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center gap-6 animate-bounce-in">
+              <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
+                <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-xl font-black text-white">Desconectar Agenda?</h3>
+                <p className="font-medium text-slate-400">
+                  Tem certeza que deseja desconectar o <span className="text-white font-bold">{calendarToDisconnect === 'google_calendar' ? 'Google Calendar' : 'Outlook'}</span>?
+                  <br /><br />
+                  O bot <b className="text-red-400">não entrará mais</b> nas reuniões desta agenda automaticamente.
+                </p>
+              </div>
+              <div className="flex gap-4 w-full">
+                <button
+                  onClick={() => setDisconnectModalOpen(false)}
+                  className="flex-1 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors uppercase"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDisconnect}
+                  className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors uppercase shadow-lg shadow-red-500/20"
+                >
+                  Desconectar
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* View: Pricing */}
       {
@@ -4525,49 +4626,51 @@ const App: React.FC = () => {
       }
 
       {/* LIMIT ALERT MODAL */}
-      {showLimitAlert && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] px-4 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-red-500/50 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
-            <button
-              onClick={() => {
-                setShowLimitAlert(false);
-              }}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Limite de Horas Atingido</h3>
-              <p className="text-slate-300 text-sm mb-6">
-                Você consumiu todo o tempo de gravação do seu plano atual. Novas transcrições automáticas pelo bot estão bloqueadas no momento.
-              </p>
-              <div className="flex flex-col gap-3 w-full">
-                <button
-                  onClick={() => {
-                    setShowLimitAlert(false);
-                    setSelectedPlan('ADDON_10H');
-                    setPaymentModalOpen(true);
-                  }}
-                  className="w-full bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold py-3 rounded-lg hover:from-red-500 hover:to-orange-500 transition-all shadow-lg shadow-red-500/20"
-                >
-                  Fazer Upgrade ou Comprar Horas
-                </button>
-                <button
-                  onClick={() => {
-                    setShowLimitAlert(false);
-                  }}
-                  className="w-full bg-slate-800 text-slate-300 font-semibold py-3 rounded-lg hover:bg-slate-700 transition-colors"
-                >
-                  Entendi
-                </button>
+      {
+        showLimitAlert && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] px-4 backdrop-blur-sm">
+            <div className="bg-slate-900 border border-red-500/50 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+              <button
+                onClick={() => {
+                  setShowLimitAlert(false);
+                }}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Limite de Horas Atingido</h3>
+                <p className="text-slate-300 text-sm mb-6">
+                  Você consumiu todo o tempo de gravação do seu plano atual. Novas transcrições automáticas pelo bot estão bloqueadas no momento.
+                </p>
+                <div className="flex flex-col gap-3 w-full">
+                  <button
+                    onClick={() => {
+                      setShowLimitAlert(false);
+                      setSelectedPlan('ADDON_10H');
+                      setPaymentModalOpen(true);
+                    }}
+                    className="w-full bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold py-3 rounded-lg hover:from-red-500 hover:to-orange-500 transition-all shadow-lg shadow-red-500/20"
+                  >
+                    Fazer Upgrade ou Comprar Horas
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowLimitAlert(false);
+                    }}
+                    className="w-full bg-slate-800 text-slate-300 font-semibold py-3 rounded-lg hover:bg-slate-700 transition-colors"
+                  >
+                    Entendi
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* HELP TUTORIAL MODAL */}
       {showHelpModal && <HelpGuide onClose={handleCloseHelp} />}

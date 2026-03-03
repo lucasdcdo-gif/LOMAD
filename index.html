@@ -7,6 +7,29 @@
   <title>LOMAD - Transcrição Inteligente</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { cyan: '#06b6d4', emerald: '#10b981', blue: '#2563eb' },
+            dark: { 950: '#020617', 900: '#0f172a', 800: '#1e293b' }
+          },
+          animation: {
+            'float': 'float 6s ease-in-out infinite',
+            'fade-in-up': 'fadeInUp 0.6s ease-out forwards',
+            'waveform': 'waveform 1.2s ease-in-out infinite',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-20px)' } },
+            fadeInUp: { '0%': { opacity: '0', transform: 'translateY(15px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+            waveform: { '0%, 100%': { height: '8px' }, '50%': { height: '28px' } }
+          }
+        }
+      }
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
@@ -18,6 +41,27 @@
       margin: 0;
       color: white;
       overflow-x: hidden;
+    }
+
+    .light-section-shadow {
+      box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .floating-widget-shadow {
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    }
+
+    .chat-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .chat-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .chat-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
     }
 
     .bg-mesh {

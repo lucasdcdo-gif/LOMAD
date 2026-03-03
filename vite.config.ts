@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => {
         }
       },
     },
+    // Adding optional Tailwind config block for specific tools if needed
+    // Assuming standard Vite+Tailwind setups use tailwind config file,
+    // this file is vite.config.ts! The tailwind.config is usually separate. 
     plugins: [react()],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
