@@ -54,4 +54,4 @@ O texto transcrevido gerado a partir do áudio do usuário é de propriedade do 
 A LOMAD reserva-se o direito de alterar estes termos a qualquer momento. Alterações significativas serão notificadas aos usuários via e-mail ou aviso na plataforma. O uso continuado do serviço após as alterações implica na aceitação dos novos termos.
 
 10. FORO
-Para dirimir quaisquer controvérsias oriundas deste contrato, as partes elegem o Foro da Comarca de [Inserir sua cidade/UF], com renúncia expressa a qualquer outro.
+Para dirimir quaisquer controvérsias oriundas deste contrato, as partes elegem o Foro da Comarca de São Paulo/SP, com renúncia expressa a qualquer outro.
