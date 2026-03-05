@@ -1071,9 +1071,17 @@ app.post('/api/recall/bot-join', async (req, res) => {
 
       logger.info(`[Instant Bot] Bot dispatched successfully: ${response.data.id}`);
 
-      // Save Bot ID to User Profile so Webhook can identify the owner
-      await supabase.from('profiles').update({ recall_id: response.data.id }).eq('id', userId);
-
+      // Save the manual bot meeting immediately so it shows up in history as processing
+      await supabase.from('meetings').insert({
+        recall_id: response.data.id,
+        user_id: userId,
+        title: `Reunião Manual: ${botName || 'LOMAD Bot'}`,
+        summary: 'Processando...',
+        transcriptions: [{ role: 'model', text: 'Bot ingressando na reunião. Aguardando processamento...', timestamp: Date.now() }],
+        timestamp: Date.now(),
+        notes: `Ingresso manual via bot. Link: ${meetingUrl}`,
+        video_url: null
+      });
       res.json({ success: true, message: "Bot enviado com sucesso! Ele entrará na reunião em instantes." });
 
     } catch (apiError) {
@@ -1198,13 +1206,25 @@ app.post('/api/save-meeting-external', async (req, res) => {
       }
     }
 
-    // 2. Fallback: Find user by recall_id
+    // 2. Fallback: Find user by recall_id (legacy config)
     if (!user) {
       const { data: u, error: uErr } = await supabase.from('profiles')
         .select('id, role, usage_minutes, plan_limit_minutes, extra_minutes')
         .eq('recall_id', recall_id)
         .single();
       if (!uErr) user = u;
+    }
+
+    // 3. Fallback: Find user from the manually inserted meeting wrapper
+    if (!user) {
+      const { data: existingMeeting } = await supabase.from('meetings')
+        .select('user_id').eq('recall_id', recall_id).single();
+      if (existingMeeting?.user_id) {
+        const { data: u } = await supabase.from('profiles')
+          .select('id, role, usage_minutes, plan_limit_minutes, extra_minutes')
+          .eq('id', existingMeeting.user_id).single();
+        if (u) user = u;
+      }
     }
 
     if (!user) {

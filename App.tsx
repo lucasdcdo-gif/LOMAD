@@ -170,6 +170,9 @@ const App: React.FC = () => {
       setQuickMeetingUrl('');
       setSuccessMessage('Bot enviado com sucesso! Ele entrará na reunião em instantes.');
       setTimeout(() => setSuccessMessage(null), 5000);
+
+      // Reload meetings to show the new 'Processing...' entry
+      loadMeetings(user.id);
     } catch (err: any) {
       setError(err.message || 'Erro ao enviar bot');
       setTimeout(() => setError(null), 5000);
