@@ -1156,7 +1156,16 @@ app.post('/api/save-meeting-external', async (req, res) => {
           } else {
             // Fallback: look up by recall_id in profiles
             const { data: u } = await supabase.from('profiles').select('name').eq('recall_id', recall_id).single();
-            if (u?.name) userName = u.name;
+            if (u?.name) {
+              userName = u.name;
+            } else {
+              // Fallback 2: look up by recall_id in meetings
+              const { data: existingMeeting } = await supabase.from('meetings').select('user_id').eq('recall_id', recall_id).single();
+              if (existingMeeting?.user_id) {
+                const { data: u2 } = await supabase.from('profiles').select('name').eq('id', existingMeeting.user_id).single();
+                if (u2?.name) userName = u2.name;
+              }
+            }
           }
 
           // 2. Compose Message
