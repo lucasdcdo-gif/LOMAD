@@ -1322,7 +1322,7 @@ app.post('/api/save-meeting-external', async (req, res) => {
             .single();
 
           if (existingJob && (
-            existingJob.summary === 'Processando...' ||
+            existingJob.notes?.includes('Iniciando processamento Gemini') ||
             existingJob.summary?.includes('Gemini') ||
             existingJob.notes?.includes('Fallback Gemini')
           )) {
@@ -1349,7 +1349,7 @@ app.post('/api/save-meeting-external', async (req, res) => {
             transcriptions: [{ role: 'model', text: '', timestamp: Date.now() }],
             summary: 'Processando...',
             timestamp: validTimestamp,
-            notes: baseNotes,
+            notes: baseNotes + ' | Iniciando processamento Gemini...',
             video_url: video_url
           }, { onConflict: 'recall_id' }).select().single();
 
@@ -1429,7 +1429,8 @@ app.post('/api/save-meeting-external', async (req, res) => {
                 transcriptions: [{ role: 'model', text: aiText, timestamp: Date.now() }],
                 summary: 'Transcrito via Gemini AI (Backup)',
                 notes: finalNotes,
-                video_url: video_url
+                video_url: video_url,
+                opl: 0
               }).eq('recall_id', recall_id).select();
 
               if (updateError) {
