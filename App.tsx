@@ -181,6 +181,44 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSendCampaign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || user.role !== 'MASTER') return;
+
+    if (!window.confirm(`ATENÇÃO: Você está prestes a disparar o e-mail '${campaignForm.templateAlias}' para o público '${campaignForm.targetRole}'. Deseja continuar?`)) {
+      return;
+    }
+
+    setCampaignLoading(true);
+    setCampaignResult(null);
+    setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch('/api/admin/send-campaign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({
+          templateAlias: campaignForm.templateAlias,
+          targetRole: campaignForm.targetRole,
+          mapping: campaignMapping
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao processar campanha');
+
+      setSuccessMessage('Campanha disparada com sucesso!');
+      setCampaignResult({ success: data.success, failed: data.failed, processed: data.processed });
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: any) {
+      setError(`Erro na Campanha: ${err.message}`);
+    } finally {
+      setCampaignLoading(false);
+    }
+  };
+
   // Terms Enforcement State
   const [termsAccepted, setTermsAccepted] = useState(true); // Default true until checked to avoid flash
   const [showTermsBlockingModal, setShowTermsBlockingModal] = useState(false);
@@ -220,6 +258,12 @@ const App: React.FC = () => {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponForm, setCouponForm] = useState({ code: '', type: 'PERCENTAGE', value: '', valid_from: '', valid_until: '' });
   const [couponLoading, setCouponLoading] = useState(false);
+
+  // Marketing Campaign State
+  const [campaignForm, setCampaignForm] = useState({ templateAlias: '', targetRole: 'Todos' });
+  const [campaignMapping, setCampaignMapping] = useState<{ from: string, to: string }[]>([{ from: 'nome', to: 'profiles.name' }]);
+  const [campaignLoading, setCampaignLoading] = useState(false);
+  const [campaignResult, setCampaignResult] = useState<{ success: number, failed: number, processed: number } | null>(null);
 
   // Routing Handler for clean URLs
   useEffect(() => {
@@ -3150,6 +3194,115 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Marketing Campaign UI Block */}
+              <div className="mt-8 glass rounded-[2rem] border border-white/10 p-8 h-fit">
+                <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider flex items-center gap-3">
+                  <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                  Disparo de E-mail Marketing
+                </h3>
+                <form onSubmit={handleSendCampaign} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Postmark Template Alias / ID</label>
+                      <input
+                        type="text"
+                        required
+                        value={campaignForm.templateAlias}
+                        onChange={e => setCampaignForm(prev => ({ ...prev, templateAlias: e.target.value }))}
+                        className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
+                        placeholder="Ex: oferta-black-friday"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Público Alvo (Role)</label>
+                      <select
+                        required
+                        value={campaignForm.targetRole}
+                        onChange={e => setCampaignForm(prev => ({ ...prev, targetRole: e.target.value }))}
+                        className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 appearance-none"
+                      >
+                        <option value="Todos">Todos os Usuários</option>
+                        <option value="FREE">FREE</option>
+                        <option value="PRO">PRO</option>
+                        <option value="PRO_PLUS">PRO+</option>
+                        <option value="LOMAD_PLUS">LOMAD+</option>
+                        <option value="MASTER">MASTER (Testes)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/5 p-6 rounded-xl border border-white/5">
+                    <div className="flex justify-between items-center mb-4">
+                      <label className="text-sm font-bold text-slate-300 uppercase">Mapeamento Dinâmico de Variáveis</label>
+                      <button
+                        type="button"
+                        onClick={() => setCampaignMapping(prev => [...prev, { from: '', to: '' }])}
+                        className="px-3 py-1 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 rounded-lg text-xs font-bold uppercase"
+                      >
+                        + Variável
+                      </button>
+                    </div>
+                    {campaignMapping.map((map, idx) => (
+                      <div key={idx} className="flex gap-4 items-center mb-3">
+                        <input
+                          type="text"
+                          required
+                          value={map.from}
+                          onChange={e => {
+                            const newMapping = [...campaignMapping];
+                            newMapping[idx].from = e.target.value;
+                            setCampaignMapping(newMapping);
+                          }}
+                          className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
+                          placeholder="Variável Postmark (ex: nome)"
+                        />
+                        <span className="text-slate-500 font-bold">{'->'}</span>
+                        <input
+                          type="text"
+                          required
+                          value={map.to}
+                          onChange={e => {
+                            const newMapping = [...campaignMapping];
+                            newMapping[idx].to = e.target.value;
+                            setCampaignMapping(newMapping);
+                          }}
+                          className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
+                          placeholder="Origem Supabase (ex: profiles.name)"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setCampaignMapping(prev => prev.filter((_, i) => i !== idx))}
+                          className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg"
+                          disabled={campaignMapping.length === 1}
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+                    ))}
+                    <p className="text-xs text-slate-500 mt-2">Dica: Utilize 'profiles.name', 'profiles.email', etc para injetar dados reais do banco de dados no Template.</p>
+                  </div>
+
+                  {campaignResult && (
+                    <div className="p-4 bg-slate-900 border border-white/10 rounded-xl mb-4">
+                      <p className="text-sm text-slate-300 font-bold mb-2">Último Resultado:</p>
+                      <ul className="text-xs text-slate-400 space-y-1">
+                        <li>E-mails únicos processados (Deduplicação): <strong className="text-blue-400">{campaignResult.processed}</strong></li>
+                        <li>Enviados com Sucesso: <strong className="text-emerald-400">{campaignResult.success}</strong></li>
+                        <li>Falhas: <strong className="text-red-400">{campaignResult.failed}</strong></li>
+                      </ul>
+                    </div>
+                  )}
+
+                  <button
+                    disabled={campaignLoading}
+                    className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold uppercase tracking-wide shadow-lg transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {campaignLoading ? 'Disparando Foguete...' : 'Disparar Campanha em Lote'}
+                  </button>
+                </form>
+              </div>
+
             </div>
           )
         }

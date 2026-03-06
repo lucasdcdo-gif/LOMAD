@@ -188,6 +188,63 @@ app.post('/api/auth/mfa/reset', async (req, res) => {
   }
 });
 
+// Admin Endpoint: Disparar Campanha de Marketing Postmark
+app.post('/api/admin/send-campaign', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Token auzente' });
+
+    // 1. Check MASTER authorization
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) return res.status(401).json({ error: 'Token inválido' });
+
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    if (!profile || profile.role !== 'MASTER') {
+      return res.status(403).json({ error: 'Acesso negado. Apenas MASTER.' });
+    }
+
+    const { templateAlias, targetRole, mapping } = req.body;
+    if (!templateAlias || !targetRole || !Array.isArray(mapping)) {
+      return res.status(400).json({ error: 'Payload incompleto. templateAlias, targetRole e mapping são obrigatórios.' });
+    }
+
+    // 2. Fetch Users
+    let query = supabase.from('profiles').select('email, name, role, is_active, phone, created_at, subscription_status');
+
+    if (targetRole !== 'Todos') {
+      query = query.eq('role', targetRole);
+    }
+
+    // Podemos evitar enviar para inativos se desejarmos, ou deixar aberto.
+    query = query.eq('is_active', true);
+
+    const { data: users, error: dbError } = await query;
+    if (dbError) throw dbError;
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({ error: 'Nenhum usuário encontrado para esse público alvo.' });
+    }
+
+    // 3. Import Email Service & Dispatch (Deduplication happens inside sendMarketingCampaign)
+    const { emailService } = await import('./lib/email.js');
+
+    logger.info(`[Admin Campaign] Usando template '${templateAlias}' para ${users.length} usuários (Filtro: ${targetRole})`);
+
+    const result = await emailService.sendMarketingCampaign(templateAlias, users, mapping);
+
+    if (result.error) {
+      return res.status(500).json({ error: result.error });
+    }
+
+    res.json({ success: true, ...result });
+
+  } catch (err) {
+    logger.error(`[Admin Campaign Error] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 app.post('/api/ai/summarize', async (req, res) => {
   try {
     const response = await ai.models.generateContent({
