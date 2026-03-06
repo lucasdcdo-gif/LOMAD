@@ -181,13 +181,16 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSendCampaign = async (e: React.FormEvent) => {
+  const [campaignConfirmOpen, setCampaignConfirmOpen] = useState(false);
+
+  const initiateCampaign = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || user.role !== 'MASTER') return;
+    setCampaignConfirmOpen(true);
+  };
 
-    if (!window.confirm(`ATENÇÃO: Você está prestes a disparar o e-mail '${campaignForm.templateAlias}' para o público '${campaignForm.targetRole}'. Deseja continuar?`)) {
-      return;
-    }
+  const handleSendCampaign = async () => {
+    setCampaignConfirmOpen(false);
 
     setCampaignLoading(true);
     setCampaignResult(null);
@@ -3201,7 +3204,7 @@ const App: React.FC = () => {
                   <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                   Disparo de E-mail Marketing
                 </h3>
-                <form onSubmit={handleSendCampaign} className="space-y-6">
+                <form onSubmit={initiateCampaign} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Postmark Template Alias / ID</label>
@@ -3301,6 +3304,56 @@ const App: React.FC = () => {
                     {campaignLoading ? 'Disparando Foguete...' : 'Disparar Campanha em Lote'}
                   </button>
                 </form>
+
+                {/* Campaign Confirmation Modal */}
+                {campaignConfirmOpen && (
+                  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+                    <div className="w-full max-w-md bg-slate-900 border border-indigo-500/30 rounded-3xl p-8 shadow-[0_0_50px_rgba(79,70,229,0.15)] animate-bounce-in relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
+                        <svg className="w-32 h-32 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                      </div>
+
+                      <div className="flex flex-col items-center text-center relative z-10">
+                        <div className="w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center mb-6">
+                          <svg className="w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-2xl font-black text-white mb-2">Confirmar Disparo</h3>
+                        <p className="text-slate-300 mb-6">
+                          Você está prestes a disparar o e-mail <strong className="text-indigo-400">'{campaignForm.templateAlias}'</strong> para o público alvo <strong className="text-emerald-400">'{campaignForm.targetRole}'</strong>.
+                        </p>
+                        <div className="w-full p-4 bg-slate-950/50 rounded-xl border border-white/5 mb-8 text-left">
+                          <p className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-2">Mapeamento Selecionado:</p>
+                          <ul className="space-y-1 text-sm text-slate-300">
+                            {campaignMapping.map((map, idx) => (
+                              <li key={idx} className="flex gap-2">
+                                <span className="text-slate-500">{map.from}</span>
+                                <span>{'->'}</span>
+                                <span className="font-bold text-white">{map.to}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="w-full flex gap-4">
+                          <button
+                            onClick={() => setCampaignConfirmOpen(false)}
+                            className="flex-1 py-3 px-4 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={handleSendCampaign}
+                            className="flex-1 py-3 px-4 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white transition-all hover:scale-[1.02] shadow-lg shadow-indigo-500/25"
+                          >
+                            Sim, Disparar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>
