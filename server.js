@@ -2084,7 +2084,7 @@ app.post('/api/ai/transcribe', async (req, res) => {
 // NEW: Post-Meeting Full Processing Endpoint (ASYNC / FIRE-AND-FORGET)
 app.post('/api/meetings/process-recording', async (req, res) => {
   try {
-    const { audioData, mimeType, meetingData } = req.body;
+    const { audioData, mimeType, meetingData, summaryTemplate } = req.body;
 
     if (!audioData) return res.status(400).json({ error: 'No audio data' });
 
@@ -2117,7 +2117,7 @@ app.post('/api/meetings/process-recording', async (req, res) => {
     // 2. BACKGROUND PROCESSING (Don't await this block for the response)
     (async () => {
       try {
-        logger.info(`[Async Process] Starting for user ${meetingData?.user_id}(Meeting ID: ${insertedMeeting.id})`);
+        logger.info(`[Async Process] Starting for user ${meetingData?.user_id}(Meeting ID: ${insertedMeeting.id}) Template: ${summaryTemplate || 'EXECUTIVE'}`);
 
         // Clean base64
         const base64Data = audioData.includes('base64,') ? audioData.split('base64,')[1] : audioData;
@@ -2134,12 +2134,22 @@ app.post('/api/meetings/process-recording', async (req, res) => {
           generationConfig: { responseMimeType: "application/json" }
         });
 
+        // Configurar instrução do resumo com base no template escolhido (retrocompatível)
+        let templateInstruction = "2. 'summary': Um resumo executivo com pontos-chave, decisões e próximos passos.\n";
+        if (summaryTemplate === 'SALES') {
+          templateInstruction = "2. 'summary': Uma ata comercial detalhada: Dores e necessidades do cliente, Objeções identificadas, Preços/orçamentos discutidos, Decisores e Próximos Passos de fechamento.\n";
+        } else if (summaryTemplate === 'SCRUM') {
+          templateInstruction = "2. 'summary': Uma ata técnica ágil (Scrum/Daily): O que foi feito, Impedimentos e bloqueios relatados, Próximas tarefas planejadas e Decisões de código/arquitetura.\n";
+        } else if (summaryTemplate === 'FORMAL') {
+          templateInstruction = "2. 'summary': Uma ata corporativa formal clássica: Cabeçalho com pauta, Deliberações e discussões detalhadas, Decisões colegiadas aprovadas, Resoluções com Responsáveis e Prazos.\n";
+        }
+
         // Prompt for full context
         const result = await model.generateContent([
           "ATUAR COMO PROFISSIONAL DE ATAS DE REUNIÃO. \n" +
           "Analise o áudio completo da reunião e forneça:\n" +
           "1. 'transcript': A transcrição literal em Português.\n" +
-          "2. 'summary': Um resumo executivo com pontos-chave.\n" +
+          templateInstruction +
           "3. 'topics': Uma lista de tópicos discutidos.\n\n" +
           "Se o áudio for silêncio ou apenas barulho, retorne campos vazios.\n" +
           "Formato JSON obrigatório: { \"transcript\": string, \"summary\": string, \"topics\": string[] }",

@@ -1030,7 +1030,41 @@ const App: React.FC = () => {
   const audioLevelRef = useRef<number>(0);
   const monitorIntervalRef = useRef<any>(null);
 
-  const handleInitiate = async () => {
+  // Estados e Refs para Gravação Invisível Nativa (getDisplayMedia)
+  const [recordingDuration, setRecordingDuration] = useState<number>(0);
+  const [isRecordingPaused, setIsRecordingPaused] = useState<boolean>(false);
+  const [liveAudioLevel, setLiveAudioLevel] = useState<number>(0);
+  const [hasSystemAudioTrack, setHasSystemAudioTrack] = useState<boolean | null>(null);
+  const [showNoAudioWarningModal, setShowNoAudioWarningModal] = useState<boolean>(false);
+  const [summaryTemplate, setSummaryTemplate] = useState<'EXECUTIVE' | 'SALES' | 'SCRUM' | 'FORMAL'>('EXECUTIVE');
+
+  const timerIntervalRef = useRef<any>(null);
+  const isRecordingPausedRef = useRef<boolean>(false);
+
+  const formatDuration = (totalSeconds: number) => {
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    if (hrs > 0) {
+      return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const togglePauseRecording = () => {
+    if (!mediaRecorderRef.current) return;
+    if (mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.pause();
+      isRecordingPausedRef.current = true;
+      setIsRecordingPaused(true);
+    } else if (mediaRecorderRef.current.state === 'paused') {
+      mediaRecorderRef.current.resume();
+      isRecordingPausedRef.current = false;
+      setIsRecordingPaused(false);
+    }
+  };
+
+  const handleInitiate = async (forceNoSystemAudio = false) => {
     try {
       if (user && user.role === 'FREE' && (user.meetings_recorded || 0) >= 5) {
         setPaymentModalOpen(true);
@@ -1044,6 +1078,10 @@ const App: React.FC = () => {
       setChatMessages([]);
       setSelectedMeeting(null);
       setConsentGiven(false);
+      setRecordingDuration(0);
+      setIsRecordingPaused(false);
+      isRecordingPausedRef.current = false;
+      setShowNoAudioWarningModal(false);
 
       setStatus(SessionStatus.PERMISSIONS);
 
@@ -1057,11 +1095,6 @@ const App: React.FC = () => {
       analyserRef.current = analyser;
       audioLevelRef.current = 0;
 
-      // Connect destination to analyser to monitor what we are recording
-      // Note: we need to connect the sources also to this analyser, OR connect destination -> analyser.
-      // destination is a MediaStreamAudioDestinationNode. It doesn't have an output to connect from in standard graph way 
-      // typically you connect SOURCE -> Analyser -> Destination.
-
       audioContextRef.current = audioCtx;
       audioDestinationRef.current = destination;
 
@@ -1071,32 +1104,44 @@ const App: React.FC = () => {
       }
 
       // 2. Obtain Screen Share
-      let hasSystemAudio = false;
-      if (navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-        displayStreamRef.current = displayStream;
+      let systemAudioActive = false;
+      if (!forceNoSystemAudio && navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
+        try {
+          const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+          displayStreamRef.current = displayStream;
 
-        if (displayStream.getAudioTracks().length > 0) {
-          const displaySource = audioCtx.createMediaStreamSource(displayStream);
+          if (displayStream.getAudioTracks().length > 0) {
+            const displaySource = audioCtx.createMediaStreamSource(displayStream);
 
-          // Boost System Audio Volume (often quieter than Mic)
-          const systemGain = audioCtx.createGain();
-          systemGain.gain.value = 1.5;
+            // Boost System Audio Volume (often quieter than Mic)
+            const systemGain = audioCtx.createGain();
+            systemGain.gain.value = 1.5;
 
-          displaySource.connect(systemGain);
-          systemGain.connect(destination);
-          systemGain.connect(analyser); // Monitor boosted source
+            displaySource.connect(systemGain);
+            systemGain.connect(destination);
+            systemGain.connect(analyser); // Monitor boosted source
 
-          console.log("✓ System Audio mixed (Boosted 1.5x).");
-          hasSystemAudio = true;
-        } else {
-          console.warn("⚠️ No system audio track detected.");
-          setError("Aviso: Áudio do sistema não detectado.");
+            console.log("✓ System Audio mixed (Boosted 1.5x).");
+            systemAudioActive = true;
+            setHasSystemAudioTrack(true);
+          } else {
+            console.warn("⚠️ No system audio track detected.");
+            setHasSystemAudioTrack(false);
+            setShowNoAudioWarningModal(true);
+          }
+
+          displayStream.getVideoTracks()[0].onended = () => {
+            stopRecording();
+          };
+        } catch (displayErr: any) {
+          if (displayErr.name === 'NotAllowedError') {
+            console.log("User cancelled screen selection dialog.");
+            setStatus(SessionStatus.IDLE);
+            if (audioContextRef.current) audioContextRef.current.close();
+            return;
+          }
+          throw displayErr;
         }
-
-        displayStream.getVideoTracks()[0].onended = () => {
-          stopRecording();
-        };
       }
 
       // 3. Obtain Microphone with Audio Processing Constraints
@@ -1116,25 +1161,25 @@ const App: React.FC = () => {
       micSource.connect(analyser); // Monitor this source
       console.log("✓ Mic Audio mixed (Echo/Noise Cancel Active).");
 
-      // Start Volume Monitoring Loop
+      // Start Volume Monitoring Loop for VU Meter
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
 
       monitorIntervalRef.current = setInterval(() => {
         analyser.getByteFrequencyData(dataArray);
 
-        // Calculate average volume
         let sum = 0;
         for (let i = 0; i < bufferLength; i++) {
           sum += dataArray[i];
         }
         const average = sum / bufferLength;
+        const normalized = Math.min(100, Math.round((average / 80) * 100));
+        setLiveAudioLevel(normalized);
 
-        // Keep track of MAX volume seen in the current chunk window
         if (average > audioLevelRef.current) {
           audioLevelRef.current = average;
         }
-      }, 100); // Check every 100ms
+      }, 100);
 
       setStatus(SessionStatus.CONNECTING);
       startCloudRecording(destination.stream);
@@ -1142,7 +1187,9 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error("Initiate Error:", err);
       setStatus(SessionStatus.IDLE);
-      setError(`Erro permissões: ${getErrorMessage(err)}`);
+      if (err.name !== 'NotAllowedError') {
+        setError(`Erro permissões: ${getErrorMessage(err)}`);
+      }
       if (audioContextRef.current) audioContextRef.current.close();
     }
   };
@@ -1158,12 +1205,7 @@ const App: React.FC = () => {
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          // BUFFERING: Store chunks locally instead of streaming
           audioChunksRef.current.push(event.data);
-          // Optional: Visual feedback of "recording" based on volume, but no upload
-          if (audioLevelRef.current > 5) {
-            // We could update a visualizer here
-          }
           audioLevelRef.current = 0;
         }
       };
@@ -1171,6 +1213,15 @@ const App: React.FC = () => {
       recorder.start(1000); // 1-second chunks for smoother UI stopping
       isRecordingRef.current = true;
       setStatus(SessionStatus.RECORDING);
+
+      // Iniciar timer de duração da reunião
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = setInterval(() => {
+        if (!isRecordingPausedRef.current) {
+          setRecordingDuration(prev => prev + 1);
+        }
+      }, 1000);
+
       console.log("☁️ Local Buffering Started (will process at end)");
 
     } catch (e) {
@@ -1179,7 +1230,7 @@ const App: React.FC = () => {
     }
   };
 
-  // New function to handle full file upload
+  // Function to handle full file upload with summary template support
   const uploadMeetingRecording = async (blob: Blob) => {
     try {
       console.log("Uploading full meeting audio...", blob.size);
@@ -1189,16 +1240,16 @@ const App: React.FC = () => {
       reader.onloadend = async () => {
         const base64data = reader.result as string;
 
-        // Fire request but don't wait for full processing if server supports async
         const response = await fetch('/api/meetings/process-recording', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             audioData: base64data,
             mimeType: blob.type,
+            summaryTemplate: summaryTemplate,
             meetingData: {
               user_id: user?.id,
-              title: selectedMeeting?.title || `Reunião ${new Date().toLocaleString()}`,
+              title: selectedMeeting?.title || `Reunião ${new Date().toLocaleString('pt-BR')}`,
               timestamp: Date.now()
             }
           })
@@ -1212,14 +1263,11 @@ const App: React.FC = () => {
         const data = await response.json();
         console.log("Upload accepted:", data);
 
-        // Save success, refresh list (it might show 'Processing' state if we implemented that DB field)
         setStatus(SessionStatus.COMPLETED);
         if (user) loadMeetings(user.id);
 
-        // Show success and UNBLOCK immediately
         setSuccessMessage("Reunião enviada! O processamento continuará em segundo plano.");
 
-        // Reset to IDLE immediately so user can record again
         setTimeout(() => {
           setStatus(SessionStatus.IDLE);
           setTranscriptions([]);
@@ -1238,16 +1286,29 @@ const App: React.FC = () => {
     isRecordingRef.current = false;
     console.log("Stopping recording...");
 
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+
+    if (monitorIntervalRef.current) {
+      clearInterval(monitorIntervalRef.current);
+      monitorIntervalRef.current = null;
+    }
+    setLiveAudioLevel(0);
+    setIsRecordingPaused(false);
+    isRecordingPausedRef.current = false;
+    setShowNoAudioWarningModal(false);
+
     // Stop Cloud MediaRecorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.onstop = async () => {
         console.log("Recorder stopped. Processing buffer...");
-        setStatus(SessionStatus.SAVING); // Show "Processing..." briefly
+        setStatus(SessionStatus.SAVING);
 
         const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
 
-        // Clear buffer
         audioChunksRef.current = [];
 
         await uploadMeetingRecording(blob);
@@ -1255,22 +1316,16 @@ const App: React.FC = () => {
 
       try {
         mediaRecorderRef.current.stop();
-        // Stop all tracks
         if (displayStreamRef.current) displayStreamRef.current.getTracks().forEach(t => t.stop());
         if (micStreamRef.current) micStreamRef.current.getTracks().forEach(t => t.stop());
 
-        // FIX: Check state before closing AudioContext
         if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
           audioContextRef.current.close();
         }
       } catch (e) { console.warn("Error stopping MediaRecorder:", e); }
       mediaRecorderRef.current = null;
-    }
-
-
-    if (monitorIntervalRef.current) {
-      clearInterval(monitorIntervalRef.current);
-      monitorIntervalRef.current = null;
+    } else {
+      setStatus(SessionStatus.IDLE);
     }
 
     // Close AudioContext
@@ -1290,8 +1345,6 @@ const App: React.FC = () => {
       micStreamRef.current.getTracks().forEach(track => track.stop());
       micStreamRef.current = null;
     }
-
-    setStatus(SessionStatus.IDLE);
 
     // Initial Save Logic
     if (transcriptionsRef.current.length > 0 && user) {
@@ -1983,6 +2036,37 @@ const App: React.FC = () => {
                         </div>
                       )}
 
+                      {/* Seletor de Modelo de Ata & Resumo */}
+                      <div className="mb-6 max-w-lg mx-auto text-left">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                          <svg className="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                          Modelo de Ata Desejado
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {[
+                            { id: 'EXECUTIVE', label: 'Executivo', desc: 'Decisões e Ações' },
+                            { id: 'SALES', label: 'Comercial', desc: 'Dores e Preços' },
+                            { id: 'SCRUM', label: 'Scrum / Tech', desc: 'Daily e Bloqueios' },
+                            { id: 'FORMAL', label: 'Formal', desc: 'Ata Colegiada' }
+                          ].map(tpl => (
+                            <button
+                              key={tpl.id}
+                              type="button"
+                              onClick={() => setSummaryTemplate(tpl.id as any)}
+                              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                                summaryTemplate === tpl.id
+                                  ? 'bg-cyan-500/20 border-cyan-500 text-white shadow-lg shadow-cyan-500/10'
+                                  : 'bg-slate-900/50 border-white/5 text-slate-400 hover:border-white/20 hover:text-white'
+                              }`}
+                            >
+                              <div className="text-xs font-bold truncate">{tpl.label}</div>
+                              <div className="text-[10px] text-slate-400 truncate opacity-80 mt-0.5">{tpl.desc}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Checkbox de Consentimento LGPD */}
                       <div className="flex items-start gap-3 bg-slate-800/50 p-4 rounded-xl border border-white/5 max-w-md mx-auto mb-6">
                         <div className="relative flex items-center">
                           <input
@@ -1999,8 +2083,14 @@ const App: React.FC = () => {
                         </label>
                       </div>
 
+                      {/* Selo Modo Invisível */}
+                      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold tracking-wide uppercase mb-4">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                        Gravação Silenciosa • Sem Bot na Chamada • 100% Privado
+                      </div>
+
                       <button
-                        onClick={handleInitiate}
+                        onClick={() => handleInitiate(false)}
                         disabled={!consentGiven}
                         className={`group relative w-full py-10 md:py-12 rounded-[2rem] font-black text-3xl md:text-4xl text-white shadow-2xl transition-all overflow-hidden ${consentGiven ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:shadow-cyan-500/30 hover:scale-[1.02] cursor-pointer' : 'bg-slate-700 opacity-50 cursor-not-allowed'}`}
                       >
@@ -2013,7 +2103,12 @@ const App: React.FC = () => {
                           </span>
                         </span>
                       </button>
-                      <p className="mt-8 text-slate-400 text-sm font-semibold text-center leading-relaxed">Clique no botão e selecione a aba do navegador com sua reunião.<br />A transcrição iniciará automaticamente.</p>
+
+                      <div className="mt-6 max-w-md mx-auto p-3.5 rounded-xl bg-cyan-500/5 border border-cyan-500/20 text-slate-300 text-xs text-center flex items-center gap-2.5 justify-center">
+                        <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span>Ao abrir a janela do navegador, marque <strong>"Compartilhar áudio da aba"</strong> para capturar todas as pessoas da chamada.</span>
+                      </div>
+
                       <button
                         onClick={() => setShowHelpModal(true)}
                         className="mt-6 flex items-center justify-center gap-2 px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-full text-sm font-black mx-auto border border-red-500/20 hover:border-red-500/40 transition-all uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]"
@@ -2028,50 +2123,149 @@ const App: React.FC = () => {
             )}
 
             {status === SessionStatus.RECORDING && (
-              <div className="w-full flex flex-col gap-8 animate-fade-in">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-6 md:gap-0 bg-gradient-to-r from-red-950/30 via-slate-950/80 to-red-950/30 p-6 md:p-10 rounded-[2rem] border border-red-500/20 glass shadow-2xl">
-                  <div className="flex flex-col md:flex-row items-center gap-4 md:gap-5">
-                    <div className="relative">
-                      <div className="w-4 h-4 rounded-full bg-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.8)]"></div>
-                      <div className="absolute inset-0 w-4 h-4 rounded-full bg-red-500 animate-ping opacity-75"></div>
+              <div className="w-full flex flex-col gap-6 animate-fade-in">
+                {/* Header da Gravação com Cronômetro e Controles */}
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-gradient-to-r from-red-950/40 via-slate-950/90 to-red-950/40 p-6 md:p-8 rounded-[2rem] border border-red-500/30 glass shadow-2xl">
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    {/* Cronômetro */}
+                    <div className="flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-black/60 border border-white/10 font-mono text-2xl md:text-3xl font-black text-white shadow-inner">
+                      <span className={`w-3.5 h-3.5 rounded-full ${isRecordingPaused ? 'bg-amber-400' : 'bg-red-500 animate-ping'}`} />
+                      {formatDuration(recordingDuration)}
+                      {isRecordingPaused && (
+                        <span className="text-xs font-sans font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          PAUSADO
+                        </span>
+                      )}
                     </div>
-                    <div className="flex flex-col items-center md:items-start gap-1">
-                      <span className="text-white font-black text-lg uppercase tracking-wide text-center md:text-left leading-tight">Gravação em Andamento</span>
-                      <span className="text-slate-300 font-semibold text-sm">O áudio será processado ao final.</span>
+
+                    <div className="flex flex-col items-center sm:items-start gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-black text-base md:text-lg uppercase tracking-wide">
+                          Gravação Silenciosa
+                        </span>
+                        {hasSystemAudioTrack === true && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            Áudio da Reunião Ativo
+                          </span>
+                        )}
+                        {hasSystemAudioTrack === false && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                            Apenas Microfone
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-slate-400 text-xs">
+                        Modelo de Ata: <strong className="text-cyan-400 font-bold">{summaryTemplate}</strong> • O áudio será processado ao final.
+                      </span>
                     </div>
                   </div>
-                  <button onClick={stopRecording} className="w-full md:w-auto px-8 md:px-14 py-4 md:py-5 font-black rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-500/30 hover:scale-105 text-sm uppercase tracking-wider">Encerrar e Transcrever</button>
+
+                  <div className="flex items-center gap-3 w-full md:w-auto">
+                    {/* Botão Pausar / Retomar */}
+                    <button
+                      onClick={togglePauseRecording}
+                      className={`flex-1 md:flex-none px-5 py-4 font-bold rounded-xl border transition-all text-sm uppercase tracking-wider flex items-center justify-center gap-2 ${
+                        isRecordingPaused
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10'
+                      }`}
+                    >
+                      {isRecordingPaused ? (
+                        <>
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>
+                          Retomar
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          Pausar
+                        </>
+                      )}
+                    </button>
+
+                    {/* Botão Encerrar */}
+                    <button
+                      onClick={stopRecording}
+                      className="flex-1 md:flex-none px-8 py-4 font-black rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-500/30 hover:scale-105 text-sm uppercase tracking-wider cursor-pointer"
+                    >
+                      Encerrar e Transcrever
+                    </button>
+                  </div>
                 </div>
 
-                {/* Persistent Warning Alert */}
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 flex items-start gap-4 animate-fade-in">
-                  <div className="p-2 bg-amber-500/20 rounded-lg shrink-0">
-                    <svg className="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                {/* Painel do Visualizador de Áudio (VU Meter em Tempo Real) */}
+                <div className="glass rounded-[2.5rem] p-8 md:p-12 border border-white/10 flex flex-col items-center justify-center text-center shadow-2xl bg-gradient-to-b from-slate-950/60 to-slate-900/60 relative overflow-hidden">
+                  {/* Luz de Fundo */}
+                  <div className={`absolute w-72 h-72 rounded-full blur-3xl transition-all duration-300 pointer-events-none ${
+                    liveAudioLevel > 15 ? 'bg-cyan-500/15 scale-110' : 'bg-red-500/10 scale-90'
+                  }`} />
+
+                  {/* Equalizador / VU Meter Visual */}
+                  <div className="flex items-end justify-center gap-1.5 md:gap-2 h-24 mb-6 z-10">
+                    {[12, 28, 45, 60, 35, 75, 90, 65, 80, 50, 70, 95, 85, 60, 75, 40, 65, 80, 55, 30].map((weight, i) => {
+                      // Modula a altura da barra com base no volume atual detectado pelo Web Audio API
+                      const barLevel = Math.max(8, Math.min(100, (liveAudioLevel * (weight / 60))));
+                      return (
+                        <div
+                          key={i}
+                          style={{ height: `${barLevel}%` }}
+                          className={`w-2 md:w-3 rounded-full transition-all duration-75 ${
+                            isRecordingPaused
+                              ? 'bg-amber-500/40'
+                              : liveAudioLevel > 15
+                                ? 'bg-gradient-to-t from-cyan-500 to-emerald-400 shadow-[0_0_8px_rgba(6,182,212,0.6)]'
+                                : 'bg-slate-700/60'
+                          }`}
+                        />
+                      );
+                    })}
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="text-amber-200 font-bold text-lg">Atenção Obrigatória</h4>
-                    <p className="text-amber-200/80 text-sm leading-relaxed">
-                      Para que a gravação funcione, você <strong>DEVE</strong> ter marcado a opção <span className="text-amber-100 font-bold">"Compartilhar áudio do sistema"</span> ao selecionar a tela.
+
+                  <div className="space-y-2 relative z-10">
+                    <h3 className="text-xl md:text-2xl font-bold text-white flex items-center justify-center gap-2">
+                      {isRecordingPaused ? "Gravação Pausada" : "Capturando Áudio da Reunião..."}
+                    </h3>
+                    <p className="text-slate-400 text-sm max-w-lg">
+                      Mantenha esta aba aberta durante a chamada. Quando finalizar a reunião, clique no botão <strong>"Encerrar e Transcrever"</strong> para gerar o resumo completo.
                     </p>
                   </div>
                 </div>
 
-                {/* Visualizer Placeholder / Info Area */}
-                <div className="glass rounded-[2.5rem] p-10 md:p-12 h-[300px] border border-white/10 flex flex-col items-center justify-center text-center shadow-2xl bg-gradient-to-b from-slate-950/50 to-slate-900/50">
-                  <div className="flex flex-col items-center justify-center gap-6">
-                    <div className="relative">
-                      <div className="w-24 h-24 rounded-full bg-red-500/10 animate-pulse absolute inset-0"></div>
-                      <svg className="w-24 h-24 text-red-500 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                {/* Modal de Aviso caso não tenha marcado áudio da aba */}
+                {showNoAudioWarningModal && (
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in text-left">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400 shrink-0">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-amber-200 font-bold text-sm">Áudio da reunião não detectado na seleção de tela</div>
+                        <div className="text-amber-200/80 text-xs mt-0.5">
+                          Para gravar as outras pessoas na chamada, é necessário marcar <strong>"Compartilhar áudio da aba"</strong> na janela do navegador.
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <h3 className="text-2xl font-bold text-white">Capturando Áudio...</h3>
-                      <p className="text-slate-400 max-w-lg">Mantenha esta aba aberta. Quando finalizar a reunião, clique em "Encerrar" para gerar a ata completa e o resumo.</p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => {
+                          stopRecording();
+                          setTimeout(() => handleInitiate(false), 300);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black uppercase tracking-wider transition-all"
+                      >
+                        Tentar Novamente
+                      </button>
+                      <button
+                        onClick={() => setShowNoAudioWarningModal(false)}
+                        className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-white/10 transition-all"
+                      >
+                        Continuar Só com Microfone
+                      </button>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
-            )
-            }
+            )}
 
             {
               (status === SessionStatus.CONNECTING || status === SessionStatus.PERMISSIONS || status === SessionStatus.SAVING) && (
