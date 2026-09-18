@@ -1993,7 +1993,61 @@ app.post('/api/request-data-deletion', async (req, res) => {
   }
 });
 
-// Transcription Endpoint for Gemini 1.5 Flash
+// Helper to transcribe audio using Groq Whisper Large-v3 Turbo (Ultra-fast, 2000 req/day free).
+// Returns transcription text string if successful, or null if key missing or request fails (triggering fallback).
+async function transcribeAudioWithGroq(base64Data, mimeType = 'audio/webm') {
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (!groqApiKey) {
+    return null;
+  }
+
+  try {
+    const cleanBase64 = base64Data.includes('base64,') ? base64Data.split('base64,')[1] : base64Data;
+    const cleanMime = (mimeType || 'audio/webm').split(';')[0].trim();
+    const buffer = Buffer.from(cleanBase64, 'base64');
+
+    // Determine audio file extension
+    let extension = 'webm';
+    if (cleanMime.includes('mp4')) extension = 'mp4';
+    else if (cleanMime.includes('mp3') || cleanMime.includes('mpeg')) extension = 'mp3';
+    else if (cleanMime.includes('wav')) extension = 'wav';
+    else if (cleanMime.includes('m4a')) extension = 'm4a';
+    else if (cleanMime.includes('ogg')) extension = 'ogg';
+
+    const audioBlob = new Blob([buffer], { type: cleanMime });
+    const formData = new FormData();
+    formData.append('file', audioBlob, `meeting-audio.${extension}`);
+    formData.append('model', 'whisper-large-v3-turbo');
+    formData.append('language', 'pt');
+    formData.append('temperature', '0');
+    formData.append('response_format', 'json');
+
+    const startTime = Date.now();
+    const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${groqApiKey}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      logger.warn(`[Groq Whisper] API error (${response.status}): ${errText}. Using Gemini fallback.`);
+      return null;
+    }
+
+    const data = await response.json();
+    const duration = Date.now() - startTime;
+    logger.info(`[Groq Whisper] Transcribed successfully in ${duration}ms (${data.text?.length || 0} chars)`);
+    return data.text || "";
+  } catch (err) {
+    logger.warn(`[Groq Whisper] Exception during transcription: ${err.message}. Using Gemini fallback.`);
+    return null;
+  }
+}
+
+// Transcription Endpoint with Groq Whisper + Gemini Fallback
 app.post('/api/ai/transcribe', async (req, res) => {
   try {
     const { audioData, mimeType } = req.body;
@@ -2002,8 +2056,15 @@ app.post('/api/ai/transcribe', async (req, res) => {
       return res.status(400).json({ error: 'No audio data provided' });
     }
 
-    // Switch to gemini-flash-latest as 'gemini-1.5-flash' caused 404s and 2.0 caused 400s
-    // The diagnostic log confirmed 'gemini-flash-latest' is available in the user's account.
+    // 1. Tentar Groq Whisper primeiro (se GROQ_API_KEY configurada)
+    if (process.env.GROQ_API_KEY) {
+      const groqText = await transcribeAudioWithGroq(audioData, mimeType);
+      if (groqText !== null) {
+        return res.json({ transcription: groqText });
+      }
+    }
+
+    // 2. Fallback para Gemini
     const modelName = 'gemini-flash-latest';
 
     // Robustly remove the Data URI prefix (handles codecs parameters too)
@@ -2144,32 +2205,69 @@ app.post('/api/meetings/process-recording', async (req, res) => {
           templateInstruction = "2. 'summary': Uma ata corporativa formal clássica: Cabeçalho com pauta, Deliberações e discussões detalhadas, Decisões colegiadas aprovadas, Resoluções com Responsáveis e Prazos.\n";
         }
 
-        // Prompt for full context
-        const result = await model.generateContent([
-          "ATUAR COMO PROFISSIONAL DE ATAS DE REUNIÃO. \n" +
-          "Analise o áudio completo da reunião e forneça:\n" +
-          "1. 'transcript': A transcrição literal em Português.\n" +
-          templateInstruction +
-          "3. 'topics': Uma lista de tópicos discutidos.\n\n" +
-          "Se o áudio for silêncio ou apenas barulho, retorne campos vazios.\n" +
-          "Formato JSON obrigatório: { \"transcript\": string, \"summary\": string, \"topics\": string[] }",
-          {
-            inlineData: {
-              mimeType: cleanMimeType,
-              data: base64Data
-            }
-          }
-        ]);
-
-        const responseText = result.response.text();
         let processedData = { transcript: "", summary: "", topics: [] };
+        let usedGroq = false;
 
-        try {
-          processedData = JSON.parse(responseText);
-        } catch (e) {
-          logger.warn("Failed to parse JSON from AI, using raw text as transcript");
-          processedData.transcript = responseText;
-          processedData.summary = "Resumo automático não disponível (formato inválido).";
+        // 1. Tentar transcrição de alta velocidade com Groq Whisper Large-v3 Turbo primeiro
+        const groqTranscript = await transcribeAudioWithGroq(base64Data, cleanMimeType);
+        if (groqTranscript && groqTranscript.trim().length > 0) {
+          usedGroq = true;
+          processedData.transcript = groqTranscript.trim();
+
+          // 2. Com a transcrição do Groq em mãos, usar o Gemini apenas para gerar a ata e tópicos (ultra rápido e centavos de custo)
+          try {
+            logger.info(`[Async Process] Generating structured summary with Gemini for meeting ${insertedMeeting.id}...`);
+            const summaryResult = await model.generateContent([
+              "ATUAR COMO PROFISSIONAL DE ATAS DE REUNIÃO. \n" +
+              "Abaixo está a transcrição literal da reunião em Português:\n\n" +
+              "\"\"\"\n" + groqTranscript + "\n\"\"\"\n\n" +
+              "Com base na transcrição acima, forneça:\n" +
+              templateInstruction +
+              "3. 'topics': Uma lista de tópicos discutidos.\n\n" +
+              "Formato JSON obrigatório: { \"summary\": string, \"topics\": string[] }"
+            ]);
+
+            const summaryResponseText = summaryResult.response.text();
+            try {
+              const parsedSummary = JSON.parse(summaryResponseText);
+              processedData.summary = parsedSummary.summary || "Resumo processado.";
+              processedData.topics = parsedSummary.topics || [];
+            } catch (pErr) {
+              processedData.summary = summaryResponseText;
+            }
+          } catch (sumErr) {
+            logger.error(`[Async Process] Gemini text summary error: ${sumErr.message}`);
+            processedData.summary = "Resumo automático não disponível no momento.";
+          }
+        }
+
+        // 3. Fallback: Se o Groq não estiver configurado ou falhar, usar o pipeline multimodal legado do Gemini
+        if (!usedGroq) {
+          logger.info(`[Async Process] Using Gemini Multimodal Audio fallback for meeting ${insertedMeeting.id}...`);
+          const result = await model.generateContent([
+            "ATUAR COMO PROFISSIONAL DE ATAS DE REUNIÃO. \n" +
+            "Analise o áudio completo da reunião e forneça:\n" +
+            "1. 'transcript': A transcrição literal em Português.\n" +
+            templateInstruction +
+            "3. 'topics': Uma lista de tópicos discutidos.\n\n" +
+            "Se o áudio for silêncio ou apenas barulho, retorne campos vazios.\n" +
+            "Formato JSON obrigatório: { \"transcript\": string, \"summary\": string, \"topics\": string[] }",
+            {
+              inlineData: {
+                mimeType: cleanMimeType,
+                data: base64Data
+              }
+            }
+          ]);
+
+          const responseText = result.response.text();
+          try {
+            processedData = JSON.parse(responseText);
+          } catch (e) {
+            logger.warn("Failed to parse JSON from AI, using raw text as transcript");
+            processedData.transcript = responseText;
+            processedData.summary = "Resumo automático não disponível (formato inválido).";
+          }
         }
 
         // Format transcriptions
