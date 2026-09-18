@@ -28,7 +28,7 @@ import {
   EcosystemSection
 } from './components/LandingComponents.tsx';
 
-const MODEL_NAME = import.meta.env.VITE_GEMINI_LIVE_MODEL || 'gemini-2.0-flash-exp';
+const MODEL_NAME = import.meta.env.VITE_GEMINI_LIVE_MODEL || 'gemini-3.6-flash';
 
 const getErrorMessage = (err: any): string => {
   if (!err) return "Erro desconhecido";

@@ -1428,7 +1428,7 @@ app.post('/api/save-meeting-external', async (req, res) => {
 
             try {
               const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-              const modelName = process.env.GEMINI_CHAT_MODEL || "gemini-2.0-flash";
+              const modelName = process.env.GEMINI_CHAT_MODEL || "gemini-3.6-flash";
               const model = genAI.getGenerativeModel({ model: modelName });
 
               logger.info(`[Gemini] Using model: ${modelName}`);
@@ -2188,10 +2188,10 @@ app.post('/api/meetings/process-recording', async (req, res) => {
         const apiKey = process.env.GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        // Fix Model Name: "gemini-1.5-flash" was NOT found in user's available models. 
-        // Switching to "gemini-2.0-flash" which is available and supports 1M token context.
+        // Use GEMINI_CHAT_MODEL or default to gemini-3.6-flash (current generation)
+        const chatModelName = process.env.GEMINI_CHAT_MODEL || 'gemini-3.6-flash';
         const model = genAI.getGenerativeModel({
-          model: 'gemini-2.0-flash',
+          model: chatModelName,
           generationConfig: { responseMimeType: "application/json" }
         });
 
@@ -2420,31 +2420,60 @@ app.post('/api/ai/chat', async (req, res) => {
     
     Responda à pergunta do usuário abaixo com base APENAS na transcrição acima.`;
 
-    // Initialize Gemini with the correct model (Gemini 2.0 Flash)
-    // We instantiate locally to ensure fresh config
+    // Initialize Gemini with candidate models (gemini-3.6-flash, gemini-2.5-flash, etc.)
     const apiKey = process.env.GEMINI_API_KEY;
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction: systemInstruction
-    });
+    const modelCandidates = [
+      process.env.GEMINI_CHAT_MODEL,
+      'gemini-3.6-flash',
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+      'gemini-3-flash-preview'
+    ].filter(Boolean);
 
     const chatHistory = (history || []).map(h => ({
       role: h.role === 'user' ? 'user' : 'model',
       parts: [{ text: h.text }]
     }));
 
-    const chat = model.startChat({
-      history: chatHistory,
-      generationConfig: {
-        maxOutputTokens: 2000,
-      },
-    });
+    let text = null;
+    let lastError = null;
 
-    const result = await chat.sendMessage(userPrompt);
-    const response = await result.response;
-    const text = response.text();
+    for (const modelCandidate of modelCandidates) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelCandidate,
+          systemInstruction: systemInstruction
+        });
+
+        const chat = model.startChat({
+          history: chatHistory,
+          generationConfig: {
+            maxOutputTokens: 2000,
+          },
+        });
+
+        const result = await chat.sendMessage(userPrompt);
+        const response = await result.response;
+        text = response.text();
+        if (text) {
+          logger.info(`[Chat Success] Responded using model: ${modelCandidate}`);
+          break;
+        }
+      } catch (e) {
+        lastError = e;
+        logger.warn(`[Chat] Model ${modelCandidate} failed: ${e.message}. Trying next candidate...`);
+        // If it's a 404 or deprecated model error, try next candidate
+        if (!e.message.includes('404') && !e.message.includes('not found') && !e.message.includes('no longer available')) {
+          throw e;
+        }
+      }
+    }
+
+    if (!text && lastError) {
+      throw lastError;
+    }
 
     res.json({ response: text });
 
